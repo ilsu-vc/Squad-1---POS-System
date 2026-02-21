@@ -29,8 +29,8 @@ body, button, input {
 
 /* Navbar */
 .main-nav {
-  background: white;
-  padding: 10px 25px 20px;
+  background-color: #5d7c5d;
+  padding: 15px 25px 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -39,8 +39,9 @@ body, button, input {
 }
 
 .logo {
+  font-size: 1.25rem;
   font-weight: 700;
-  font-size: 1.1rem;
+  margin: 0;
 }
 
 /* Center the navbar content */
@@ -76,37 +77,36 @@ body, button, input {
 .nav-btn {
   display: flex;
   align-items: center;
-  gap: 8px; /* Space between icon and text */
-  padding: 10px 18px;
-  border: 1px solid #e0e0e0;
-  background-color: #f9f9f9;
+  gap: 8px;
+  padding: 8px 18px;
   border-radius: 8px;
+
+  border: 1px solid transparent;   /* 👈 no visible border by default */
+  background: transparent;
+  color: white;
+
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.3s ease;
-  
-  /* Thicker text settings */
-  font-weight: 600; 
-  font-size: 15px;
-  color: #333;
+  transition: all 0.2s ease;
 }
 
 .nav-btn img {
-  width: 20px;
-  height: 20px;
-  object-fit: contain;
+  width: 18px;
+  height: 18px;
 }
 
 .nav-btn.active {
-  background-color: #5d7c5d; 
-  color: white;
-  border-color: #5d7c5d;
-  font-weight: 700; /* Extra thick when selected */
+  background-color: white;
+  color: #1a1a1a;
+  border-color: white;             /* 👈 border appears here */
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-.nav-btn:hover:not(.active) {
-  background-color: #eff1ef;
-  border-color: #ccc;
+.nav-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: transparent;       /* 👈 ensure no border on hover */
 }
+
 /* Content Layout */
 .pos-content {
   display: grid;

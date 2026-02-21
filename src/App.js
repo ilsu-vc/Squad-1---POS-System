@@ -1,9 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
-
-// --- POS-003: Your Integrated Service ---
-import { calculateCartTotals, formatCurrencyPHP } from './TransactionService';
-
+import { supabase } from "./supabaseClient"; 
 // Import Recharts components
 import { 
   ResponsiveContainer, 
@@ -49,6 +46,10 @@ import card_icon from './assets/images/card_icon.png';
 import mobile_icon from './assets/images/mobile_icon.png';
 
 const App = () => {
+
+  const [dbTransactionId, setDbTransactionId] = useState(null); // UUID from Supabase
+  const [dbReceiptNumber, setDbReceiptNumber] = useState(null);
+
   const [cart, setCart] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [historySearch, setHistorySearch] = useState('');
@@ -69,7 +70,7 @@ const App = () => {
         id: 'TXN-1771607944136', 
         date: 'Feb 21, 2026',
         time: '1:19:04 AM', 
-        amount: '₱12.31', 
+        amount: '$12.31', 
         rawAmount: 12.31,
         method: 'Mobile Payment',
         itemsCount: 1,
@@ -183,12 +184,9 @@ const App = () => {
     setCart(cart.map(item => item.id === id ? { ...item, quantity: Math.max(1, item.quantity + delta) } : item));
   };
 
-  const totals = calculateCartTotals(cart);
-  
-  const subtotal = totals.subtotal;
-  const tax = totals.vatAmount;
-  const total = totals.grandTotal;
-  // -------------------------------------------------------------------
+  const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+  const tax = subtotal * 0.12;
+  const total = subtotal + tax;
 
   const changeAmount = cashReceived ? Math.max(0, parseFloat(cashReceived) - total) : 0;
 
@@ -200,35 +198,129 @@ const App = () => {
     if (paymentStatus === 'success') setCart([]); 
   };
 
-  const handleCompletePayment = () => {
+  const handleCompletePayment = async () => {
+  if (!dbTransactionId) {
+    alert("No DB transaction found. Click Proceed to Payment again.");
+    return;
+  }
+
+  try {
+    // --- 1) mark DB transaction as PAID and insert VAT---
+    const { error: updErr } = await supabase
+      .from("transactions")
+      .update({
+      status: "paid",
+      paid_at: new Date().toISOString(),
+      vat: Number(tax.toFixed(2)), 
+  })
+  .eq("id", dbTransactionId);
+
+    if (updErr) throw updErr;
+
+    // --- 2) call your receipt function ---
+    const { data: receiptRows, error: rpcErr } = await supabase.rpc(
+      "get_or_create_receipt_for_transaction",
+      { p_transaction_id: dbTransactionId }
+    );
+
+    if (rpcErr) throw rpcErr;
+
+    const receipt = Array.isArray(receiptRows) ? receiptRows[0] : receiptRows;
+    const receiptNo = receipt?.receipt_number ?? null;
+    setDbReceiptNumber(receiptNo);
+
+    // --- 3) keep your existing local transaction history logic ---
     const now = new Date();
-    const formattedHour = now.getHours() >= 12 
-        ? (now.getHours() === 12 ? '12PM' : (now.getHours() - 12) + 'PM') 
-        : (now.getHours() === 0 ? '12AM' : now.getHours() + 'AM');
+    const formattedHour =
+      now.getHours() >= 12
+        ? now.getHours() === 12
+          ? "12PM"
+          : now.getHours() - 12 + "PM"
+        : now.getHours() === 0
+        ? "12AM"
+        : now.getHours() + "AM";
 
     const methodMap = {
-        'cash': 'Cash Payment',
-        'card': 'Credit/Debit Card',
-        'mobile': 'Mobile Payment'
+      cash: "Cash Payment",
+      card: "Credit/Debit Card",
+      mobile: "Mobile Payment",
     };
 
     const newTransaction = {
-      id: `TXN-${Date.now()}`,
-      date: now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      // Keep your old ID if you want, but it's better to store the real UUID:
+      id: dbTransactionId, // ✅ real DB UUID
+      receiptNumber: receiptNo, // ✅ your sequential receipt
+      date: now.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+      time: now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
       hour: formattedHour,
-      amount: formatCurrencyPHP(total), // Saved as PHP
+      amount: `$${total.toFixed(2)}`,
       rawAmount: total,
       method: methodMap[paymentMethod],
       itemsCount: cart.reduce((sum, item) => sum + item.quantity, 0),
-      items: cart.map(item => ({ name: item.name, qty: item.quantity, price: item.price, category: item.category })),
-      subtotal: subtotal,
-      tax: tax
+      items: cart.map((item) => ({
+        name: item.name,
+        qty: item.quantity,
+        price: item.price,
+        category: item.category,
+      })),
+      subtotal,
+      tax,
     };
 
     setTransactions([newTransaction, ...transactions]);
-    setPaymentStatus('success');
-  };
+    setPaymentStatus("success");
+  } catch (err) {
+    console.error(err);
+    alert(err.message || "Failed to complete payment / generate receipt.");
+  }
+};
+
+const handleCancelPayment = async () => {
+  if (!dbTransactionId) {
+    setIsPaymentModalOpen(false);
+    return;
+  }
+
+  try {
+    const { error } = await supabase
+      .from("transactions")
+      .update({ status: "cancelled" })
+      .eq("id", dbTransactionId);
+
+    if (error) throw error;
+
+    // reset local UI state
+    setPaymentStatus("idle");
+    setDbReceiptNumber(null);
+    setDbTransactionId(null);
+    setIsPaymentModalOpen(false);
+  } catch (err) {
+    console.error(err);
+    alert(err.message || "Failed to cancel transaction.");
+  }
+};
+
+  const handleProceedToPayment = async () => {
+  try {
+    // Create transaction in DB (UUID auto-generated)
+    const { data, error } = await supabase
+      .from("transactions")
+      .insert({ status: "pending" })
+      .select("id")
+      .single();
+
+    if (error) throw error;
+
+    setDbTransactionId(data.id);
+    setDbReceiptNumber(null);
+
+    // open modal
+    setIsPaymentModalOpen(true);
+  } catch (err) {
+    console.error(err);
+    alert(err.message || "Failed to create transaction.");
+  }
+};
 
   return (
     <div className="pos-container">
@@ -256,7 +348,7 @@ const App = () => {
               <div className="stat-card">
                 <div className="stat-info">
                   <h3>Total Revenue</h3>
-                  <p className="stat-value">{formatCurrencyPHP(totalRevenue)}</p>
+                  <p className="stat-value">${totalRevenue.toFixed(2)}</p>
                   <p className="stat-subtext">↗ Today</p>
                 </div>
                 <div className="stat-icon-bg"><img src={total_revenue_icon} alt="" className="stat-img-icon" /></div>
@@ -272,7 +364,7 @@ const App = () => {
               <div className="stat-card">
                 <div className="stat-info">
                   <h3>Avg. Transaction</h3>
-                  <p className="stat-value">{formatCurrencyPHP(avgTransaction)}</p>
+                  <p className="stat-value">${avgTransaction.toFixed(2)}</p>
                   <p className="stat-subtext">Per order</p>
                 </div>
                 <div className="stat-icon-bg"><img src={avg_transaction} alt="" className="stat-img-icon" /></div>
@@ -369,8 +461,8 @@ const App = () => {
 
             <div className="history-stats-row">
                <div className="h-stat-card"><p className="h-stat-label">Total Transactions</p><h2 className="h-stat-value">{transactions.length}</h2></div>
-               <div className="h-stat-card"><p className="h-stat-label">Total Revenue</p><h2 className="h-stat-value">{formatCurrencyPHP(totalRevenue)}</h2></div>
-               <div className="h-stat-card"><p className="h-stat-label">Average Transaction</p><h2 className="h-stat-value">{formatCurrencyPHP(avgTransaction)}</h2></div>
+               <div className="h-stat-card"><p className="h-stat-label">Total Revenue</p><h2 className="h-stat-value">${totalRevenue.toFixed(2)}</h2></div>
+               <div className="h-stat-card"><p className="h-stat-label">Average Transaction</p><h2 className="h-stat-value">${avgTransaction.toFixed(2)}</h2></div>
             </div>
 
             <div className="history-scroll-area">
@@ -398,15 +490,15 @@ const App = () => {
                                       <div key={idx} className="item-detail-row">
                                           <div className="item-info">
                                               <p className="item-name-text">{item.name}</p>
-                                              <p className="item-calc-text">{formatCurrencyPHP(item.price)} × {item.qty}</p>
+                                              <p className="item-calc-text">${item.price} × {item.qty}</p>
                                           </div>
-                                          <p className="item-price-sum">{formatCurrencyPHP(item.price * item.qty)}</p>
+                                          <p className="item-price-sum">${(item.price * item.qty).toFixed(2)}</p>
                                       </div>
                                   ))}
                                 </div>
                                 <div className="history-financial-summary">
-                                    <div className="f-row"><span>Subtotal:</span> <span>{formatCurrencyPHP(txn.subtotal)}</span></div>
-                                    <div className="f-row"><span>Tax:</span> <span>{formatCurrencyPHP(txn.tax)}</span></div>
+                                    <div className="f-row"><span>Subtotal:</span> <span>${txn.subtotal.toFixed(2)}</span></div>
+                                    <div className="f-row"><span>Tax:</span> <span>${txn.tax.toFixed(2)}</span></div>
                                     <div className="f-row f-total"><span>Total:</span> <span>{txn.amount}</span></div>
                                 </div>
                             </div>
@@ -438,7 +530,7 @@ const App = () => {
                   <h3 className="product-name">{product.name}</h3>
                   <p className="cat-label">{product.category}</p>
                   <div className="card-footer">
-                      <div><span className="price">{formatCurrencyPHP(product.price)}</span><span className="stock">Stock: {product.stock}</span></div>
+                      <div><span className="price">${product.price.toFixed(2)}</span><span className="stock">Stock: {product.stock}</span></div>
                       <button className="add-btn" onClick={() => addToCart(product)}>+</button>
                   </div>
                 </div>
@@ -452,35 +544,34 @@ const App = () => {
               {cart.map(item => (
                 <div key={item.id} className="cart-item">
                   <div className="item-details">
-                    <h4 className="cart-item-name">{item.name}</h4><p className="item-price-each">{formatCurrencyPHP(item.price)} each</p>
+                    <h4 className="cart-item-name">{item.name}</h4><p className="item-price-each">${item.price.toFixed(2)} each</p>
                     <div className="qty-controls">
                       <button onClick={() => updateQty(item.id, -1)}>-</button><span>{item.quantity}</span><button onClick={() => updateQty(item.id, 1)}>+</button>
                     </div>
                   </div>
                   <div className="item-total-section">
                     <button className="delete-item" onClick={() => setCart(cart.filter(i => i.id !== item.id))}><img src={deleteIcon} alt="Delete" /></button>
-                    <p className="item-total">{formatCurrencyPHP(item.price * item.quantity)}</p>
+                    <p className="item-total">${(item.price * item.quantity).toFixed(2)}</p>
                   </div>
                 </div>
               ))}
             </div>
             <div className="billing-summary">
-              {/* --- POS-003: Now using your formatCurrencyPHP function --- */}
               <div className="bill-row">
                 <span>Subtotal:</span> 
-                <span id="display-subtotal">{formatCurrencyPHP(subtotal)}</span>
+                <span id="display-subtotal">${subtotal.toFixed(2)}</span>
               </div>
               <div className="bill-row">
-                <span>Tax (12% inclusive):</span> 
-                <span id="display-vat">{formatCurrencyPHP(tax)}</span>
+                <span>Tax (12%):</span> 
+                <span id="display-vat">${tax.toFixed(2)}</span>
               </div>
               <hr />
               <div className="bill-row total">
                 <span>Total:</span> 
-                <span id="display-grand-total">{formatCurrencyPHP(total)}</span>
+                <span id="display-grand-total">${total.toFixed(2)}</span>
               </div>
-              <button className="pay-btn" onClick={() => setIsPaymentModalOpen(true)}>Proceed to Payment</button>
-            </div>
+                <button className="pay-btn" onClick={handleProceedToPayment}> Proceed to Payment</button>            
+              </div>
           </aside>
         </main>
       )}
@@ -495,7 +586,7 @@ const App = () => {
           ) : (
             <div className="payment-modal">
               <div className="modal-header"><h2 className="modal-title">Payment</h2><button className="close-modal" onClick={closePaymentModal}>✕</button></div>
-              <div className="amount-display"><p>Total Amount</p><h1 className="total-h1">{formatCurrencyPHP(total)}</h1></div>
+              <div className="amount-display"><p>Total Amount</p><h1 className="total-h1">${total.toFixed(2)}</h1></div>
               {!paymentMethod ? (
                 <div className="payment-options">
                   <p className="section-label">Select Payment Method</p>
@@ -515,19 +606,18 @@ const App = () => {
                   <div className="quick-amounts">
                     <p className="section-label-sm">Quick Amount</p>
                     <div className="quick-grid">
-                      <button className="quick-btn" onClick={() => setCashReceived(total.toFixed(2))}>{formatCurrencyPHP(total)}</button>
-                      <button className="quick-btn" onClick={() => setCashReceived('80')}>₱80</button>
-                      <button className="quick-btn" onClick={() => setCashReceived('100')}>₱100</button>
+                      <button className="quick-btn" onClick={() => setCashReceived(total.toFixed(2))}>${total.toFixed(2)}</button>
+                      <button className="quick-btn" onClick={() => setCashReceived('80')}>$80</button><button className="quick-btn" onClick={() => setCashReceived('100')}>$100</button>
                     </div>
                   </div>
 
                   <div className="change-display">
                     <p>Change</p>
-                    <h2>{formatCurrencyPHP(changeAmount)}</h2>
+                    <h2>${changeAmount.toFixed(2)}</h2>
                   </div>
 
                   <div className="modal-actions">
-                    <button className="cancel-btn" onClick={closePaymentModal}>Cancel</button>
+                    <button className="cancel-btn" onClick={handleCancelPayment}>Cancel</button>
                     <button className={`complete-btn ${parseFloat(cashReceived) >= total ? 'active' : ''}`} disabled={parseFloat(cashReceived) < total || !cashReceived} onClick={handleCompletePayment}>Complete Payment</button>
                   </div>
                 </div>
