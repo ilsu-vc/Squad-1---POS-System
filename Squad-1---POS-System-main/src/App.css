@@ -1,0 +1,1763 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* Global Bold Typography Style */
+body, button, input {
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  color: #1a1a1a;
+}
+
+:root {
+  /* PharmaCare Color Palette */
+  --primary-green: #5d7c5d;
+  --primary-light: #f0f4f0;
+  --bg-dashboard: #d1d1d1; /* The grey background from your screenshot */
+  --card-white: #ffffff;
+  --text-main: #2d2d2d;
+  --text-muted: #888888;
+  --border-subtle: #eeeeee;
+}
+
+.pos-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: var(--bg-gray);
+  overflow: hidden;
+  position: relative;
+}
+
+/* Navbar */
+.main-nav {
+  background: white;
+  padding: 10px 25px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  border-bottom: 1px solid #d9d9d9;
+}
+
+.logo {
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+/* Center the navbar content */
+.nav-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 40px;
+}
+
+/* Wrapper for full-page views like Dashboard and History */
+.view-content-wrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  padding: 40px 0;
+}
+
+/* The actual container that holds the content */
+.centered-container {
+  width: 100%;
+  max-width: 1200px; /* Adjust this to control how wide it gets */
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.nav-actions {
+  display: flex;
+  gap: 15px;
+  width: 380px;
+  justify-content: flex-end;
+}
+
+.nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px; /* Space between icon and text */
+  padding: 10px 18px;
+  border: 1px solid #e0e0e0;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  
+  /* Thicker text settings */
+  font-weight: 600; 
+  font-size: 15px;
+  color: #333;
+}
+
+.nav-btn img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+
+.nav-btn.active {
+  background-color: #5d7c5d; 
+  color: white;
+  border-color: #5d7c5d;
+  font-weight: 700; /* Extra thick when selected */
+}
+
+.nav-btn:hover:not(.active) {
+  background-color: #eff1ef;
+  border-color: #ccc;
+}
+/* Content Layout */
+.pos-content {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  height: calc(100vh - 80px);
+  overflow: hidden;
+}
+
+.inventory-section {
+  background-color: #f9f9f9 !important;
+  padding: 20px;
+  flex: 1;
+  overflow-y: auto;  /* Enable scrolling when content exceeds the container height */
+}
+.inventory-section::-webkit-scrollbar {
+  width: 8px; /* Adjust scrollbar width */
+}
+
+.inventory-section::-webkit-scrollbar-track {
+  background: #f1f1f1; /* Light background for the track */
+  border-radius: 10px;
+}
+
+.inventory-section::-webkit-scrollbar-thumb {
+  background: #cccccc; /* Custom thumb color (green) */
+  border-radius: 10px;
+}
+
+.inventory-section::-webkit-scrollbar-thumb:hover {
+  background: #c0bfbf; /* Darker green on hover */
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  background-color: #f9f9f9 !important;
+  border: 1px solid #d0d5d0;
+  border-radius: 10px;
+  padding: 0 15px; /* Keep this for overall internal spacing */
+  height: 45px;
+  margin-bottom: 20px;
+}
+
+.search-icon-img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  margin-right: 12px; /* Increased margin to push the text further away */
+  display: block; 
+  flex-shrink: 0;
+  opacity: 0.6; /* Optional: makes it look more professional like your UI */
+}
+
+.search-box input {
+  flex: 1; /* This pushes the text field to fill the rest of the space */
+  background: transparent;
+  border: none;
+  outline: none;
+  height: 100%;
+  font-size: 15px;
+  padding: 0; /* Important: remove padding here so it aligns with icon margin */
+}
+
+.search-box:focus-within {
+  border-color: #5d7c5d; /* Matches your brand green */
+  box-shadow: 0 0 0 2px rgba(93, 124, 93, 0.1);
+}
+
+.category-bar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 30px;
+  flex-wrap: wrap;
+}
+
+.cat-btn {
+  padding: 10px 20px;
+  border: 1px solid #e0e0e0;
+  background-color: white;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  
+  /* This makes the text bold and thicker */
+  font-weight: 600; 
+  font-size: 14px;
+  color: #333;
+}
+
+.cat-btn.active {
+  background-color: #5d7c5d; /* Matches the green in your images */
+  color: white;
+  border-color: #5d7c5d;
+  font-weight: 700; /* Extra thickness for the active state */
+}
+
+.cat-btn:hover:not(.active) {
+  background-color: #f5f5f5;
+  border-color: #ccc;
+}
+
+/* Product Cards */
+
+
+.product-card, .cart-item {
+  background-color: #edf1ed; /* New light background */
+  border-radius: 12px;
+  padding: 15px;
+  transition: transform 0.2s ease;
+}
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr); 
+  gap: 12px;
+}
+
+.product-card {
+  background: white;
+  border-radius: 15px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.img-container {
+  background: #eaf1ea;
+  height: 160px;
+  border-radius: 12px;
+  margin-bottom: 15px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.img-container img {
+  width: 70px;
+}
+
+.product-card h3 {
+  font-size: 1.1rem;
+  margin-bottom: 5px;
+}
+
+.cat-label {
+  font-size: 0.8rem;
+  color: #777;
+}
+
+.card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-top: 15px;
+}
+
+.price {
+  display: block;
+  font-weight: bold;
+  font-size: 1.2rem;
+}
+
+.stock {
+  font-size: 0.75rem;
+  color: #a6a6a6;
+}
+
+.add-btn {
+  background: var(--primary-green);
+  color: white;
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 1.5rem;
+}
+
+/* Sidebar */
+.order-sidebar {
+  background: white;
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid #e3e3e3;
+  height: 100%; 
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.clear-all {
+  color: #d9534f;
+  background: none;
+  border: none;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.cart-list {
+  flex: 1;
+  overflow-y: auto;
+  margin: 10px 0;
+  padding-right: 5px;
+}
+
+.cart-item {
+  border: 1px solid #e3e3e3;
+  border-radius: 16px;
+
+  /* more breathing room */
+  padding: 20px 18px 12px;
+  background: #f9f9f9;
+  margin-bottom: 14px;
+
+  /* 3-row layout */
+  display: grid;
+  grid-template-columns: 1fr auto;      /* left content + right price */
+  grid-template-rows: 90px auto auto;   /* title row, each row, qty row */
+  row-gap: 15px;                        /* more vertical spacing */
+  column-gap: 18px;                     /* more horizontal spacing */
+  align-items: center;
+}
+
+.cart-item .item-info {
+  grid-column: 1 / 2;
+  grid-row: 1 / 3; /* Let it span the first two rows */
+  padding-right: 10px; /* Buffer zone */
+  overflow: hidden;
+}
+
+/* 2. Force the title text to truncate instead of pushing into the icon */
+.cart-item .item-info span {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis; 
+  max-width: 220px; /* Adjust based on your sidebar width */
+}
+
+.cart-item .item-info span small {
+  font-weight: 400;
+  color: #888;
+}
+
+.item-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 16px;
+  position: relative;
+}
+
+.item-details {
+  flex: 1; /* This makes the text take up available space but not push the icon */
+  margin-right: 10px; /* Space between text and delete icon */
+}
+
+.delete-button {
+  flex-shrink: 0; /* Prevents the icon from getting squished or moved */
+}
+/* quantity row */
+.cart-item .quantity-controls {
+  display: flex;
+  align-items: center;
+  gap: 14px; /* more space between - qty + */
+}
+
+/* qty buttons */
+.cart-item .quantity-controls button {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  border: 1px solid #cfcfcf;
+  background: #fff;
+  cursor: pointer;
+
+  font-size: 20px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  color: #222;
+}
+
+/* qty value */
+.cart-item .quantity-controls span {
+  min-width: 26px;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 700;
+  color: #222;
+}
+
+/* right side total price (big, bottom-right like screenshot) */
+.cart-item > span {
+  grid-column: 2 / 3;
+  grid-row: 3 / 4;
+  justify-self: end;
+
+  font-size: 19px;
+  font-weight: 900;
+  color: #222;
+  padding-right: 4px;
+}
+
+/* trash button top-right */
+.cart-item .remove-btn {
+  grid-column: 2 / 3;    /* Forces icon to the right column */
+  grid-row: 1 / 2;       /* Forces icon to the top row, level with title */
+  justify-self: end;     /* Snaps to the right edge of the card */
+  align-self: start;     /* Snaps to the top edge */
+
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  
+  /* Matches the vertical pill hover shape in your UI */
+  padding: 8px 12px; 
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+  
+  color: #ff3b30;        /* Red icon color */
+}
+
+/* 3. Red hover state */
+.cart-item .remove-btn:hover {
+  background-color: #fee2e2; 
+}
+
+.cart-item .remove-btn img {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+.cart-item .remove-btn:hover {
+  background-color: #fee2e2; /* Light red background on hover */
+
+}
+
+.qty-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.qty-controls button {
+  width: 28px;
+  height: 28px;
+  border: 1px solid #ccc;
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.item-total-section {
+  display: flex;
+  flex-direction: column; /* Stacks price on top, icon on bottom */
+  justify-content: space-between; /* Pushes them to opposite vertical ends */
+  align-items: flex-end; /* Snaps both elements to the right edge */
+  height: 100%;
+  min-width: 90px;
+  padding: 5px 0;
+}
+
+.delete-item {
+  background-color: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  /* This ensures it sits at the bottom right corner */
+  margin-bottom: 5px; 
+}
+
+.delete-item:hover {
+  background-color: #fee2e2;
+  transform: scale(1.1);
+}
+
+/* Feedback when the button is actually clicked */
+.delete-item:active {
+  transform: scale(0.95);     /* Brief "shrink" effect on click */
+  background-color: #db9696;
+}
+
+.delete-item img {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+
+.item-total-section {
+  display: flex;
+  flex-direction: column; /* Stacks price and delete icon vertically */
+  justify-content: space-between; /* Pushes price to top and icon to bottom, or vice versa */
+  align-items: flex-end; /* Aligns both to the right edge */
+  height: 100%; /* Ensures it takes up the full height of the card */
+  min-width: 80px; /* Gives enough space for the price */
+}
+
+.item-total {
+  font-weight: 700;
+  font-size: 16px;
+  color: #333;
+  margin-top: 5px; /* Adds a little breathing room from the top */
+}
+
+.bill-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 2px;
+  font-size: 0.8rem;
+  color: #555;
+}
+
+.total {
+  display: flex;
+  justify-content: space-between;
+  font-size: 1.2rem;
+  font-weight: 800;
+  margin: 5px 0 10px 0;
+  color: #000;
+}
+
+.pay-btn {
+  width: 100%;
+  padding: 12px;
+  background: var(--primary-green);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* --- PAYMENT MODAL STYLES --- */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+}
+
+.payment-modal {
+  background: white;
+  width: 450px;
+  border-radius: 20px;
+  padding: 25px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.modal-header h2 {
+  font-size: 1.4rem;
+  font-weight: 800;
+}
+
+.close-modal {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: #666;
+}
+
+.amount-display {
+  background: #f4f4f2;
+  padding: 20px;
+  border-radius: 15px;
+  text-align: left;
+  margin-bottom: 25px;
+}
+
+.amount-display p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.amount-display h1 {
+  margin: 5px 0 0 0;
+  font-size: 2.5rem;
+  font-weight: 800;
+}
+
+.section-label {
+  font-weight: 700;
+  margin-bottom: 15px;
+}
+
+.method-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+}
+
+.method-item {
+  border: 1px solid #ddd;
+  background: white;
+  border-radius: 12px;
+  padding: 15px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.method-item:hover {
+  border-color: var(--primary-green);
+  background: #f9fff9;
+}
+
+.method-img-icon {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+.method-item span {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+/* This targets the horizontal line in your billing summary */
+.billing-summary hr {
+  border: none;               /* Removes default browser styling */
+  border-top: 1px solid #d0d5d0; /* This is the "line green" / grey shade */
+  margin: 15px 0;             /* Adds space above and below the line */
+}
+
+/* If you want that line to be the same Green as your buttons: */
+.billing-summary hr {
+  border-top: 1px solid #a6a6a6; /* Changes the line to Pharmacy Green */
+  opacity: 0.3;                 /* Makes it subtle so it's not too bold */
+}
+/* --- UPDATED PAYMENT MODAL STYLES --- */
+
+
+.cash-payment-view, .payment-method-view {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.view-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.change-method {
+  background: none;
+  border: none;
+  color: var(--primary-green);
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.input-group label {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.error-text {
+  color: #d9534f;
+  font-size: 0.8rem;
+  font-weight: 600;
+  animation: fadeIn 0.3s ease;
+}
+
+.input-group input {
+  padding: 15px;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  font-size: 1.2rem;
+  background: #fff;
+}
+
+.section-label-sm {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #666;
+  margin-bottom: 10px;
+}
+
+.quick-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.quick-grid button {
+  padding: 10px;
+  background: #e6e6e4;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.quick-grid button:hover {
+  background: #d1d1cf;
+}
+
+.modal-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin-top: 10px;
+}
+
+.cancel-btn {
+  padding: 12px;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.complete-btn {
+  padding: 12px;
+  background: #e6e6e4;
+  color: #a6a6a6;
+  border: none;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: not-allowed;
+  transition: 0.3s;
+}
+
+.complete-btn.active {
+  background: var(--primary-green);
+  color: white;
+  cursor: pointer;
+}
+
+.add-btn {
+  background-color: #5d7c5d;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  width: 35px;  /* Set a fixed width */
+  height: 35px; /* Set a fixed height to make it a perfect square */
+  cursor: pointer;
+  
+  /* Use Flexbox to center the "+" symbol perfectly */
+  display: flex;
+  align-items: center;     /* Vertical center */
+  justify-content: center;  /* Horizontal center */
+  
+  /* Reset these to ensure no extra spacing is added */
+  padding: 0; 
+  font-size: 20px; 
+  font-weight: bold;
+  line-height: 1; 
+  
+  transition: background-color 0.2s ease;
+}
+
+.add-btn:hover {
+  background-color: #4a634a; /* Slightly darker green on hover */
+}
+
+.qty-controls button {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f9f9f9;
+  border: 1px solid #d0d5d0;
+  border-radius: 6px;
+  padding: 0;
+  font-weight: bold;
+}
+
+/* --- STATUS BOX STYLES (CARD & MOBILE) --- */
+
+.reader-status-box {
+  background-color: #e6e6e4;
+  border-radius: 15px;
+  padding: 40px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.reader-img-container {
+  width: 60px;
+  height: 60px;
+  margin-bottom: 5px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.status-img-icon {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.main-prompt {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #333;
+  margin: 0;
+}
+
+.sub-prompt {
+  font-size: 0.9rem;
+  color: #888;
+  margin: 0;
+}
+
+/* Payment Success Styles */
+.success-modal {
+  background: white;
+  padding: 40px;
+  border-radius: 12px;
+  text-align: center;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  animation: modalPop 0.3s ease-out;
+}
+
+.success-icon {
+  background-color: #5e7e63;
+  color: white;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+  margin: 0 auto 20px;
+}
+
+.success-modal h2 {
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+
+.success-modal p {
+  color: #888;
+  margin-bottom: 30px;
+}
+
+.close-success-btn {
+  background-color: #5e7e63;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.close-success-btn:hover {
+  background-color: #4a634e;
+}
+
+@keyframes modalPop {
+  from { transform: scale(0.8); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Dashboard Main Container */
+.dashboard-view {
+  padding: 20px;
+  overflow-y: auto;
+  height: calc(100vh - 80px);
+  background-color: var(--bg-main);
+}
+
+.dashboard-title {
+  font-size: 24px;
+  font-weight: 800;
+  margin-bottom: 25px;
+}
+
+.recent-transactions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 15px;
+
+.transaction-card .txn-id {
+  font-size: 0.90rem; /* Smaller font size */
+  color: #282828; /* Optional: Slightly darker color for subtle appearance */
+}
+  
+.transaction-card .txn-method {
+  display: inline-flex; /* Keeps text in one line */
+  align-items: center; /* Vertically centers the text */
+  padding: 3px 9px; /* Smaller padding for a compact pill shape */
+  border-radius: 50px; /* Fully rounded corners for an oval shape */
+  font-weight: 450; /* Lighter font weight for thinner text */
+  font-size: 0.70rem; /* Smaller font size */
+  white-space: nowrap; /* Prevents text from wrapping */
+}
+
+.transaction-card .txn-method.cash {
+  background: #defcdc; /* Light green */
+  border: 1px solid #9ee63f; /* Dark green */
+  color: #8cd86b; /* Green text */
+}
+
+.transaction-card .txn-method.card {
+  background: #dbeafe; /* Light blue */
+  border: 1px solid #7db5ff; /* Dark blue */
+  color: #7db5ff; /* Blue text */
+}
+
+.transaction-card .txn-method.mobile {
+  background: #ffedd5; /* Light orange */
+  border: 1px solid #f99c39; /* Dark orange */
+  color: #f99c39; /* Orange text */
+}
+
+  /* Critical changes for scrolling: */
+  max-height: 300px;       /* Adjust this height as needed */
+  overflow-y: auto;        /* Adds a scrollbar only when items overflow */
+  padding-right: 8px;      /* Space for the scrollbar so it doesn't touch the text */
+}
+
+.history-scroll-area {
+  background-color: #ffffff; /* Light grey background for the scrollable area */
+  max-height: 300px;         /* Adjust this height as needed */
+  overflow-y: auto;          /* Adds a scrollbar when content overflows */
+  padding-right: 8px;        /* Space for the scrollbar to prevent touching the text */
+  border-radius: 10px;       /* Rounded corners for the scrollable area */
+  padding: 10px;             /* Padding inside the scrollable area */
+  box-sizing: border-box;    /* Ensures padding is included within the height and width */
+}
+
+.history-scroll-area::-webkit-scrollbar {
+  width: 8px; /* Customize the width of the scrollbar */
+}
+
+.history-scroll-area::-webkit-scrollbar-track {
+  background: #ffffff; /* Light background for the scrollbar track */
+  border-radius: 10px;
+}
+
+.history-scroll-area::-webkit-scrollbar-thumb {
+  background: #cccccc;  /* Using a green theme color */
+  border-radius: 10px;   /* Rounded corners for the scrollbar thumb */
+}
+
+.history-scroll-area::-webkit-scrollbar-thumb:hover {
+  background: #5d7c5d;   /* Darker green color on hover */
+}
+
+.history-scroll-area .history-card {
+  background-color: #f8f8f8; /* Light background color for transaction cards */
+  border-radius: 10px;          /* Optional: Rounded corners for each transaction card */
+  padding: 12px;               /* Adds padding inside the transaction card */
+  margin-bottom: 3px;         /* Adds space between transaction cards */
+  box-shadow: 0 2px 7px rgba(53, 53, 53, 0.1); /* Optional: Subtle shadow for the card */
+  border: -5px solid #ffffff;  
+}
+
+.history-scroll-area .history-card:hover {
+  background-color: #efefee; /* Change background color on hover for interactivity */
+}
+
+.history-scroll-area .history-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.history-scroll-area .history-card-header .header-left {
+  display: flex;
+  flex-direction: column;
+}
+
+.history-scroll-area .history-card-header .header-right {
+  display: flex;
+  flex-direction: column;
+}
+
+.history-scroll-area .txn-id-text {
+  font-weight: bold;
+  color: #333; /* Darker color for the transaction ID */
+}
+
+.history-scroll-area .txn-meta-text {
+  font-size: 0.85rem;
+  color: #666; /* Lighter color for the transaction date and item count */
+}
+
+.history-scroll-area .txn-total-text {
+  font-weight: bold;
+  color: #333; /* Darker color for the transaction total */
+}
+
+
+.transaction-card {
+  background-color: #f5f5f5; /* Light grey background from your image */
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.txn-id {
+  font-weight: 700;
+  color: #333;
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.txn-date {
+  color: #999;
+  margin: 4px 0 0 0;
+  font-size: 0.85rem;
+}
+
+.txn-info-right {
+  text-align: right;
+}
+
+.txn-amount {
+  font-weight: 800;
+  color: #333;
+  margin: 0;
+  font-size: 1rem;
+}
+
+.txn-method {
+  color: #999;
+  margin: 4px 0 0 0;
+  font-size: 0.8rem;
+}
+
+/* History View Specific Styles */
+.history-item-container {
+    background: white;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    border: 1px solid #e0e0e0;
+    overflow: hidden;
+}
+
+.history-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.history-row:hover {
+    background: #fcfcfc;
+}
+
+/* Container and Stats */
+.history-view {
+  height: calc(100vh - 80px); /* Adjust based on your nav height */
+  overflow-y: auto;
+  padding-bottom: 40px;
+  background-color: #eff1ef;
+}
+
+.view-title {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  margin-bottom: 30px;
+}
+
+.view-inner-container {
+    max-width: 1100px; /* Standardized width for all views */
+    margin: 0 auto;
+    padding: 20px 40px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.history-search-container {
+  display: flex;
+  align-items: center;
+  background: #ffffff;
+  padding: 12px 20px;
+  border-radius: 10px;
+  margin-bottom: 30px;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.history-search-container input {
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
+  border: none;
+  outline: none;
+  width: 100%;
+  margin-left: 12px;
+}
+
+.history-stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); /* Creates 3 equal-width columns */
+  gap: 24px; /* Adds space between the columns */
+  margin-bottom: 40px; /* Adds space below the stats row */
+}
+
+.history-stats-row .h-stat-card {
+  background-color: #ffffff; /* Light grey background for each card */
+  border-radius: 8px; /* Rounded corners for each card */
+  padding: 20px; /* Padding inside the card */
+  box-shadow: 0 2px 5px rgba(100, 100, 100, 0.1); /* Optional: Subtle shadow for the card */
+  text-align: center; /* Centers the content in each card */
+}
+
+.history-stats-row .h-stat-card .h-stat-value.total-revenue {
+  background-color: #4caf50; /* Green background for Total Revenue */
+  color: white; /* White text color */
+  padding: 10px;
+  border-radius: 5px;
+}
+
+.history-stats-row .h-stat-card .h-stat-value.avg-transaction {
+  background-color: #ffffff; /* Blue background for Average Transaction */
+  color: white; /* White text color */
+  padding: 10px;
+  border-radius: 5px;
+}
+
+.history-stats-row .h-stat-card .h-stat-value.total-transactions {
+  background-color: #ff9800; /* Orange background for Total Transactions */
+  color: white; /* White text color */
+  padding: 10px;
+  border-radius: 5px;
+}
+
+.history-accordion {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  /* Ensures the list doesn't push the page infinitely */
+  margin-top: 20px;
+}
+
+
+.h-stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -1px;
+}
+
+.txn-id-text, .item-name-text {
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.txn-total-text, .total-row-bold {
+  font-weight: 700;
+  font-size: 18px;
+}
+
+.method-pill {
+  font-weight: 600;
+  background: #e9ecef;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  color: #6c757d;
+}
+
+/* Custom Scrollbar for better look */
+.history-view::-webkit-scrollbar {
+  width: 8px;
+}
+.history-view::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+.history-view::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 10px;
+}
+
+.h-stat-card {
+  background: white;
+  padding: 24px;
+  border-radius: 12px;
+  border: 1px solid #eef0ee;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.03);
+}
+
+.h-stat-label {
+  color: #666;
+  font-size: 14px;
+  font-weight: 500;
+  margin: 0 0 8px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.h-stat-value {
+  font-size: 32px;
+  font-weight: 700;
+  margin: 0;
+  color: #1a1a1a;
+}
+
+/* Accordion Cards - Improved Typography */
+.history-card {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e0e0e0;
+  margin-bottom: 16px;
+  transition: all 0.2s ease;
+}
+
+.txn-id-text {
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  font-size: 16px;
+  color: #1a1a1a;
+}
+
+.method-pill {
+  font-weight: 500;
+  background: #f0f2f0;
+  color: #5d7c5d; /* Using your primary green for the text */
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+}
+
+.txn-total-text {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.item-name-text {
+  font-weight: 600;
+  font-size: 15px;
+  color: #333;
+}
+
+/* Dashboards Stat Icon Fix (From previous step) */
+.stat-icon-bg {
+  width: 48px;         /* Reduced from original size */
+  height: 48px;        /* Reduced from original size */
+  background-color: rgba(93, 124, 93, 0.1); /* Soft green tint */
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;      /* Prevents the circle from squishing */
+}
+
+.stat-img-icon {
+  width: 24px;         /* Specific size for the icon */
+  height: 24px;
+  object-fit: contain; /* Ensures the icon doesn't stretch */
+  opacity: 0.8;        /* Optional: makes it look a bit more modern/subtle */
+}
+
+/* Accordion Cards */
+.history-card { background: white; border-radius: 12px; border: 1px solid #ddd; margin-bottom: 15px; overflow: hidden; }
+.history-card.expanded { border: 1px solid #999; }
+.history-card-header { padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+
+.id-badge-row { display: flex; align-items: center; gap: 10px; margin-bottom: 5px; }
+.txn-id-text { font-weight: 700; color: #333; }
+.method-pill { background: #e0e4e0; color: #777; padding: 2px 10px; border-radius: 12px; font-size: 11px; }
+
+.txn-meta-text { font-size: 12px; color: #999; margin: 0; }
+.txn-total-text { font-size: 18px; font-weight: 700; margin-right: 15px; }
+
+/* Expanded Body */
+.history-card-body { padding: 20px; background: #f9f9f9; border-top: 1px solid #eee; }
+.body-section-title { font-weight: 700; font-size: 14px; margin-bottom: 15px; }
+
+.item-detail-row { 
+  display: flex; justify-content: space-between; align-items: center; 
+  background: white; padding: 12px 15px; border-radius: 8px; margin-bottom: 8px;
+}
+.item-name-text { font-weight: 600; margin: 0; font-size: 14px; }
+.item-calc-text { font-size: 12px; color: #888; margin: 2px 0 0 0; }
+.item-price-sum { font-weight: 700; font-size: 14px; }
+
+.history-financial-summary { margin-top: 20px; padding-top: 15px; border-top: 1px dashed #ccc; }
+.f-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 14px; color: #666; }
+.f-total { font-weight: 800; color: #000; font-size: 16px; margin-top: 10px; }
+
+.method-badge {
+    background: #e8e8e8;
+    padding: 2px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #666;
+}
+
+.history-price-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.chevron {
+    font-size: 18px;
+    color: #999;
+    transition: transform 0.3s;
+}
+
+.chevron.open {
+    transform: rotate(180deg);
+}
+
+.history-details-expanded {
+    padding: 20px;
+    background: #fff;
+    border-top: 1px solid #eee;
+}
+
+.items-header {
+    font-weight: 800;
+    font-size: 14px;
+    margin-bottom: 15px;
+}
+
+.expanded-item-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    background: #f9f9f9;
+    border-radius: 8px;
+    margin-bottom: 8px;
+}
+
+.item-name {
+    font-weight: 700;
+    margin: 0;
+}
+
+.item-price-calc {
+    font-size: 12px;
+    color: #888;
+    margin: 2px 0 0 0;
+}
+
+.item-row-total {
+    font-weight: 700;
+}
+
+.expanded-summary {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+}
+
+.summary-line {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+    font-size: 14px;
+    color: #555;
+}
+
+.summary-line.total {
+    font-weight: 800;
+    font-size: 16px;
+    color: #000;
+    margin-top: 10px;
+}
+.recent-transactions-list {
+  max-height: 300px; /* Example: Set a height for the scrollable area */
+  overflow-y: auto;  /* Enables vertical scrolling */
+  padding-right: 8px; /* Space for the scrollbar to prevent touching text */
+}
+
+.recent-transactions-list::-webkit-scrollbar {
+  width: 8px; /* Customize the width of the scrollbar */
+}
+
+.recent-transactions-list::-webkit-scrollbar-track {
+  background: #f8f8f8; /* Lighter grey background for the scrollbar track */
+  border-radius: 10px;  /* Optional: Rounded corners for the scrollbar track */
+}
+
+.recent-transactions-list::-webkit-scrollbar-thumb {
+  background: #cccccc;  /* Lighter grey for the scrollbar thumb */
+  border-radius: 10px;   /* Optional: Rounded corners for the scrollbar thumb */
+}
+
+.recent-transactions-list::-webkit-scrollbar-thumb:hover {
+  background: #a5a5a5;  /* Darker color when hovering over the scrollbar thumb */
+}
+
+.transaction-card {
+  background-color: #f5f5f5; /* Light grey background from your image */
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.txn-id {
+  font-weight: 700;
+  color: #333;
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.txn-date {
+  color: #999;
+  margin: 4px 0 0 0;
+  font-size: 0.85rem;
+}
+
+.txn-info-right {
+  text-align: right;
+}
+
+.txn-amount {
+  font-weight: 800;
+  color: #333;
+  margin: 0;
+  font-size: 1rem;
+}
+
+.txn-method {
+  color: #999;
+  margin: 4px 0 0 0;
+  font-size: 0.8rem;
+}
+
+/* Dashboard Specific Layout */
+.dashboard-view {
+    padding: 40px;
+    background-color: #eff1ef; /* The grey background from your screenshot */
+    min-height: calc(100vh - 80px);
+}
+
+.dashboard-header-title {
+    font-size: 30px;
+    font-weight: 800;
+    margin-bottom: 30px;
+    color: #2d2d2d;
+}
+
+.view-header-title {
+  font-size: 50px;
+  font-weight: 800;
+  margin-bottom: -20px;
+  color: #2d2d2d;
+}
+
+/* Typography specifics for History (from image 276a7a.png) */
+.view-title {
+  font-size: 30px;
+  font-weight: 700;
+  margin-bottom: -5px;
+  margin-left: -37px;
+  padding: 40px;
+}
+
+/* Payment Methods Card Styling */
+.payment-methods-card {
+    background: #ffffff;
+    padding: 24px;
+    border-radius: 12px;
+    border: 1px solid #e0e0e0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.payment-methods-card h3 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 20px;
+    color: #1a1a1a;
+}
+
+.payment-item {
+    margin-bottom: 20px;
+}
+
+.payment-info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.payment-label {
+    font-weight: 600;
+    font-size: 14px;
+    color: #1a1a1a;
+}
+
+.payment-stats {
+    font-size: 14px;
+    color: #a6a6a6; /* Muted gray for the 2 (67%) part */
+    font-weight: 500;
+}
+
+/* Progress Bar Styling */
+.progress-bar-bg {
+    width: 100%;
+    height: 8px;
+    background-color: #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+/* Progress Bar Fill (The green bar) */
+.progress-bar-fill {
+  height: 100%; /* Ensures it fills the height of .progress-bar-bg */
+  background-color: #5d7c5d; /* Your PharmaCare green */
+  border-radius: 4px;
+  transition: width 0.3s ease;
+  /* If width is not set here or in HTML, it stays at 0 */
+  width: 0%; 
+}
+
+/* 4-Column Stat Cards */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.stat-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.stat-info h3 {
+    font-size: 0.85rem;
+    color: #888;
+    text-transform: capitalize;
+    margin-bottom: 10px;
+}
+
+.stat-value {
+    font-size: 24px;
+    font-weight: 800;
+    color: #2d2d2d;
+    margin: 0;
+}
+
+.stat-subtext {
+    font-size: 0.8rem;
+    color: #888;
+    margin-top: 5px;
+}
+
+.stat-icon-bg {
+    background: #e6e6e4;
+    padding: 10px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 2x2 Main Content Grid */
+.dashboard-main-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr; 
+  gap: 20px;
+  margin-top: 24px;
+  /* REMOVED align-items: start; - This allows stretching */
+  width: 100%;
+}
+
+.content-card {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid #eef0ee;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+  min-height: 350px; /* Gives them a uniform base height */
+  display: flex;
+  flex-direction: column;
+  max-height: 450px;       /* Keeps the whole card contained */
+  overflow: hidden;
+}
+
+.card-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 25px;
+    color: #2d2d2d;
+}
+
+/* Transaction List overrides for Dashboard */
+.recent-transactions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.transaction-card {
+    background-color: #f8f8f8; /* Very light grey */
+    border-radius: 10px;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Container for the icon - ensures it stays small and square */
+.stat-icon-bg {
+  width: 48px;
+  height: 48px;
+  background-color: #f0f2f0; /* Matches the light grey/green tint in your design */
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0; /* Prevents the box from squishing */
+}
+
+/* The actual image icon */
+.stat-img-icon {
+  width: 24px;  /* Adjust this to make the icon larger or smaller inside the box */
+  height: 24px;
+  object-fit: contain;
+}
+
+/* Ensures the stat card content and icon sit side-by-side */
+.stat-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  border: 1px solid #e0e0e0;
+}
+
+.stat-info h3 {
+  font-size: 14px;
+  color: #666;
+  margin: 0 0 8px 0;
+  font-weight: 500;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0;
+  color: #333;
+}
+
+.txn-id-label, .txn-id-value  {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+/* ✅ ADDED: Method pill designs for Transaction History */
+/* Add these modifier classes on your method pill element:
+   - Credit/Debit Card: class="method-pill card"
+   - Cash Payment:      class="method-pill cash"
+   - Mobile Payment:    class="method-pill mobile"
+*/
+.method-pill {
+  display: inline-flex; /* Keeps text in one line */
+  align-items: center; /* Vertically centers the text */
+  padding: 3px 9px; /* Smaller padding for a compact pill shape */
+  border-radius: 50px; /* Fully rounded corners for an oval shape */
+  font-weight: 450; /* Slightly lighter font weight for thinner text */
+  font-size: 0.70rem; /* Smaller font size */
+  white-space: nowrap; /* Prevents text from wrapping */
+}
+
+.method-pill.card {
+  background: #dbeafe; /* Light blue */
+  border: 1px solid #7db5ff; /* Dark blue */
+  color: #7db5ff; /* Blue text */
+}
+
+.method-pill.cash {
+  background: #defcdc; /* Light green */
+  border: 1px solid #9ee63f; /* Dark green */
+  color: #8cd86b; /* Green text */
+}
+
+.method-pill.mobile {
+  background: #ffedd5; /* Light orange */
+  border: 1px solid #f99c39; /* Dark orange */
+  color: #f99c39; /* Orange text */
+}
+
