@@ -119,7 +119,24 @@ body, button, input {
   background-color: #f9f9f9 !important;
   padding: 20px;
   flex: 1;
-  overflow-y: auto;
+  overflow-y: auto;  /* Enable scrolling when content exceeds the container height */
+}
+.inventory-section::-webkit-scrollbar {
+  width: 8px; /* Adjust scrollbar width */
+}
+
+.inventory-section::-webkit-scrollbar-track {
+  background: #f1f1f1; /* Light background for the track */
+  border-radius: 10px;
+}
+
+.inventory-section::-webkit-scrollbar-thumb {
+  background: #cccccc; /* Custom thumb color (green) */
+  border-radius: 10px;
+}
+
+.inventory-section::-webkit-scrollbar-thumb:hover {
+  background: #c0bfbf; /* Darker green on hover */
 }
 
 .search-box {
@@ -909,7 +926,7 @@ body, button, input {
 
 /* Dashboard Main Container */
 .dashboard-view {
-  padding: 15px 40px 30px;
+  padding: 20px;
   overflow-y: auto;
   height: calc(100vh - 80px);
   background-color: var(--bg-main);
@@ -926,26 +943,118 @@ body, button, input {
   flex-direction: column;
   gap: 12px;
   margin-top: 15px;
+
+.transaction-card .txn-id {
+  font-size: 0.90rem; /* Smaller font size */
+  color: #282828; /* Optional: Slightly darker color for subtle appearance */
+}
   
+.transaction-card .txn-method {
+  display: inline-flex; /* Keeps text in one line */
+  align-items: center; /* Vertically centers the text */
+  padding: 3px 9px; /* Smaller padding for a compact pill shape */
+  border-radius: 50px; /* Fully rounded corners for an oval shape */
+  font-weight: 450; /* Lighter font weight for thinner text */
+  font-size: 0.70rem; /* Smaller font size */
+  white-space: nowrap; /* Prevents text from wrapping */
+}
+
+.transaction-card .txn-method.cash {
+  background: #defcdc; /* Light green */
+  border: 1px solid #9ee63f; /* Dark green */
+  color: #8cd86b; /* Green text */
+}
+
+.transaction-card .txn-method.card {
+  background: #dbeafe; /* Light blue */
+  border: 1px solid #7db5ff; /* Dark blue */
+  color: #7db5ff; /* Blue text */
+}
+
+.transaction-card .txn-method.mobile {
+  background: #ffedd5; /* Light orange */
+  border: 1px solid #f99c39; /* Dark orange */
+  color: #f99c39; /* Orange text */
+}
+
   /* Critical changes for scrolling: */
   max-height: 300px;       /* Adjust this height as needed */
   overflow-y: auto;        /* Adds a scrollbar only when items overflow */
   padding-right: 8px;      /* Space for the scrollbar so it doesn't touch the text */
 }
 
-.recent-transactions-list::-webkit-scrollbar-track {
-  background: #f1f1f1;
+.history-scroll-area {
+  background-color: #ffffff; /* Light grey background for the scrollable area */
+  max-height: 300px;         /* Adjust this height as needed */
+  overflow-y: auto;          /* Adds a scrollbar when content overflows */
+  padding-right: 8px;        /* Space for the scrollbar to prevent touching the text */
+  border-radius: 10px;       /* Rounded corners for the scrollable area */
+  padding: 10px;             /* Padding inside the scrollable area */
+  box-sizing: border-box;    /* Ensures padding is included within the height and width */
+}
+
+.history-scroll-area::-webkit-scrollbar {
+  width: 8px; /* Customize the width of the scrollbar */
+}
+
+.history-scroll-area::-webkit-scrollbar-track {
+  background: #ffffff; /* Light background for the scrollbar track */
   border-radius: 10px;
 }
 
-.recent-transactions-list::-webkit-scrollbar-thumb {
-  background: #adc7ad;    /* Using your green theme color */
-  border-radius: 10px;
+.history-scroll-area::-webkit-scrollbar-thumb {
+  background: #cccccc;  /* Using a green theme color */
+  border-radius: 10px;   /* Rounded corners for the scrollbar thumb */
 }
 
-.recent-transactions-list::-webkit-scrollbar-thumb:hover {
-  background: #5d7c5d;
+.history-scroll-area::-webkit-scrollbar-thumb:hover {
+  background: #5d7c5d;   /* Darker green color on hover */
 }
+
+.history-scroll-area .history-card {
+  background-color: #f8f8f8; /* Light background color for transaction cards */
+  border-radius: 10px;          /* Optional: Rounded corners for each transaction card */
+  padding: 12px;               /* Adds padding inside the transaction card */
+  margin-bottom: 3px;         /* Adds space between transaction cards */
+  box-shadow: 0 2px 7px rgba(53, 53, 53, 0.1); /* Optional: Subtle shadow for the card */
+  border: -5px solid #ffffff;  
+}
+
+.history-scroll-area .history-card:hover {
+  background-color: #efefee; /* Change background color on hover for interactivity */
+}
+
+.history-scroll-area .history-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.history-scroll-area .history-card-header .header-left {
+  display: flex;
+  flex-direction: column;
+}
+
+.history-scroll-area .history-card-header .header-right {
+  display: flex;
+  flex-direction: column;
+}
+
+.history-scroll-area .txn-id-text {
+  font-weight: bold;
+  color: #333; /* Darker color for the transaction ID */
+}
+
+.history-scroll-area .txn-meta-text {
+  font-size: 0.85rem;
+  color: #666; /* Lighter color for the transaction date and item count */
+}
+
+.history-scroll-area .txn-total-text {
+  font-weight: bold;
+  color: #333; /* Darker color for the transaction total */
+}
+
 
 .transaction-card {
   background-color: #f5f5f5; /* Light grey background from your image */
@@ -1053,9 +1162,38 @@ body, button, input {
 
 .history-stats-row {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
-  margin-bottom: 40px;
+  grid-template-columns: repeat(3, 1fr); /* Creates 3 equal-width columns */
+  gap: 24px; /* Adds space between the columns */
+  margin-bottom: 40px; /* Adds space below the stats row */
+}
+
+.history-stats-row .h-stat-card {
+  background-color: #ffffff; /* Light grey background for each card */
+  border-radius: 8px; /* Rounded corners for each card */
+  padding: 20px; /* Padding inside the card */
+  box-shadow: 0 2px 5px rgba(100, 100, 100, 0.1); /* Optional: Subtle shadow for the card */
+  text-align: center; /* Centers the content in each card */
+}
+
+.history-stats-row .h-stat-card .h-stat-value.total-revenue {
+  background-color: #4caf50; /* Green background for Total Revenue */
+  color: white; /* White text color */
+  padding: 10px;
+  border-radius: 5px;
+}
+
+.history-stats-row .h-stat-card .h-stat-value.avg-transaction {
+  background-color: #ffffff; /* Blue background for Average Transaction */
+  color: white; /* White text color */
+  padding: 10px;
+  border-radius: 5px;
+}
+
+.history-stats-row .h-stat-card .h-stat-value.total-transactions {
+  background-color: #ff9800; /* Orange background for Total Transactions */
+  color: white; /* White text color */
+  padding: 10px;
+  border-radius: 5px;
 }
 
 .history-accordion {
@@ -1066,12 +1204,6 @@ body, button, input {
   margin-top: 20px;
 }
 
-/* Typography specifics for History (from image 276a7a.png) */
-.view-title {
-  font-size: 24px;
-  font-weight: 700;
-  margin-bottom: 20px;
-}
 
 .h-stat-value {
   font-size: 28px;
@@ -1301,10 +1433,27 @@ body, button, input {
     margin-top: 10px;
 }
 .recent-transactions-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding-top: 10px;
+  max-height: 300px; /* Example: Set a height for the scrollable area */
+  overflow-y: auto;  /* Enables vertical scrolling */
+  padding-right: 8px; /* Space for the scrollbar to prevent touching text */
+}
+
+.recent-transactions-list::-webkit-scrollbar {
+  width: 8px; /* Customize the width of the scrollbar */
+}
+
+.recent-transactions-list::-webkit-scrollbar-track {
+  background: #f8f8f8; /* Lighter grey background for the scrollbar track */
+  border-radius: 10px;  /* Optional: Rounded corners for the scrollbar track */
+}
+
+.recent-transactions-list::-webkit-scrollbar-thumb {
+  background: #cccccc;  /* Lighter grey for the scrollbar thumb */
+  border-radius: 10px;   /* Optional: Rounded corners for the scrollbar thumb */
+}
+
+.recent-transactions-list::-webkit-scrollbar-thumb:hover {
+  background: #a5a5a5;  /* Darker color when hovering over the scrollbar thumb */
 }
 
 .transaction-card {
@@ -1354,11 +1503,28 @@ body, button, input {
 }
 
 .dashboard-header-title {
-    font-size: 28px;
+    font-size: 30px;
     font-weight: 800;
     margin-bottom: 30px;
     color: #2d2d2d;
 }
+
+.view-header-title {
+  font-size: 50px;
+  font-weight: 800;
+  margin-bottom: -20px;
+  color: #2d2d2d;
+}
+
+/* Typography specifics for History (from image 276a7a.png) */
+.view-title {
+  font-size: 30px;
+  font-weight: 700;
+  margin-bottom: -5px;
+  margin-left: -37px;
+  padding: 40px;
+}
+
 /* Payment Methods Card Styling */
 .payment-methods-card {
     background: #ffffff;
@@ -1554,3 +1720,44 @@ body, button, input {
   margin: 0;
   color: #333;
 }
+
+.txn-id-label, .txn-id-value  {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+/* ✅ ADDED: Method pill designs for Transaction History */
+/* Add these modifier classes on your method pill element:
+   - Credit/Debit Card: class="method-pill card"
+   - Cash Payment:      class="method-pill cash"
+   - Mobile Payment:    class="method-pill mobile"
+*/
+.method-pill {
+  display: inline-flex; /* Keeps text in one line */
+  align-items: center; /* Vertically centers the text */
+  padding: 3px 9px; /* Smaller padding for a compact pill shape */
+  border-radius: 50px; /* Fully rounded corners for an oval shape */
+  font-weight: 450; /* Slightly lighter font weight for thinner text */
+  font-size: 0.70rem; /* Smaller font size */
+  white-space: nowrap; /* Prevents text from wrapping */
+}
+
+.method-pill.card {
+  background: #dbeafe; /* Light blue */
+  border: 1px solid #7db5ff; /* Dark blue */
+  color: #7db5ff; /* Blue text */
+}
+
+.method-pill.cash {
+  background: #defcdc; /* Light green */
+  border: 1px solid #9ee63f; /* Dark green */
+  color: #8cd86b; /* Green text */
+}
+
+.method-pill.mobile {
+  background: #ffedd5; /* Light orange */
+  border: 1px solid #f99c39; /* Dark orange */
+  color: #f99c39; /* Orange text */
+}
+
