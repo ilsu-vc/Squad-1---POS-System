@@ -1,23 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
-
-// --- POS-003: Your Integrated Service ---
-import { calculateCartTotals, formatCurrencyPHP } from './TransactionService';
-
+import { supabase } from "./supabaseClient";
 // Import Recharts components
-import { 
-  ResponsiveContainer, 
-  BarChart, 
-  Bar,       
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  PieChart, 
-  Pie, 
-  Cell, 
-  Legend 
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,      
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  PieChart,
+  Pie,
+  Cell,
+  Legend
 } from 'recharts';
+
 
 // Import Product Images
 import medicineImg from './assets/images/medicine.png';
@@ -26,6 +24,7 @@ import personalCareImg from './assets/images/personalcare.png';
 import firstAidImg from './assets/images/firstaid.png';
 import healthWellnessImg from './assets/images/health&wellness.png';
 import babyCareImg from './assets/images/babycare.png';
+
 
 // Import Icons
 import dashboard_CI from './assets/images/dashboard_CI.png';
@@ -37,27 +36,55 @@ import history_NCI from './assets/images/history_NCI.png';
 import searchIcon from './assets/images/search_icon.png';
 import deleteIcon from './assets/images/delete_icon.png';
 
+
 // Import Dashboard Stat Icons
 import total_revenue_icon from './assets/images/total_revenue_icon.png';
 import transaction_icon from './assets/images/transaction_icon.png';
 import avg_transaction from './assets/images/avg_transaction.png';
 import items_sold_icon from './assets/images/items_sold_icon.png';
 
+
 // Import Payment Icons
 import cash_icon from './assets/images/cash_icon.png';
 import card_icon from './assets/images/card_icon.png';
 import mobile_icon from './assets/images/mobile_icon.png';
 
+const getPaymentMethodColor = (index) => {
+  const colors = [
+    "#5d7c5d",  // Light Orange for Mobile Payment
+    "#5d7c5d",  // Light Blue for Credit/Debit Card
+    "#5d7c5d",  // Light Green for Cash Payment
+  ];
+  return colors[index];
+};
+
+const getBarColor = (index) => {
+  const colors = [
+    "#5d7c5d",  // Lighter Green
+    "#678b67",  // Light Blue
+    "#73a073",  // Yellow
+    "#7dab7d",  // Light Red
+    "#95b495",  // Orange
+    "#a3bea3",  // Blue Violet
+    "#b0c8b0",  // Lime Green
+    "#cce1cc",  // Tomato Red
+  ];
+  return colors[index % colors.length]; // Cycle through colors
+};
+
 const App = () => {
+  // --- State Variables ---
+  const [dbTransactionId, setDbTransactionId] = useState(null); // UUID from Supabase
+  const [dbReceiptNumber, setDbReceiptNumber] = useState(null);
+
   const [cart, setCart] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [historySearch, setHistorySearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
   const [activeTab, setActiveTab] = useState('POS');
-  const [expandedTxn, setExpandedTxn] = useState(null); 
-  
+  const [expandedTxn, setExpandedTxn] = useState(null);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState(null); 
+  const [paymentMethod, setPaymentMethod] = useState(null);
   const [cashReceived, setCashReceived] = useState('');
   const [paymentStatus, setPaymentStatus] = useState('idle');
 
@@ -65,11 +92,11 @@ const App = () => {
   const [transactions, setTransactions] = useState(() => {
     const saved = localStorage.getItem('pharma_transactions');
     return saved ? JSON.parse(saved) : [
-      { 
-        id: 'TXN-1771607944136', 
+      {
+        id: 'TXN-1771607944136',
         date: 'Feb 21, 2026',
-        time: '1:19:04 AM', 
-        amount: '₱12.31', 
+        time: '1:19:04 AM',
+        amount: '$12.31',
         rawAmount: 12.31,
         method: 'Mobile Payment',
         itemsCount: 1,
@@ -81,9 +108,13 @@ const App = () => {
     ];
   });
 
-  useEffect(() => {
-    localStorage.setItem('pharma_transactions', JSON.stringify(transactions));
-  }, [transactions]);
+  // --- New Function to determine the payment method pill class ---
+  const getMethodPillClass = (method) => {
+    if (method === "Credit/Debit Card") return "card";
+    if (method === "Cash Payment") return "cash";
+    if (method === "Mobile Payment") return "mobile";
+    return "";
+  };
 
   // --- Computed Dashboard Stats ---
   const totalRevenue = transactions.reduce((acc, curr) => acc + curr.rawAmount, 0);
@@ -92,7 +123,10 @@ const App = () => {
 
   // --- Dynamic Chart Data Helpers ---
   const getRevenueByHour = () => {
-    const hours = ['8AM', '9AM', '10AM', '11AM', '12PM', '1PM', '2PM', '3PM', '4PM', '5PM', '6PM', '7PM'];
+    const hours = [
+      '12AM','1AM','2AM','3AM','4AM','5AM','6AM','7AM','8AM','9AM','10AM','11AM',
+      '12PM','1PM','2PM','3PM','4PM','5PM','6PM','7PM','8PM','9PM','10PM','11PM'
+    ];
     return hours.map(h => ({
       time: h,
       amount: transactions.filter(t => t.hour === h).reduce((acc, curr) => acc + curr.rawAmount, 0)
@@ -110,16 +144,26 @@ const App = () => {
     return data.length > 0 ? data : [{ name: 'None', value: 0 }];
   };
 
-  const getPaymentMethodStats = () => {
-    const totalCount = transactions.length;
-    if (totalCount === 0) return [];
-    const methods = ['Mobile Payment', 'Credit/Debit Card', 'Cash Payment'];
-    return methods.map(m => {
-      const count = transactions.filter(t => t.method === m).length;
-      const percentage = Math.round((count / totalCount) * 100);
-      return { name: m, count, percentage };
-    });
-  };
+const getPaymentMethodStats = () => {
+  const totalCount = transactions.length;
+  if (totalCount === 0) return [];
+  const methods = ['Mobile Payment', 'Credit/Debit Card', 'Cash Payment'];
+  
+  const paymentMethodsData = methods.map(m => {
+    const count = transactions.filter(t => t.method === m).length;
+    const percentage = Math.round((count / totalCount) * 100);
+    return { name: m, count, percentage };
+  });
+  
+  // Add colors for each payment method
+  return paymentMethodsData.map((stat, index) => ({
+    ...stat,
+    color: getPaymentMethodColor(index),
+  }));
+};
+
+  // Remaining code..
+
 
   const products = [
     { id: 1, name: 'Acetaminophen 500mg', price: 8.99, image: medicineImg, stock: 150, category: 'OTC Medications' },
@@ -161,14 +205,18 @@ const App = () => {
     { id: 37, name: 'Diaper Rash Cream', price: 7.99, image: babyCareImg, stock: 100, category: 'Baby Care' },
   ];
 
+
   const categories = ['All', 'OTC Medications', 'Vitamins & Supplements', 'Personal Care', 'First Aid', 'Health & Wellness', 'Baby Care'];
 
-  const filteredProducts = products.filter(p => 
+
+  const filteredProducts = products.filter(p =>
     (activeCategory === 'All' || p.category === activeCategory) &&
     p.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+
   const toggleHistoryItem = (id) => setExpandedTxn(expandedTxn === id ? null : id);
+
 
   const addToCart = (product) => {
     const exists = cart.find(item => item.id === product.id);
@@ -179,56 +227,170 @@ const App = () => {
     }
   };
 
+
   const updateQty = (id, delta) => {
     setCart(cart.map(item => item.id === id ? { ...item, quantity: Math.max(1, item.quantity + delta) } : item));
   };
 
-  const totals = calculateCartTotals(cart);
-  
-  const subtotal = totals.subtotal;
-  const tax = totals.vatAmount;
-  const total = totals.grandTotal;
-  // -------------------------------------------------------------------
+
+  const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+  const tax = subtotal * 0.12;
+  const total = subtotal + tax;
+
 
   const changeAmount = cashReceived ? Math.max(0, parseFloat(cashReceived) - total) : 0;
+
 
   const closePaymentModal = () => {
     setIsPaymentModalOpen(false);
     setPaymentMethod(null);
     setCashReceived('');
     setPaymentStatus('idle');
-    if (paymentStatus === 'success') setCart([]); 
+    if (paymentStatus === 'success') setCart([]);
   };
 
-  const handleCompletePayment = () => {
+
+  const handleCompletePayment = async () => {
+  if (!dbTransactionId) {
+    alert("No DB transaction found. Click Proceed to Payment again.");
+    return;
+  }
+
+
+  try {
+    // --- 1) mark DB transaction as PAID and insert---
+    const { error: updErr } = await supabase
+      .from("transactions")
+      .update({
+      status: "paid",
+      paid_at: new Date().toISOString(),
+      vat: Number(tax.toFixed(2)),
+  })
+  .eq("id", dbTransactionId);
+
+
+    if (updErr) throw updErr;
+
+
+    // --- 2) call your receipt function ---
+    const { data: receiptRows, error: rpcErr } = await supabase.rpc(
+      "get_or_create_receipt_for_transaction",
+      { p_transaction_id: dbTransactionId }
+    );
+
+
+    if (rpcErr) throw rpcErr;
+
+
+    const receipt = Array.isArray(receiptRows) ? receiptRows[0] : receiptRows;
+    const receiptNo = receipt?.receipt_number ?? null;
+    setDbReceiptNumber(receiptNo);
+
+
+    // --- 3) keep your existing local transaction history logic ---
     const now = new Date();
-    const formattedHour = now.getHours() >= 12 
-        ? (now.getHours() === 12 ? '12PM' : (now.getHours() - 12) + 'PM') 
-        : (now.getHours() === 0 ? '12AM' : now.getHours() + 'AM');
+    const formattedHour =
+      now.getHours() >= 12
+        ? now.getHours() === 12
+          ? "12PM"
+          : now.getHours() - 12 + "PM"
+        : now.getHours() === 0
+        ? "12AM"
+        : now.getHours() + "AM";
+
 
     const methodMap = {
-        'cash': 'Cash Payment',
-        'card': 'Credit/Debit Card',
-        'mobile': 'Mobile Payment'
+      cash: "Cash Payment",
+      card: "Credit/Debit Card",
+      mobile: "Mobile Payment",
     };
 
+
     const newTransaction = {
-      id: `TXN-${Date.now()}`,
-      date: now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      // Keep your old ID if you want, but it's better to store the real UUID:
+      id: dbTransactionId, // ✅ real DB UUID
+      receiptNumber: receiptNo, // ✅ your sequential receipt
+      date: now.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+      time: now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
       hour: formattedHour,
-      amount: formatCurrencyPHP(total), // Saved as PHP
+      amount: `$${total.toFixed(2)}`,
       rawAmount: total,
       method: methodMap[paymentMethod],
       itemsCount: cart.reduce((sum, item) => sum + item.quantity, 0),
-      items: cart.map(item => ({ name: item.name, qty: item.quantity, price: item.price, category: item.category })),
-      subtotal: subtotal,
-      tax: tax
+      items: cart.map((item) => ({
+        name: item.name,
+        qty: item.quantity,
+        price: item.price,
+        category: item.category,
+      })),
+      subtotal,
+      tax,
     };
 
+
     setTransactions([newTransaction, ...transactions]);
-    setPaymentStatus('success');
-  };
+    setPaymentStatus("success");
+  } catch (err) {
+    console.error(err);
+    alert(err.message || "Failed to complete payment / generate receipt.");
+  }
+};
+
+
+const handleCancelPayment = async () => {
+  if (!dbTransactionId) {
+    setIsPaymentModalOpen(false);
+    return;
+  }
+
+
+  try {
+    const { error } = await supabase
+      .from("transactions")
+      .update({ status: "cancelled" })
+      .eq("id", dbTransactionId);
+
+
+    if (error) throw error;
+
+
+    // reset local UI state
+    setPaymentStatus("idle");
+    setDbReceiptNumber(null);
+    setDbTransactionId(null);
+    setIsPaymentModalOpen(false);
+  } catch (err) {
+    console.error(err);
+    alert(err.message || "Failed to cancel transaction.");
+  }
+};
+
+
+  const handleProceedToPayment = async () => {
+  try {
+    // Create transaction in DB (UUID auto-generated)
+    const { data, error } = await supabase
+      .from("transactions")
+      .insert({ status: "pending" })
+      .select("id")
+      .single();
+
+
+    if (error) throw error;
+
+
+    setDbTransactionId(data.id);
+    setDbReceiptNumber(null);
+
+
+    // open modal
+    setIsPaymentModalOpen(true);
+  } catch (err) {
+    console.error(err);
+    alert(err.message || "Failed to create transaction.");
+  }
+};
+
 
   return (
     <div className="pos-container">
@@ -247,16 +409,17 @@ const App = () => {
         </div>
       </header>
 
+
       {activeTab === 'Dashboard' && (
         <div className="dashboard-view">
           <div className="view-inner-container">
             <h2 className="dashboard-header-title">Dashboard Overview</h2>
-            
+           
             <div className="stats-grid">
               <div className="stat-card">
                 <div className="stat-info">
                   <h3>Total Revenue</h3>
-                  <p className="stat-value">{formatCurrencyPHP(totalRevenue)}</p>
+                  <p className="stat-value">${totalRevenue.toFixed(2)}</p>
                   <p className="stat-subtext">↗ Today</p>
                 </div>
                 <div className="stat-icon-bg"><img src={total_revenue_icon} alt="" className="stat-img-icon" /></div>
@@ -272,7 +435,7 @@ const App = () => {
               <div className="stat-card">
                 <div className="stat-info">
                   <h3>Avg. Transaction</h3>
-                  <p className="stat-value">{formatCurrencyPHP(avgTransaction)}</p>
+                  <p className="stat-value">${avgTransaction.toFixed(2)}</p>
                   <p className="stat-subtext">Per order</p>
                 </div>
                 <div className="stat-icon-bg"><img src={avg_transaction} alt="" className="stat-img-icon" /></div>
@@ -287,30 +450,37 @@ const App = () => {
               </div>
             </div>
 
+
             <div className="dashboard-main-grid">
               <div className="content-card">
                 <h3 className="card-title">Revenue by Hour</h3>
                 <div style={{ width: '100%', height: '100%', minHeight: '200px' }}>
                   <ResponsiveContainer>
-                    <BarChart data={getRevenueByHour()}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
-                      <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{fontSize: 12, fontWeight: 500, fill: '#666'}} />
-                      <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fontWeight: 500, fill: '#666'}} />
-                      <Tooltip cursor={{fill: '#f5f5f5'}} contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)'}} />
-                      <Bar dataKey="amount" fill="#5d7c5d" radius={[4, 4, 0, 0]} barSize={30} />
-                    </BarChart>
-                  </ResponsiveContainer>
+  <BarChart data={getRevenueByHour()}>
+    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
+    <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{fontSize: 12, fontWeight: 500, fill: '#666'}} />
+    <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fontWeight: 500, fill: '#666'}} />
+    <Tooltip cursor={{fill: '#f5f5f5'}} contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)'}} />
+    <Bar dataKey="amount" radius={[4, 4, 0, 0]} barSize={30}>
+      {/* Add dynamic colors for each bar */}
+      {getRevenueByHour().map((entry, index) => (
+        <Cell key={`cell-${index}`} fill={getBarColor(index)} />
+      ))}
+    </Bar>
+  </BarChart>
+</ResponsiveContainer>
                 </div>
               </div>
+
 
               <div className="content-card">
                 <h3 className="card-title">Sales by Category</h3>
                 <div style={{ width: '100%', height: '100%', minHeight: '200px' }}>
                   <ResponsiveContainer>
                     <PieChart>
-                      <Pie 
-                        data={getCategoryData()} 
-                        cx="50%" cy="50%" outerRadius={60} dataKey="value" 
+                      <Pie
+                        data={getCategoryData()}
+                        cx="50%" cy="50%" outerRadius={60} dataKey="value"
                         labelLine={true}
                         label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                       >
@@ -325,38 +495,51 @@ const App = () => {
                 </div>
               </div>
 
+
               <div className="content-card">
-                <h3 className="card-title">Payment Methods</h3>
-                <div className="payment-methods-scroll">
-                  {getPaymentMethodStats().map(stat => (
-                    <div className="payment-item" key={stat.name}>
-                        <div className="payment-info-row">
-                            <span className="payment-label">{stat.name}</span>
-                            <span className="payment-stats">{stat.count} ({stat.percentage}%)</span>
-                        </div>
-                        <div className="progress-bar-bg">
-                            <div className="progress-bar-fill" style={{ width: `${stat.percentage}%` }}></div>
-                        </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+  <h3 className="card-title">Payment Methods</h3>
+  <div className="payment-methods-scroll">
+    {getPaymentMethodStats().map((stat) => (
+      <div className="payment-item" key={stat.name}>
+        <div className="payment-info-row">
+          <span className="payment-label">{stat.name}</span>
+          <span className="payment-stats">{stat.count} ({stat.percentage}%)</span>
+        </div>
+        <div className="progress-bar-bg">
+          <div className="progress-bar-fill" style={{ width: `${stat.percentage}%`, backgroundColor: stat.color }}></div>
+        </div>
+      </div>
+    ))}
+  </div>
+</div>
+
 
               <div className="content-card">
                 <h3 className="card-title">Recent Transactions</h3>
-                <div className="recent-transactions-list">
-                  {transactions.slice(0, 5).map((txn) => (
-                    <div key={txn.id} className="transaction-card">
-                      <div><p className="txn-id">{txn.id}</p><p className="txn-date">{txn.time}</p></div>
-                      <div className="txn-info-right"><p className="txn-amount">{txn.amount}</p><p className="txn-method">{txn.method}</p></div>
-                    </div>
-                  ))}
-                </div>
+              <div className="recent-transactions-list">
+  {transactions.slice(0, 5).map((txn) => (
+    <div 
+      key={txn.id} 
+      className="transaction-card"
+    >
+      <div>
+        <p className="txn-id">{txn.id}</p>
+        <p className="txn-date">{txn.time}</p>
+      </div>
+      <div className="txn-info-right">
+        <p className="txn-amount">{txn.amount}</p>
+        {/* Add dynamic class for method */}
+        <p className={`txn-method ${getMethodPillClass(txn.method)}`}>{txn.method}</p>
+      </div>
+    </div>
+  ))}
+</div>
               </div>
             </div>
           </div>
         </div>
       )}
+
 
       {activeTab === 'History' && (
         <div className="history-view">
@@ -367,13 +550,16 @@ const App = () => {
               <input type="text" className="modern-input" placeholder="Search by transaction ID..." value={historySearch} onChange={(e) => setHistorySearch(e.target.value)} />
             </div>
 
+
             <div className="history-stats-row">
                <div className="h-stat-card"><p className="h-stat-label">Total Transactions</p><h2 className="h-stat-value">{transactions.length}</h2></div>
-               <div className="h-stat-card"><p className="h-stat-label">Total Revenue</p><h2 className="h-stat-value">{formatCurrencyPHP(totalRevenue)}</h2></div>
-               <div className="h-stat-card"><p className="h-stat-label">Average Transaction</p><h2 className="h-stat-value">{formatCurrencyPHP(avgTransaction)}</h2></div>
+               <div className="h-stat-card"><p className="h-stat-label">Total Revenue</p><h2 className="h-stat-value">${totalRevenue.toFixed(2)}</h2></div>
+               <div className="h-stat-card"><p className="h-stat-label">Average Transaction</p><h2 className="h-stat-value">${avgTransaction.toFixed(2)}</h2></div>
             </div>
 
-            <div className="history-scroll-area">
+
+            {/* ✅ ADDED: scrollable container for many transactions */}
+            <div className="history-scroll-area" style={{ maxHeight: "60vh", overflowY: "auto" }}>
               <div className="history-accordion">
                  {transactions.filter(t => t.id.toLowerCase().includes(historySearch.toLowerCase())).map(txn => (
                     <div key={txn.id} className={`history-card ${expandedTxn === txn.id ? 'expanded' : ''}`}>
@@ -381,7 +567,8 @@ const App = () => {
                             <div className="header-left">
                                 <div className="id-badge-row">
                                     <span className="txn-id-text">{txn.id}</span>
-                                    <span className="method-pill">{txn.method}</span>
+                                    {/* ✅ CHANGED: method pill now has the right class for colors */}
+                                   <span className={`method-pill ${getMethodPillClass(txn.method)}`}>{txn.method}</span>
                                 </div>
                                 <p className="txn-meta-text">{txn.date}, {txn.time} • {txn.itemsCount} items</p>
                             </div>
@@ -398,15 +585,15 @@ const App = () => {
                                       <div key={idx} className="item-detail-row">
                                           <div className="item-info">
                                               <p className="item-name-text">{item.name}</p>
-                                              <p className="item-calc-text">{formatCurrencyPHP(item.price)} × {item.qty}</p>
+                                              <p className="item-calc-text">${item.price} × {item.qty}</p>
                                           </div>
-                                          <p className="item-price-sum">{formatCurrencyPHP(item.price * item.qty)}</p>
+                                          <p className="item-price-sum">${(item.price * item.qty).toFixed(2)}</p>
                                       </div>
                                   ))}
                                 </div>
                                 <div className="history-financial-summary">
-                                    <div className="f-row"><span>Subtotal:</span> <span>{formatCurrencyPHP(txn.subtotal)}</span></div>
-                                    <div className="f-row"><span>Tax:</span> <span>{formatCurrencyPHP(txn.tax)}</span></div>
+                                    <div className="f-row"><span>Subtotal:</span> <span>${txn.subtotal.toFixed(2)}</span></div>
+                                    <div className="f-row"><span>Tax:</span> <span>${txn.tax.toFixed(2)}</span></div>
                                     <div className="f-row f-total"><span>Total:</span> <span>{txn.amount}</span></div>
                                 </div>
                             </div>
@@ -418,6 +605,7 @@ const App = () => {
           </div>
         </div>
       )}
+
 
       {activeTab === 'POS' && (
         <main className="pos-content">
@@ -438,7 +626,7 @@ const App = () => {
                   <h3 className="product-name">{product.name}</h3>
                   <p className="cat-label">{product.category}</p>
                   <div className="card-footer">
-                      <div><span className="price">{formatCurrencyPHP(product.price)}</span><span className="stock">Stock: {product.stock}</span></div>
+                      <div><span className="price">${product.price.toFixed(2)}</span><span className="stock">Stock: {product.stock}</span></div>
                       <button className="add-btn" onClick={() => addToCart(product)}>+</button>
                   </div>
                 </div>
@@ -452,50 +640,68 @@ const App = () => {
               {cart.map(item => (
                 <div key={item.id} className="cart-item">
                   <div className="item-details">
-                    <h4 className="cart-item-name">{item.name}</h4><p className="item-price-each">{formatCurrencyPHP(item.price)} each</p>
+                    <h4 className="cart-item-name">{item.name}</h4><p className="item-price-each">${item.price.toFixed(2)} each</p>
                     <div className="qty-controls">
                       <button onClick={() => updateQty(item.id, -1)}>-</button><span>{item.quantity}</span><button onClick={() => updateQty(item.id, 1)}>+</button>
                     </div>
                   </div>
                   <div className="item-total-section">
                     <button className="delete-item" onClick={() => setCart(cart.filter(i => i.id !== item.id))}><img src={deleteIcon} alt="Delete" /></button>
-                    <p className="item-total">{formatCurrencyPHP(item.price * item.quantity)}</p>
+                    <p className="item-total">${(item.price * item.quantity).toFixed(2)}</p>
                   </div>
                 </div>
               ))}
             </div>
             <div className="billing-summary">
-              {/* --- POS-003: Now using your formatCurrencyPHP function --- */}
               <div className="bill-row">
-                <span>Subtotal:</span> 
-                <span id="display-subtotal">{formatCurrencyPHP(subtotal)}</span>
+                <span>Subtotal:</span>
+                <span id="display-subtotal">${subtotal.toFixed(2)}</span>
               </div>
               <div className="bill-row">
-                <span>Tax (12% inclusive):</span> 
-                <span id="display-vat">{formatCurrencyPHP(tax)}</span>
+                <span>Tax (12%):</span>
+                <span id="display-vat">${tax.toFixed(2)}</span>
               </div>
               <hr />
               <div className="bill-row total">
-                <span>Total:</span> 
-                <span id="display-grand-total">{formatCurrencyPHP(total)}</span>
+                <span>Total:</span>
+                <span id="display-grand-total">${total.toFixed(2)}</span>
               </div>
-              <button className="pay-btn" onClick={() => setIsPaymentModalOpen(true)}>Proceed to Payment</button>
-            </div>
+                <button className="pay-btn" onClick={handleProceedToPayment}> Proceed to Payment</button>            
+              </div>
           </aside>
         </main>
       )}
+
 
       {isPaymentModalOpen && (
         <div className="modal-overlay">
           {paymentStatus === 'success' ? (
             <div className="success-modal">
-              <div className="success-icon">✓</div><h2 className="modal-title">Payment Successful!</h2><p>Transaction completed</p>
+              <div className="success-icon">✓</div><h2 className="modal-title">Payment Successful!</h2>
+              <p>
+                Receipt Number:{" "}
+                <strong>{dbReceiptNumber ? dbReceiptNumber : "Generating..."}</strong>
+              </p>
+              <p>Transaction completed</p>
               <button className="close-success-btn" onClick={closePaymentModal}>Back to POS</button>
             </div>
           ) : (
             <div className="payment-modal">
-              <div className="modal-header"><h2 className="modal-title">Payment</h2><button className="close-modal" onClick={closePaymentModal}>✕</button></div>
-              <div className="amount-display"><p>Total Amount</p><h1 className="total-h1">{formatCurrencyPHP(total)}</h1></div>
+
+
+ 
+
+
+            <div className="modal-header">
+              <div>
+                <h2 className="modal-title">Payment</h2>
+                  <p className="txn-id-line"><span className="txn-id-label">Transaction ID:</span>{" "}<span className="txn-id-value">{dbTransactionId ? dbTransactionId : "Generating..."}</span></p>
+                </div><button className="close-modal" onClick={closePaymentModal}>✕</button></div>
+             
+             
+             
+             
+              <div className="amount-display"><p>Total Amount</p><h1 className="total-h1">${total.toFixed(2)}</h1></div>
               {!paymentMethod ? (
                 <div className="payment-options">
                   <p className="section-label">Select Payment Method</p>
@@ -515,19 +721,20 @@ const App = () => {
                   <div className="quick-amounts">
                     <p className="section-label-sm">Quick Amount</p>
                     <div className="quick-grid">
-                      <button className="quick-btn" onClick={() => setCashReceived(total.toFixed(2))}>{formatCurrencyPHP(total)}</button>
-                      <button className="quick-btn" onClick={() => setCashReceived('80')}>₱80</button>
-                      <button className="quick-btn" onClick={() => setCashReceived('100')}>₱100</button>
+                      <button className="quick-btn" onClick={() => setCashReceived(total.toFixed(2))}>${total.toFixed(2)}</button>
+                      <button className="quick-btn" onClick={() => setCashReceived('80')}>$80</button><button className="quick-btn" onClick={() => setCashReceived('100')}>$100</button>
                     </div>
                   </div>
 
+
                   <div className="change-display">
                     <p>Change</p>
-                    <h2>{formatCurrencyPHP(changeAmount)}</h2>
+                    <h2>${changeAmount.toFixed(2)}</h2>
                   </div>
 
+
                   <div className="modal-actions">
-                    <button className="cancel-btn" onClick={closePaymentModal}>Cancel</button>
+                    <button className="cancel-btn" onClick={handleCancelPayment}>Cancel</button>
                     <button className={`complete-btn ${parseFloat(cashReceived) >= total ? 'active' : ''}`} disabled={parseFloat(cashReceived) < total || !cashReceived} onClick={handleCompletePayment}>Complete Payment</button>
                   </div>
                 </div>
@@ -549,5 +756,6 @@ const App = () => {
     </div>
   );
 };
+
 
 export default App;
