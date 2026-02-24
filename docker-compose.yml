@@ -1,0 +1,33 @@
+# ──────────────────────────────────────────────
+# docker-compose.yml for Squad-1 POS System
+# ──────────────────────────────────────────────
+# Run with:  docker compose up --build
+# Stop with: docker compose down
+
+version: '3.8'
+
+services:
+  web:
+    # Build using the Dockerfile in the current directory
+    build: .
+
+    # Map container port 3000 → your machine's port 3000
+    # Access the app at http://localhost:3000
+    ports:
+      - "3000:3000"
+
+    # VOLUMES — mount your local code into the container
+    # so changes you make locally auto-refresh in the browser
+    volumes:
+      - .:/app # Sync your project folder → /app in container
+      - /app/node_modules # BUT keep container's node_modules (don't overwrite with local ones)
+
+    # ENVIRONMENT VARIABLES
+    # These are read from your .env file automatically
+    env_file:
+      - .env
+
+    environment:
+      - CHOKIDAR_USEPOLLING=true # Enables file-watching in Docker (for hot-reload)
+      - WATCHPACK_POLLING=true # Same, for Webpack 5
+      - NODE_OPTIONS=--openssl-legacy-provider # OpenSSL compat for react-scripts 5
