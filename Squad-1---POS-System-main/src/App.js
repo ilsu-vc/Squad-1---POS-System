@@ -398,13 +398,13 @@ const handleCancelPayment = async () => {
         <h1 className="logo">PharmaCare Drugstore POS</h1>
         <div className="nav-actions">
           <button className={activeTab === 'Dashboard' ? 'nav-btn active' : 'nav-btn'} onClick={() => setActiveTab('Dashboard')}>
-            <img src={activeTab === 'Dashboard' ? dashboard_CI : dashboard_NCI} alt="" /> Dashboard
+            <img src={activeTab === 'Dashboard' ? dashboard_CI : dashboard_CI} alt="" /> Dashboard
           </button>
           <button className={activeTab === 'POS' ? 'nav-btn active' : 'nav-btn'} onClick={() => setActiveTab('POS')}>
-            <img src={activeTab === 'POS' ? POS_CI : POS_NCI} alt="" /> POS
+            <img src={activeTab === 'POS' ? POS_CI : POS_CI} alt="" /> POS
           </button>
           <button className={activeTab === 'History' ? 'nav-btn active' : 'nav-btn'} onClick={() => setActiveTab('History')}>
-            <img src={activeTab === 'History' ? history_CI : history_NCI} alt="" /> History
+            <img src={activeTab === 'History' ? history_CI : history_CI} alt="" /> History
           </button>
         </div>
       </header>
@@ -636,22 +636,35 @@ const handleCancelPayment = async () => {
           <aside className="order-sidebar">
             <div className="sidebar-header"><h2 className="sidebar-title">Current Order</h2><button className="clear-all" onClick={() => setCart([])}>Clear All</button></div>
             <p className="item-count">{cart.length} items</p>
-            <div className="cart-list">
-              {cart.map(item => (
-                <div key={item.id} className="cart-item">
-                  <div className="item-details">
-                    <h4 className="cart-item-name">{item.name}</h4><p className="item-price-each">${item.price.toFixed(2)} each</p>
-                    <div className="qty-controls">
-                      <button onClick={() => updateQty(item.id, -1)}>-</button><span>{item.quantity}</span><button onClick={() => updateQty(item.id, 1)}>+</button>
-                    </div>
-                  </div>
-                  <div className="item-total-section">
-                    <button className="delete-item" onClick={() => setCart(cart.filter(i => i.id !== item.id))}><img src={deleteIcon} alt="Delete" /></button>
-                    <p className="item-total">${(item.price * item.quantity).toFixed(2)}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+           <div className="cart-list">
+  {cart.map(item => (
+    <div key={item.id} className="cart-item">
+      
+      {/* Left Column: Details & Quantity */}
+      <div className="item-details">
+        <div className="item-info">
+          <h4 className="cart-item-name">{item.name}</h4>
+          <p className="item-price-each">${item.price.toFixed(2)} each</p>
+        </div>
+        
+        <div className="quantity-controls">
+          <button onClick={() => updateQty(item.id, -1)}>-</button>
+          <span>{item.quantity}</span>
+          <button onClick={() => updateQty(item.id, 1)}>+</button>
+        </div>
+      </div>
+
+      {/* Right Column: Delete & Total */}
+      <div className="item-total-section">
+        <button className="delete-item" onClick={() => setCart(cart.filter(i => i.id !== item.id))}>
+          <img src={deleteIcon} alt="Delete" style={{ width: '16px', height: '16px' }} />
+        </button>
+        <p className="item-total">${(item.price * item.quantity).toFixed(2)}</p>
+      </div>
+
+    </div>
+  ))}
+</div>
             <div className="billing-summary">
               <div className="bill-row">
                 <span>Subtotal:</span>
