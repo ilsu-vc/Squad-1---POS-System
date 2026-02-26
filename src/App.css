@@ -4,33 +4,58 @@
 body, button, input {
   font-family: 'Inter', sans-serif;
   -webkit-font-smoothing: antialiased;
-  color: #1a1a1a;
+  color: #1b2a47;
+}
+
+html, body {
+  margin: 0; /* Removes the default margin */
+  padding: 0; /* Removes the default padding */
+  width: 100%; /* Ensure it takes up the full width */
+  color: var(--text);
+  height: 100%; /* Ensure it takes up the full height */
+}
+
+footer {
+  background-color: #f9fbfc; /* Ensure footer matches the main background */
 }
 
 :root {
-  /* PharmaCare Color Palette */
-  --primary-green: #5d7c5d;
-  --primary-light: #f0f4f0;
-  --bg-dashboard: #d1d1d1; /* The grey background from your screenshot */
-  --card-white: #ffffff;
-  --text-main: #2d2d2d;
-  --text-muted: #888888;
-  --border-subtle: #eeeeee;
+  --brand-navy: #1b2a47;
+  --brand-teal: #01a2ad;
+  --brand-bg:   #f9fbfc;
+
+  --surface: #ffffff;
+  --text: var(--brand-navy);
+
+  --muted: rgba(27, 42, 71, 0.65);
+  --muted-2: rgba(27, 42, 71, 0.45);
+
+  --border: rgba(27, 42, 71, 0.12);
+  --border-strong: rgba(27, 42, 71, 0.18);
+
+  --soft: rgba(27, 42, 71, 0.05);
+  --soft-2: rgba(27, 42, 71, 0.08);
+
+  /* Fix undefined vars you used earlier */
+  --bg-gray: var(--brand-bg);
+  --bg-main: var(--brand-bg);
+
+  --stat-icon-bg-color: #f1f5f9;
 }
 
 .pos-container {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background-color: var(--bg-gray);
+  background: var(--brand-bg);
   overflow: hidden;
   position: relative;
 }
 
 /* Navbar */
 .main-nav {
-  background: white;
-  padding: 10px 25px 20px;
+  background: #1b2a47; /* Dark blue for the navbar background */
+  padding: 15px 25px 15px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -76,36 +101,43 @@ body, button, input {
 .nav-btn {
   display: flex;
   align-items: center;
-  gap: 8px; /* Space between icon and text */
-  padding: 10px 18px;
-  border: 1px solid #e0e0e0;
-  background-color: #f9f9f9;
-  border-radius: 8px;
+  gap: px; /* Space between icon and text */
+  padding: 8px 15px;
+  border: 1px solid #1b2a47;
+  background-color: #1b2a47; /* Light greyish-white background */
+  border-radius: 6px;
   cursor: pointer;
   transition: all 0.3s ease;
   
   /* Thicker text settings */
   font-weight: 600; 
-  font-size: 15px;
-  color: #333;
+  font-size: 14px;
+  color: #f9fbfc;
+  margin-left: 5px;
 }
 
 .nav-btn img {
   width: 20px;
   height: 20px;
   object-fit: contain;
+  margin-right: 5px;
 }
 
 .nav-btn.active {
-  background-color: #5d7c5d; 
+  background-color: #01a2ad; /* Teal for active button */
   color: white;
-  border-color: #5d7c5d;
+  border-color: #01a2ad;
   font-weight: 700; /* Extra thick when selected */
+  filter: brightness(0.96);
+}
+
+.nav-btn.active:hover {
+  background-color: #019a9d; /* Slightly darker teal for active hover */
 }
 
 .nav-btn:hover:not(.active) {
-  background-color: #eff1ef;
-  border-color: #ccc;
+  background-color: #374460; /* Light grey background on hover */
+  border-color: #21304e;
 }
 /* Content Layout */
 .pos-content {
@@ -116,7 +148,7 @@ body, button, input {
 }
 
 .inventory-section {
-  background-color: #f9f9f9 !important;
+  background-color: #f9fbfc !important;
   padding: 20px;
   flex: 1;
   overflow-y: auto;  /* Enable scrolling when content exceeds the container height */
@@ -126,12 +158,12 @@ body, button, input {
 }
 
 .inventory-section::-webkit-scrollbar-track {
-  background: #f1f1f1; /* Light background for the track */
+  background: #e7e9ed; /* Light background for the track */
   border-radius: 10px;
 }
 
 .inventory-section::-webkit-scrollbar-thumb {
-  background: #cccccc; /* Custom thumb color (green) */
+  background: #d1d3d6; /* Custom thumb color (green) */
   border-radius: 10px;
 }
 
@@ -142,9 +174,9 @@ body, button, input {
 .search-box {
   display: flex;
   align-items: center;
-  background-color: #f9f9f9 !important;
-  border: 1px solid #d0d5d0;
-  border-radius: 10px;
+  background-color: #f9fbfc !important;
+  border: 1px solid #dddedf;
+  border-radius: 6px;
   padding: 0 15px; /* Keep this for overall internal spacing */
   height: 45px;
   margin-bottom: 20px;
@@ -171,77 +203,80 @@ body, button, input {
 }
 
 .search-box:focus-within {
-  border-color: #5d7c5d; /* Matches your brand green */
+  border-color: #01a2ad; /* Matches your brand green */
   box-shadow: 0 0 0 2px rgba(93, 124, 93, 0.1);
 }
 
 .category-bar {
   display: flex;
   gap: 12px;
-  margin-bottom: 30px;
+  padding-top: 10px;
+  margin-bottom: 10px;
   flex-wrap: wrap;
 }
 
 .cat-btn {
   padding: 10px 20px;
-  border: 1px solid #e0e0e0;
-  background-color: white;
-  border-radius: 8px;
+  border: 1px solid #dddedf;
+  background-color: #ffffff;
+  border-radius: 6px;
   cursor: pointer;
   transition: all 0.3s ease;
   
   /* This makes the text bold and thicker */
   font-weight: 600; 
   font-size: 14px;
-  color: #333;
+  color: #1b2a47;
 }
 
 .cat-btn.active {
-  background-color: #5d7c5d; /* Matches the green in your images */
+  background-color: #01a2ad; /* Matches the green in your images */
   color: white;
-  border-color: #5d7c5d;
+  border-color: #01a2ad;
   font-weight: 700; /* Extra thickness for the active state */
 }
 
 .cat-btn:hover:not(.active) {
-  background-color: #f5f5f5;
-  border-color: #ccc;
+  background-color: #f9fbfc;
+  border-color: #01a2ad;
 }
 
 /* Product Cards */
 
-
 .product-card, .cart-item {
   background-color: #edf1ed; /* New light background */
-  border-radius: 12px;
+  border-radius: 10px;
   padding: 15px;
   transition: transform 0.2s ease;
 }
 .product-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr); 
-  gap: 12px;
+  /* Change the 250px (or whatever it is currently) down to about 180px */
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px; /* Keep a nice, tight gap between cards */
+  padding: 16px 0; /* Optional: adds a little breathing room top and bottom */
 }
 
 .product-card {
   background: white;
-  border-radius: 15px;
-  padding: 20px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-}
-
-.img-container {
-  background: #eaf1ea;
-  height: 160px;
   border-radius: 12px;
-  margin-bottom: 15px;
+  padding: 12px; /* Reduced from what is likely a larger padding */
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05); /* Soft shadow */
   display: flex;
-  justify-content: center;
-  align-items: center;
+  flex-direction: column;
 }
 
-.img-container img {
-  width: 70px;
+.product-name {
+  font-size: 8px; /* Smaller, cleaner title */
+  font-weight: 600;
+  margin: 0 0 4px 0;
+  line-height: 1.3;
+}
+
+.cat-label {
+  font-size: 12px;
+  color: #64748b;
+  margin: 0 0 12px 0;
 }
 
 .product-card h3 {
@@ -249,50 +284,62 @@ body, button, input {
   margin-bottom: 5px;
 }
 
-.cat-label {
-  font-size: 0.8rem;
-  color: #777;
+.product-card .img-container {
+  height: 160px; /* Increased from 120px */
+  width: 100%;
+  background: #f1f5f9; 
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.product-card .img-container img {
+  max-height: 80px; /* Keep the actual pill/bottle images slightly smaller */
+  object-fit: contain;
 }
 
 .card-footer {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  margin-top: 15px;
+  margin-top: auto;
+  width: 100%;
 }
 
 .price {
   display: block;
-  font-weight: bold;
-  font-size: 1.2rem;
+  font-weight: 600;
+  font-size: 16px;
 }
 
 .stock {
   font-size: 0.75rem;
-  color: #a6a6a6;
+  color: #777;
 }
 
 .add-btn {
-  background: var(--primary-green);
+  background: #9bee80;
   color: white;
   border: none;
   width: 40px;
   height: 40px;
-  border-radius: 10px;
+  border-radius: 4px;
   cursor: pointer;
   font-size: 1.5rem;
 }
 
 /* Sidebar */
 .order-sidebar {
-  background: white;
-  padding: 15px;
+  background: #f9fbfc; /* Light background for sidebar */
+  padding: 18px;
   display: flex;
   flex-direction: column;
-  border-left: 1px solid #e3e3e3;
-  height: 100%; 
+  height: 100%;
   box-sizing: border-box;
-  overflow: hidden;
+  border: 1px solid #d9d9dc;
+  overflow-y: auto;
 }
 
 .sidebar-header {
@@ -301,37 +348,143 @@ body, button, input {
   align-items: center;
 }
 
+/* Clear All Button */
+/* Clear All Button */
 .clear-all {
   color: #d9534f;
   background: none;
-  border: none;
-  font-weight: bold;
+  border: 1px solid #d9534f; /* Default border color to match the text */
+  font-weight: 600;
   cursor: pointer;
+  padding: 5px 10px;
+  border-radius: 5px; /* Rounded corners */
+  transition: all 0.3s ease; /* Smooth transition for hover effect */
+}
+
+/* Hover effect */
+.clear-all:hover {
+  color: #d9534f; /* Change text color to white on hover */
+  background-color: #f7dedd; /* Set a soft red background on hover */
+  border-color: #d9534f; /* Keep the border color consistent */
+  border-width: 1px; /* Ensure border width is maintained on hover */
 }
 
 .cart-list {
-  flex: 1;
+  /* 1. Force the container to a specific height so IT scrolls, not the parent */
+  flex: 1; 
+  /* (Or if flex doesn't work, try: max-height: 400px; ) */
+  
   overflow-y: auto;
-  margin: 10px 0;
-  padding-right: 5px;
+  padding-right: 4px; /* Gives the scrollbar a tiny bit of breathing room */
+
+  /* For Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
 }
 
+/* WebKit (Chrome/Safari) */
+.cart-list::-webkit-scrollbar {
+  width: 6px; /* Made it even thinner for a sleeker look */
+}
+
+.cart-list::-webkit-scrollbar-track {
+  background: transparent; /* Makes the track invisible so it blends in perfectly */
+}
+
+.cart-list::-webkit-scrollbar-thumb {
+  background: #cbd5e1; /* The sleek gray color */
+  border-radius: 10px; 
+}
+
+.cart-list::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8; 
+}
+
+/* Hide the arrows */
+.cart-list::-webkit-scrollbar-button {
+  display: none;
+}
+
+/* --- Cart Item Container --- */
 .cart-item {
-  border: 1px solid #e3e3e3;
-  border-radius: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: stretch; /* This forces left and right columns to be equal height */
+  padding: 16px;
+  margin-bottom: 12px;
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
 
-  /* more breathing room */
-  padding: 20px 18px 12px;
-  background: #f9f9f9;
-  margin-bottom: 14px;
+/* --- Left Column: Details & Quantity --- */
+.item-details {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 16px; /* Forces space between the text and the +/- buttons */
+}
 
-  /* 3-row layout */
-  display: grid;
-  grid-template-columns: 1fr auto;      /* left content + right price */
-  grid-template-rows: 90px auto auto;   /* title row, each row, qty row */
-  row-gap: 15px;                        /* more vertical spacing */
-  column-gap: 18px;                     /* more horizontal spacing */
+.item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px; /* Tight space between product name and unit price */
+}
+
+/* Zero out default margins on text elements so Flexbox works perfectly */
+.cart-item-name {
+  margin: 0; 
+  font-size: 15px;
+  font-weight: 600;
+  color: #333;
+}
+
+.item-price-each {
+  margin: 0;
+  font-size: 13px;
+  color: #888;
+}
+
+/* --- Right Column: Actions & Total --- */
+.item-total-section {
+  align-items: flex-end;
+}
+
+.item-details, .item-total-section {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between; /* This forces the quantity and total to the bottom line */
+}
+
+.delete-item {
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  padding: 0; /* Removed padding to push it higher */
+  margin-top: 10px; /* Fine-tunes the alignment with the text */
+  display: flex;
   align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+.delete-item:hover {
+  background: #fee2e2; /* Light red hover effect for delete action */
+}
+
+.item-total {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #2c3e50;
+  display: flex;
+  
+  /* Pushes the text to the bottom of its container so it anchors to the baseline */
+  align-items: flex-end; 
+  
+  /* Change this number to exactly match your quantity button height */
+  height: 32px; 
 }
 
 .cart-item .item-info {
@@ -375,32 +528,32 @@ body, button, input {
 .cart-item .quantity-controls {
   display: flex;
   align-items: center;
-  gap: 14px; /* more space between - qty + */
+  gap: 10px; /* more space between - qty + */
 }
 
 /* qty buttons */
 .cart-item .quantity-controls button {
-  width: 38px;
-  height: 38px;
-  border-radius: 8px;
+  width: 25px;
+  height: 25px;
+  border-radius: 5px;
   border: 1px solid #cfcfcf;
   background: #fff;
   cursor: pointer;
 
-  font-size: 20px;
+  font-size: 15px;
   line-height: 1;
   display: grid;
   place-items: center;
-  color: #222;
+  color: #1b2a47;
 }
 
 /* qty value */
 .cart-item .quantity-controls span {
   min-width: 26px;
   text-align: center;
-  font-size: 16px;
-  font-weight: 700;
-  color: #222;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1b2a47;
 }
 
 /* right side total price (big, bottom-right like screenshot) */
@@ -428,13 +581,13 @@ body, button, input {
   
   /* Matches the vertical pill hover shape in your UI */
   padding: 8px 12px; 
-  border-radius: 10px;
+  border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: background-color 0.2s ease;
   
-  color: #ff3b30;        /* Red icon color */
+  color: #ff8a84;        /* Red icon color */
 }
 
 /* 3. Red hover state */
@@ -464,7 +617,7 @@ body, button, input {
   height: 28px;
   border: 1px solid #ccc;
   background: white;
-  border-radius: 6px;
+  border-radius: 4px;
   cursor: pointer;
 }
 
@@ -481,8 +634,9 @@ body, button, input {
 .delete-item {
   background-color: transparent;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: 5px;
   padding: 4px;
+  margin-top: 4px;
   cursor: pointer;
   transition: all 0.2s ease;
   
@@ -514,12 +668,13 @@ body, button, input {
   align-items: flex-end; /* Aligns both to the right edge */
   height: 100%; /* Ensures it takes up the full height of the card */
   min-width: 80px; /* Gives enough space for the price */
+  padding-top: 4px;
 }
 
 .item-total {
   font-weight: 700;
   font-size: 16px;
-  color: #333;
+  color: #1b2a47;
   margin-top: 5px; /* Adds a little breathing room from the top */
 }
 
@@ -534,20 +689,20 @@ body, button, input {
 .total {
   display: flex;
   justify-content: space-between;
-  font-size: 1.2rem;
+  font-size: 16px;
   font-weight: 800;
   margin: 5px 0 10px 0;
-  color: #000;
+  color: #1b2a47;
 }
 
 .pay-btn {
   width: 100%;
   padding: 12px;
-  background: var(--primary-green);
+  background: var(--brand-teal) !important;
   color: white;
   border: none;
-  border-radius: 10px;
-  font-size: 1rem;
+  border-radius: 6px;
+  font-size: 16px;
   font-weight: 700;
   cursor: pointer;
 }
@@ -568,10 +723,11 @@ body, button, input {
 
 .payment-modal {
   background: white;
-  width: 40%;
+  width: 450px;
   border-radius: 20px;
   padding: 25px;
   box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  border-radius: 9px;
 }
 
 .modal-header {
@@ -595,9 +751,10 @@ body, button, input {
 }
 
 .amount-display {
-  background: #f4f4f2;
+  background: #f1f5f9;
+  border: 1px solid var(--border) !important;
   padding: 20px;
-  border-radius: 15px;
+  border-radius: 7px;
   text-align: left;
   margin-bottom: 25px;
 }
@@ -628,7 +785,7 @@ body, button, input {
 .method-item {
   border: 1px solid #ddd;
   background: white;
-  border-radius: 12px;
+  border-radius: 7px;
   padding: 15px 10px;
   display: flex;
   flex-direction: column;
@@ -640,7 +797,7 @@ body, button, input {
 
 .method-item:hover {
   border-color: var(--primary-green);
-  background: #f9fff9;
+  background:#f9fbfc;
 }
 
 .method-img-icon {
@@ -657,7 +814,8 @@ body, button, input {
 /* This targets the horizontal line in your billing summary */
 .billing-summary hr {
   border: none;               /* Removes default browser styling */
-  border-top: 1px solid #d0d5d0; /* This is the "line green" / grey shade */
+  border-top: 1px solid var(--border-strong) !important;
+opacity: 1 !important;
   margin: 15px 0;             /* Adds space above and below the line */
 }
 
@@ -685,7 +843,7 @@ body, button, input {
 .change-method {
   background: none;
   border: none;
-  color: var(--primary-green);
+  color: var(--brand-teal) !important;
   font-weight: 600;
   cursor: pointer;
   font-size: 0.9rem;
@@ -718,7 +876,7 @@ body, button, input {
 .input-group input {
   padding: 15px;
   border: 1px solid #ddd;
-  border-radius: 12px;
+  border-radius:  7px;
   font-size: 1.2rem;
   background: #fff;
 }
@@ -738,16 +896,16 @@ body, button, input {
 
 .quick-grid button {
   padding: 10px;
-  background: #e6e6e4;
+  background: #f1f5f9;
   border: none;
-  border-radius: 8px;
+  border-radius: 5px;
   font-weight: 700;
   cursor: pointer;
   transition: 0.2s;
 }
 
 .quick-grid button:hover {
-  background: #d1d1cf;
+  background: #e7e9ed;
 }
 
 .modal-actions {
@@ -761,30 +919,30 @@ body, button, input {
   padding: 12px;
   background: white;
   border: 1px solid #ddd;
-  border-radius: 10px;
+  border-radius:  7px;
   font-weight: 700;
   cursor: pointer;
 }
 
 .complete-btn {
   padding: 12px;
-  background: #e6e6e4;
+  background: #e7e9ed;
   color: #a6a6a6;
   border: none;
-  border-radius: 10px;
+  border-radius: 7px;
   font-weight: 700;
   cursor: not-allowed;
   transition: 0.3s;
 }
 
 .complete-btn.active {
-  background: var(--primary-green);
+  background:  #01a2ad;
   color: white;
   cursor: pointer;
 }
 
 .add-btn {
-  background-color: #5d7c5d;
+  background-color: #01a2ad;
   color: white;
   border: none;
   border-radius: 6px;
@@ -807,7 +965,8 @@ body, button, input {
 }
 
 .add-btn:hover {
-  background-color: #4a634a; /* Slightly darker green on hover */
+  background-color: #0596a0;
+  filter: brightness(0.96); 
 }
 
 .qty-controls button {
@@ -826,8 +985,8 @@ body, button, input {
 /* --- STATUS BOX STYLES (CARD & MOBILE) --- */
 
 .reader-status-box {
-  background-color: #e6e6e4;
-  border-radius: 15px;
+  background-color: #f1f5f9;
+  border-radius: 9px;
   padding: 40px 20px;
   display: flex;
   flex-direction: column;
@@ -1165,8 +1324,8 @@ body, button, input {
 /* Payment Success Styles */
 .success-modal {
   background: white;
-  padding: 40px;
-  border-radius: 12px;
+  padding: 35px 5px;
+  border-radius: 8px;
   text-align: center;
   max-width: 400px;
   width: 90%;
@@ -1175,7 +1334,7 @@ body, button, input {
 }
 
 .success-icon {
-  background-color: #5e7e63;
+  background-color: #01a2ad;
   color: white;
   width: 80px;
   height: 80px;
@@ -1198,18 +1357,19 @@ body, button, input {
 }
 
 .close-success-btn {
-  background-color: #5e7e63;
+  background-color: #01a2ad;
   color: white;
   border: none;
   padding: 12px 24px;
-  border-radius: 8px;
+  border-radius: 6px;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s;
 }
 
 .close-success-btn:hover {
-  background-color: #4a634e;
+  background-color: #03929c;
+  filter: brightness(0.96);
 }
 
 @keyframes modalPop {
@@ -1227,7 +1387,7 @@ body, button, input {
   padding: 20px;
   overflow-y: auto;
   height: calc(100vh - 80px);
-  background-color: var(--bg-main);
+  background: var(--brand-bg) !important;
 }
 
 .dashboard-title {
@@ -1240,11 +1400,11 @@ body, button, input {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  margin-top: 15px;
+  margin-top: 11px;
 
 .transaction-card .txn-id {
   font-size: 0.90rem; /* Smaller font size */
-  color: #282828; /* Optional: Slightly darker color for subtle appearance */
+  color: #1b2a47; /* Optional: Slightly darker color for subtle appearance */
 }
   
 .transaction-card .txn-method {
@@ -1258,21 +1418,21 @@ body, button, input {
 }
 
 .transaction-card .txn-method.cash {
-  background: #defcdc; /* Light green */
-  border: 1px solid #9ee63f; /* Dark green */
-  color: #8cd86b; /* Green text */
+ background: rgba(5, 176, 188, 0.1) !important;
+  border: 1px solid #9ddadd;
+  color: #01a3b4;
 }
 
 .transaction-card .txn-method.card {
-  background: #dbeafe; /* Light blue */
-  border: 1px solid #7db5ff; /* Dark blue */
-  color: #7db5ff; /* Blue text */
+   background: rgba(5, 176, 188, 0.1) !important;
+  border: 1px solid #9ddadd;
+  color: #01a3b4;
 }
 
 .transaction-card .txn-method.mobile {
-  background: #ffedd5; /* Light orange */
-  border: 1px solid #f99c39; /* Dark orange */
-  color: #f99c39; /* Orange text */
+   background: rgba(5, 176, 188, 0.1) !important;
+  border: 1px solid #9ddadd;
+  color: #01a3b4;
 }
 
   /* Critical changes for scrolling: */
@@ -1286,7 +1446,7 @@ body, button, input {
   max-height: 300px;         /* Adjust this height as needed */
   overflow-y: auto;          /* Adds a scrollbar when content overflows */
   padding-right: 8px;        /* Space for the scrollbar to prevent touching the text */
-  border-radius: 10px;       /* Rounded corners for the scrollable area */
+  border-radius: 8px;       /* Rounded corners for the scrollable area */
   padding: 10px;             /* Padding inside the scrollable area */
   box-sizing: border-box;    /* Ensures padding is included within the height and width */
 }
@@ -1296,25 +1456,25 @@ body, button, input {
 }
 
 .history-scroll-area::-webkit-scrollbar-track {
-  background: #ffffff; /* Light background for the scrollbar track */
+  background: #f5f5f5;
   border-radius: 10px;
 }
 
 .history-scroll-area::-webkit-scrollbar-thumb {
-  background: #cccccc;  /* Using a green theme color */
+  background: #d1d1d1;  /* Using a green theme color */
   border-radius: 10px;   /* Rounded corners for the scrollbar thumb */
 }
 
 .history-scroll-area::-webkit-scrollbar-thumb:hover {
-  background: #5d7c5d;   /* Darker green color on hover */
+  background: #b6b6b6;   /* Darker green color on hover */
 }
 
 .history-scroll-area .history-card {
-  background-color: #f8f8f8; /* Light background color for transaction cards */
-  border-radius: 10px;          /* Optional: Rounded corners for each transaction card */
+  background-color: #f9fbfc;
+  border-radius: 7px;          /* Optional: Rounded corners for each transaction card */
   padding: 12px;               /* Adds padding inside the transaction card */
   margin-bottom: 3px;         /* Adds space between transaction cards */
-  box-shadow: 0 2px 7px rgba(53, 53, 53, 0.1); /* Optional: Subtle shadow for the card */
+  box-shadow: 0 2px 7px rgba(187, 187, 187, 0.1); /* Optional: Subtle shadow for the card */
   border: -5px solid #ffffff;  
 }
 
@@ -1340,7 +1500,7 @@ body, button, input {
 
 .history-scroll-area .txn-id-text {
   font-weight: bold;
-  color: #333; /* Darker color for the transaction ID */
+  color: #1b2a47;
 }
 
 .history-scroll-area .txn-meta-text {
@@ -1350,13 +1510,13 @@ body, button, input {
 
 .history-scroll-area .txn-total-text {
   font-weight: bold;
-  color: #333; /* Darker color for the transaction total */
+  color: #1b2a47;
 }
 
 
 .transaction-card {
   background-color: #f5f5f5; /* Light grey background from your image */
-  border-radius: 12px;
+  border-radius: 8px;
   padding: 16px 20px;
   display: flex;
   justify-content: space-between;
@@ -1371,7 +1531,7 @@ body, button, input {
 }
 
 .txn-date {
-  color: #999;
+  color: var(--muted) !important;
   margin: 4px 0 0 0;
   font-size: 0.85rem;
 }
@@ -1382,13 +1542,12 @@ body, button, input {
 
 .txn-amount {
   font-weight: 800;
-  color: #333;
+  color: var(--brand-navy) !important;
   margin: 0;
   font-size: 1rem;
 }
 
 .txn-method {
-  color: #999;
   margin: 4px 0 0 0;
   font-size: 0.8rem;
 }
@@ -1412,7 +1571,7 @@ body, button, input {
 }
 
 .history-row:hover {
-    background: #fcfcfc;
+    background: #d09090;
 }
 
 /* Container and Stats */
@@ -1420,7 +1579,7 @@ body, button, input {
   height: calc(100vh - 80px); /* Adjust based on your nav height */
   overflow-y: auto;
   padding-bottom: 40px;
-  background-color: #eff1ef;
+  background: var(--brand-bg) !important;
 }
 
 .view-title {
@@ -1443,7 +1602,7 @@ body, button, input {
   align-items: center;
   background: #ffffff;
   padding: 12px 20px;
-  border-radius: 10px;
+  border-radius: 7px;
   margin-bottom: 30px;
   border: 1px solid #e0e0e0;
   box-shadow: 0 2px 4px rgba(0,0,0,0.02);
@@ -1473,26 +1632,6 @@ body, button, input {
   text-align: center; /* Centers the content in each card */
 }
 
-.history-stats-row .h-stat-card .h-stat-value.total-revenue {
-  background-color: #4caf50; /* Green background for Total Revenue */
-  color: white; /* White text color */
-  padding: 10px;
-  border-radius: 5px;
-}
-
-.history-stats-row .h-stat-card .h-stat-value.avg-transaction {
-  background-color: #ffffff; /* Blue background for Average Transaction */
-  color: white; /* White text color */
-  padding: 10px;
-  border-radius: 5px;
-}
-
-.history-stats-row .h-stat-card .h-stat-value.total-transactions {
-  background-color: #ff9800; /* Orange background for Total Transactions */
-  color: white; /* White text color */
-  padding: 10px;
-  border-radius: 5px;
-}
 
 .history-accordion {
   display: flex;
@@ -1519,15 +1658,6 @@ body, button, input {
   font-size: 18px;
 }
 
-.method-pill {
-  font-weight: 600;
-  background: #e9ecef;
-  padding: 2px 10px;
-  border-radius: 12px;
-  font-size: 11px;
-  color: #6c757d;
-}
-
 /* Custom Scrollbar for better look */
 .history-view::-webkit-scrollbar {
   width: 8px;
@@ -1549,7 +1679,7 @@ body, button, input {
 }
 
 .h-stat-label {
-  color: #666;
+  color: var(--muted) !important;
   font-size: 14px;
   font-weight: 500;
   margin: 0 0 8px 0;
@@ -1561,13 +1691,13 @@ body, button, input {
   font-size: 32px;
   font-weight: 700;
   margin: 0;
-  color: #1a1a1a;
+  color: #1b2a47;
 }
 
 /* Accordion Cards - Improved Typography */
 .history-card {
   background: white;
-  border-radius: 12px;
+  border-radius: 8px;
   border: 1px solid #e0e0e0;
   margin-bottom: 16px;
   transition: all 0.2s ease;
@@ -1577,22 +1707,13 @@ body, button, input {
   font-family: 'Inter', sans-serif;
   font-weight: 600;
   font-size: 16px;
-  color: #1a1a1a;
-}
-
-.method-pill {
-  font-weight: 500;
-  background: #f0f2f0;
-  color: #5d7c5d; /* Using your primary green for the text */
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 12px;
+  color: #1b2a47;
 }
 
 .txn-total-text {
   font-size: 20px;
   font-weight: 700;
-  color: #1a1a1a;
+  color: #1b2a47;
 }
 
 .item-name-text {
@@ -1603,10 +1724,10 @@ body, button, input {
 
 /* Dashboards Stat Icon Fix (From previous step) */
 .stat-icon-bg {
-  width: 48px;         /* Reduced from original size */
-  height: 48px;        /* Reduced from original size */
-  background-color: rgba(93, 124, 93, 0.1); /* Soft green tint */
-  border-radius: 50%;
+  width: 20px;         /* Reduced from original size */
+  height: 20px;        /* Reduced from original size */
+  background: var(--stat-icon-bg-color) !important;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1616,8 +1737,7 @@ body, button, input {
 .stat-img-icon {
   width: 24px;         /* Specific size for the icon */
   height: 24px;
-  object-fit: contain; /* Ensures the icon doesn't stretch */
-  opacity: 0.8;        /* Optional: makes it look a bit more modern/subtle */
+  object-fit: contain; /* Ensures the icon doesn't stretch */       /* Optional: makes it look a bit more modern/subtle */
 }
 
 /* Accordion Cards */
@@ -1633,7 +1753,7 @@ body, button, input {
 .txn-total-text { font-size: 18px; font-weight: 700; margin-right: 15px; }
 
 /* Expanded Body */
-.history-card-body { padding: 20px; background: #f9f9f9; border-top: 1px solid #eee; }
+.history-card-body { padding: 20px; background: #f9fbfc; border-top: 1px solid #eee; }
 .body-section-title { font-weight: 700; font-size: 14px; margin-bottom: 15px; }
 
 .item-detail-row { 
@@ -1646,7 +1766,7 @@ body, button, input {
 
 .history-financial-summary { margin-top: 20px; padding-top: 15px; border-top: 1px dashed #ccc; }
 .f-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 14px; color: #666; }
-.f-total { font-weight: 800; color: #000; font-size: 16px; margin-top: 10px; }
+.f-total { font-weight: 800; color: #1b2a47; font-size: 16px; margin-top: 10px; }
 
 .method-badge {
     background: #e8e8e8;
@@ -1727,7 +1847,7 @@ body, button, input {
 .summary-line.total {
     font-weight: 800;
     font-size: 16px;
-    color: #000;
+    color: #1b2a47;
     margin-top: 10px;
 }
 .recent-transactions-list {
@@ -1804,14 +1924,14 @@ body, button, input {
     font-size: 30px;
     font-weight: 800;
     margin-bottom: 30px;
-    color: #2d2d2d;
+    color: #1b2a47;
 }
 
 .view-header-title {
   font-size: 50px;
   font-weight: 800;
   margin-bottom: -20px;
-  color: #2d2d2d;
+  color: #1b2a47;
 }
 
 /* Typography specifics for History (from image 276a7a.png) */
@@ -1836,7 +1956,7 @@ body, button, input {
     font-size: 18px;
     font-weight: 700;
     margin-bottom: 20px;
-    color: #1a1a1a;
+    color: #1b2a47;
 }
 
 .payment-item {
@@ -1853,12 +1973,12 @@ body, button, input {
 .payment-label {
     font-weight: 600;
     font-size: 14px;
-    color: #1a1a1a;
+    color: #1b2a47;
 }
 
 .payment-stats {
     font-size: 14px;
-    color: #a6a6a6; /* Muted gray for the 2 (67%) part */
+    color: var(--muted) !important; /* Muted gray for the 2 (67%) part */
     font-weight: 500;
 }
 
@@ -1866,7 +1986,7 @@ body, button, input {
 .progress-bar-bg {
     width: 100%;
     height: 8px;
-    background-color: #e9ecef;
+    background-color: #f0f2f5;
     border-radius: 4px;
     overflow: hidden;
 }
@@ -1895,13 +2015,13 @@ body, button, input {
   align-items: center;
   padding: 20px;
   background: #fff;
-  border-radius: 12px;
+  border-radius: 1px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
 
 .stat-info h3 {
     font-size: 0.85rem;
-    color: #888;
+    color: var(--muted) !important;
     text-transform: capitalize;
     margin-bottom: 10px;
 }
@@ -1909,18 +2029,18 @@ body, button, input {
 .stat-value {
     font-size: 24px;
     font-weight: 800;
-    color: #2d2d2d;
+    color: var(--brand-navy) !important;
     margin: 0;
 }
 
 .stat-subtext {
     font-size: 0.8rem;
-    color: #888;
+    color: var(--muted) !important;
     margin-top: 5px;
 }
 
 .stat-icon-bg {
-    background: #e6e6e4;
+    background: #e7e9ed; 
     padding: 10px;
     border-radius: 8px;
     display: flex;
@@ -1940,7 +2060,8 @@ body, button, input {
 
 .content-card {
   background: #ffffff;
-  border-radius: 12px;
+  color: var(--brand-navy);
+  border-radius: 10px;
   padding: 20px;
   border: 1px solid #eef0ee;
   box-shadow: 0 2px 4px rgba(0,0,0,0.02);
@@ -1951,11 +2072,58 @@ body, button, input {
   overflow: hidden;
 }
 
+
+
 .card-title {
     font-size: 1.1rem;
     font-weight: 700;
     margin-bottom: 25px;
-    color: #2d2d2d;
+    color: #1b2a47;
+}
+
+
+/* Pie chart tooltips styling */
+.recharts-tooltip-item {
+  color: var(--brand-navy);
+  font-weight: 600;
+}
+
+.recharts-tooltip {
+  background-color: var(--surface); /* Make the tooltip background light */
+  border-radius: 6px;
+  padding: 10px;
+  border: 1px solid var(--border);
+}
+
+/* Pie chart labels styling */
+.recharts-pie-label {
+  font-size: 10px;
+  font-weight: 500;
+  fill: var(--brand-navy);
+}
+
+/* Legend and category labels */
+.recharts-legend {
+  background: var(--surface);
+  padding: 15px;
+  border-radius: 6px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.recharts-legend-item {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.recharts-legend-item .recharts-legend-icon {
+  margin-right: 10px;
+}
+
+/* Hover effect for Pie chart sectors */
+.recharts-pie-sector:hover {
+  opacity: 0.8;
+  cursor: pointer;
 }
 
 /* Transaction List overrides for Dashboard */
@@ -1966,8 +2134,8 @@ body, button, input {
 }
 
 .transaction-card {
-    background-color: #f8f8f8; /* Very light grey */
-    border-radius: 10px;
+    background-color: #f9fbfc;
+    border-radius: 6px;
     padding: 15px 20px;
     display: flex;
     justify-content: space-between;
@@ -2038,24 +2206,8 @@ body, button, input {
   border-radius: 50px; /* Fully rounded corners for an oval shape */
   font-weight: 450; /* Slightly lighter font weight for thinner text */
   font-size: 0.70rem; /* Smaller font size */
-  white-space: nowrap; /* Prevents text from wrapping */
+  white-space: nowrap;
+  background: rgba(5, 176, 188, 0.1) !important;
+   border: 1px solid rgba(1,162,173,0.30) !important;
+    color: var(--brand-teal) !important;
 }
-
-.method-pill.card {
-  background: #dbeafe; /* Light blue */
-  border: 1px solid #7db5ff; /* Dark blue */
-  color: #7db5ff; /* Blue text */
-}
-
-.method-pill.cash {
-  background: #defcdc; /* Light green */
-  border: 1px solid #9ee63f; /* Dark green */
-  color: #8cd86b; /* Green text */
-}
-
-.method-pill.mobile {
-  background: #ffedd5; /* Light orange */
-  border: 1px solid #f99c39; /* Dark orange */
-  color: #f99c39; /* Orange text */
-}
-
