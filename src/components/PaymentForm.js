@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 
 const PaymentForm = ({
   total: initialTotal,
@@ -6,10 +6,8 @@ const PaymentForm = ({
   setPaymentMethod,
   cashReceived,
   setCashReceived,
-  changeAmount: initialChangeAmount,
   handleCancelPayment,
   handleCompletePayment,
-  closePaymentModal,
   icons: { cash_icon, card_icon, mobile_icon }
 }) => {
   // --- Essential States ---

@@ -1,0 +1,437 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+/* =========================================
+   REPRINT MODAL — OVERLAY & CONTAINERS
+   ========================================= */
+
+.reprint-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.reprint-modal {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+  padding: 28px;
+  width: 100%;
+  box-sizing: border-box;
+  animation: reprintPop 0.25s ease-out;
+}
+
+.pin-modal {
+  max-width: 380px;
+}
+
+.search-modal {
+  max-width: 560px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+@keyframes reprintPop {
+  from { transform: scale(0.92); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+
+/* =========================================
+   HEADER
+   ========================================= */
+
+.reprint-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.reprint-title {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #1b2a47;
+  margin: 0 0 4px 0;
+}
+
+.reprint-subtitle {
+  font-size: 0.85rem;
+  color: #888;
+  margin: 0;
+}
+
+.reprint-close-btn {
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  color: #aaa;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.reprint-close-btn:hover {
+  background: #f0f0f0;
+  color: #555;
+}
+
+/* =========================================
+   PIN PAD
+   ========================================= */
+
+.pin-dots-row {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.pin-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid #ccc;
+  transition: all 0.2s;
+}
+
+.pin-dot.filled {
+  background: #01a2ad;
+  border-color: #01a2ad;
+  transform: scale(1.1);
+}
+
+.pin-dot.error {
+  border-color: #d9534f;
+  background: #d9534f;
+  animation: pinShake 0.4s ease;
+}
+
+@keyframes pinShake {
+  0%, 100% { transform: translateX(0); }
+  20%       { transform: translateX(-5px); }
+  40%       { transform: translateX(5px); }
+  60%       { transform: translateX(-5px); }
+  80%       { transform: translateX(5px); }
+}
+
+.pin-error-msg {
+  text-align: center;
+  color: #d9534f;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin: 0 0 12px;
+}
+
+.pin-pad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin: 16px 0 20px;
+}
+
+.pin-key {
+  height: 60px;
+  font-size: 1.3rem;
+  font-weight: 700;
+  font-family: 'Inter', sans-serif;
+  color: #1b2a47;
+  background: #f4f6f9;
+  border: 1px solid #e0e4ea;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+}
+
+.pin-key:hover:not(:disabled) {
+  background: #e8f7f8;
+  border-color: #01a2ad;
+  color: #01a2ad;
+}
+
+.pin-key:active:not(:disabled) {
+  transform: scale(0.95);
+  background: #d0f0f2;
+}
+
+.pin-key-empty {
+  background: transparent;
+  border-color: transparent;
+  cursor: default;
+}
+
+/* =========================================
+   CANCEL & PRINT BUTTONS
+   ========================================= */
+
+.reprint-cancel-btn {
+  width: 100%;
+  padding: 12px;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #666;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.reprint-cancel-btn:hover {
+  background: #f5f5f5;
+}
+
+.reprint-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.reprint-print-btn {
+  padding: 12px;
+  background: #01a2ad;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.reprint-print-btn:hover {
+  background: #0596a0;
+}
+
+/* =========================================
+   SEARCH INPUT
+   ========================================= */
+
+.reprint-search-row {
+  margin-bottom: 20px;
+}
+
+.reprint-search-input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1.5px solid #ddd;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-family: 'Inter', sans-serif;
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.reprint-search-input:focus {
+  border-color: #01a2ad;
+  box-shadow: 0 0 0 3px rgba(1,162,173,0.1);
+}
+
+/* =========================================
+   EMPTY / NOT FOUND STATES
+   ========================================= */
+
+.reprint-empty-state,
+.reprint-not-found {
+  text-align: center;
+  padding: 32px 16px;
+  color: #888;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.reprint-not-found strong {
+  color: #1b2a47;
+}
+
+.reprint-not-found-sub {
+  font-size: 0.82rem;
+  color: #aaa;
+  margin-top: 6px;
+}
+
+/* =========================================
+   RECEIPT CARD (ON SCREEN)
+   ========================================= */
+
+.receipt-print-area {
+  position: relative;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 24px;
+  font-family: 'Inter', sans-serif;
+  overflow: hidden;
+}
+
+/* REPRINT WATERMARK — on screen */
+.reprint-watermark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-35deg);
+  font-size: 5rem;
+  font-weight: 900;
+  color: rgba(209, 28, 28, 0.08);
+  letter-spacing: 0.15em;
+  pointer-events: none;
+  user-select: none;
+  white-space: nowrap;
+  z-index: 0;
+}
+
+.receipt-header,
+.receipt-items,
+.receipt-summary {
+  position: relative;
+  z-index: 1;
+}
+
+.receipt-store-name {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #1b2a47;
+  margin: 0 0 2px 0;
+  text-align: center;
+}
+
+.receipt-store-sub {
+  text-align: center;
+  font-size: 0.8rem;
+  color: #888;
+  margin: 0 0 12px 0;
+}
+
+.receipt-meta {
+  font-size: 0.82rem;
+  color: #555;
+  margin: 3px 0;
+}
+
+.receipt-meta strong {
+  color: #1b2a47;
+}
+
+.receipt-divider {
+  border: none;
+  border-top: 1px solid #e0e0e0;
+  margin: 12px 0;
+}
+
+.receipt-divider.dashed {
+  border-top-style: dashed;
+  border-color: #ccc;
+}
+
+.receipt-item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 6px;
+  font-size: 0.85rem;
+}
+
+.receipt-item-name {
+  font-weight: 600;
+  color: #1b2a47;
+}
+
+.receipt-item-calc {
+  color: #888;
+  font-size: 0.78rem;
+}
+
+.receipt-item-total {
+  font-weight: 600;
+  white-space: nowrap;
+  margin-left: 12px;
+}
+
+.receipt-summary-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: #555;
+  margin-bottom: 4px;
+}
+
+.receipt-summary-row.discount {
+  color: #d9534f;
+  font-weight: 600;
+}
+
+.receipt-summary-row.total-row {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #1b2a47;
+  margin-top: 6px;
+}
+
+.receipt-footer {
+  text-align: center;
+  font-size: 0.78rem;
+  color: #aaa;
+  margin: 4px 0 0 0;
+}
+
+.receipt-footer.small {
+  font-size: 0.72rem;
+}
+
+/* =========================================
+   @MEDIA PRINT — Everything hides except receipt
+   ========================================= */
+
+@media print {
+  /* Hide the entire app */
+  body > * {
+    display: none !important;
+  }
+
+  /* Show only the reprint overlay */
+  .reprint-overlay {
+    display: block !important;
+    position: static !important;
+    background: none !important;
+    padding: 0 !important;
+  }
+
+  /* Hide the modal chrome, show only receipt */
+  .reprint-modal {
+    display: block !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .reprint-modal-header,
+  .reprint-search-row,
+  .reprint-actions,
+  .no-print {
+    display: none !important;
+  }
+
+  .receipt-print-area {
+    border: none !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+  }
+
+  /* Make watermark bold and visible when printing */
+  .reprint-watermark {
+    color: rgba(180, 0, 0, 0.18) !important;
+    font-size: 6rem !important;
+  }
+}

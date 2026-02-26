@@ -1,7 +1,7 @@
 {
   "files": {
-    "main.css": "/static/css/main.15ab2917.css",
-    "main.js": "/static/js/main.7fce0569.js",
+    "main.css": "/static/css/main.b744e8b5.css",
+    "main.js": "/static/js/main.c2b70871.js",
     "static/media/vitamins&supplements.png": "/static/media/vitamins&supplements.66de09e1df40bc397ef9.png",
     "static/media/personalcare.png": "/static/media/personalcare.6fab9404455965f34ddf.png",
     "static/media/babycare.png": "/static/media/babycare.91594dd65f2ef3da5d26.png",
@@ -12,11 +12,8 @@
     "static/media/dashboard_CI.png": "/static/media/dashboard_CI.ebc6af1eed351992b531.png",
     "static/media/delete_icon.png": "/static/media/delete_icon.a95e95cee74ff1403bad.png",
     "static/media/history_CI.png": "/static/media/history_CI.af35271e82abceeca5b6.png",
-    "static/media/dashboard_NCI.png": "/static/media/dashboard_NCI.e477fa9b5ff7dcca5f06.png",
-    "static/media/history_NCI.png": "/static/media/history_NCI.e69ce3ff901ac20bc56d.png",
     "static/media/POS_CI.png": "/static/media/POS_CI.321f8f52c3d3dc8327e1.png",
     "static/media/total_revenue_icon.png": "/static/media/total_revenue_icon.f01c0823e0a61ad1126b.png",
-    "static/media/POS_NCI.png": "/static/media/POS_NCI.ddc06553b847ef642d18.png",
     "static/media/avg_transaction.png": "/static/media/avg_transaction.432335004f7708ee7eb5.png",
     "static/media/medicine.png": "/static/media/medicine.705b9ff9bb3a77d88fa1.png",
     "static/media/transaction_icon.png": "/static/media/transaction_icon.8de218ba446d6c467e0c.png",
@@ -24,11 +21,11 @@
     "static/media/mobile_icon.png": "/static/media/mobile_icon.190b4adf8fb646b2d06d.png",
     "static/media/card_icon.png": "/static/media/card_icon.403cb135c68650fdbc0d.png",
     "index.html": "/index.html",
-    "main.15ab2917.css.map": "/static/css/main.15ab2917.css.map",
-    "main.7fce0569.js.map": "/static/js/main.7fce0569.js.map"
+    "main.b744e8b5.css.map": "/static/css/main.b744e8b5.css.map",
+    "main.c2b70871.js.map": "/static/js/main.c2b70871.js.map"
   },
   "entrypoints": [
-    "static/css/main.15ab2917.css",
-    "static/js/main.7fce0569.js"
+    "static/css/main.b744e8b5.css",
+    "static/js/main.c2b70871.js"
   ]
 }

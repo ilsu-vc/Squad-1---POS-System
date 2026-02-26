@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import './App.css';
 import { supabase } from "./supabaseClient";
 // Import Recharts components
@@ -17,6 +17,7 @@ import {
 } from 'recharts';
 
 import PaymentModal from './components/PaymentModal';
+import ReprintModal from './components/ReprintModal';
 
 
 // Import Product Images
@@ -30,11 +31,8 @@ import babyCareImg from './assets/images/babycare.png';
 
 // Import Icons
 import dashboard_CI from './assets/images/dashboard_CI.png';
-import dashboard_NCI from './assets/images/dashboard_NCI.png';
 import POS_CI from './assets/images/POS_CI.png';
-import POS_NCI from './assets/images/POS_NCI.png';
 import history_CI from './assets/images/history_CI.png';
-import history_NCI from './assets/images/history_NCI.png';
 import searchIcon from './assets/images/search_icon.png';
 import deleteIcon from './assets/images/delete_icon.png';
 
@@ -90,6 +88,7 @@ const App = () => {
   const [paymentMethod, setPaymentMethod] = useState(null);
   const [cashReceived, setCashReceived] = useState('');
   const [paymentStatus, setPaymentStatus] = useState('idle');
+  const [isReprintModalOpen, setIsReprintModalOpen] = useState(false);
 
   // --- Transactions State with LocalStorage Initialization ---
   const [transactions, setTransactions] = useState(() => {
@@ -264,10 +263,6 @@ const getPaymentMethodStats = () => {
       discountType = 'none',
       discountAmount = 0,
       finalTotal = total,
-      refNo = '',
-      cardLast4 = '',
-      mobileProvider = '',
-      tendered = '',
     } = details;
 
     try {
@@ -551,7 +546,12 @@ const handleCancelPayment = async () => {
       {activeTab === 'History' && (
         <div className="history-view">
           <div className="view-inner-container">
-            <h2 className="view-title">Transaction History</h2>
+            <div className="history-view-title-row">
+              <h2 className="view-title">Transaction History</h2>
+              <button className="reprint-trigger-btn" onClick={() => setIsReprintModalOpen(true)}>
+                🖨 Reprint Receipt
+              </button>
+            </div>
             <div className="history-search-container">
               <img src={searchIcon} alt="" className="search-icon-img" />
               <input type="text" className="modern-input" placeholder="Search by transaction ID..." value={historySearch} onChange={(e) => setHistorySearch(e.target.value)} />
@@ -568,12 +568,16 @@ const handleCancelPayment = async () => {
             {/* ✅ ADDED: scrollable container for many transactions */}
             <div className="history-scroll-area" style={{ maxHeight: "60vh", overflowY: "auto" }}>
               <div className="history-accordion">
-                {transactions.filter(t => t.id.toLowerCase().includes(historySearch.toLowerCase())).map(txn => (
+                {transactions.filter(t => 
+                  t.id.toLowerCase().includes(historySearch.toLowerCase()) || 
+                  (t.receiptNumber && String(t.receiptNumber).toLowerCase().includes(historySearch.toLowerCase()))
+                ).map(txn => (
                   <div key={txn.id} className={`history-card ${expandedTxn === txn.id ? 'expanded' : ''}`}>
                     <div className="history-card-header" onClick={() => toggleHistoryItem(txn.id)}>
                       <div className="header-left">
                         <div className="id-badge-row">
                           <span className="txn-id-text">{txn.id}</span>
+                          {txn.receiptNumber && <span className="receipt-no-badge">OR: {txn.receiptNumber}</span>}
                           {/* ✅ CHANGED: method pill now has the right class for colors */}
                           <span className={`method-pill ${getMethodPillClass(txn.method)}`}>{txn.method}</span>
                         </div>
@@ -592,9 +596,9 @@ const handleCancelPayment = async () => {
                             <div key={idx} className="item-detail-row">
                               <div className="item-info">
                                 <p className="item-name-text">{item.name}</p>
-                                <p className="item-calc-text">${item.price} × {item.qty}</p>
+                                <p className="item-calc-text">₱{item.price} × {item.qty}</p>
                               </div>
-                              <p className="item-price-sum">${(item.price * item.qty).toFixed(2)}</p>
+                              <p className="item-price-sum">₱{(item.price * item.qty).toFixed(2)}</p>
                             </div>
                           ))}
                         </div>
@@ -695,6 +699,12 @@ const handleCancelPayment = async () => {
         handleCompletePayment={handleCompletePayment}
         closePaymentModal={closePaymentModal}
         icons={{ cash_icon, card_icon, mobile_icon }}
+      />
+
+      <ReprintModal
+        isOpen={isReprintModalOpen}
+        onClose={() => setIsReprintModalOpen(false)}
+        transactions={transactions}
       />
     </div>
   );

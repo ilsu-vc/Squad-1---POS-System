@@ -75,21 +75,7 @@ footer {
     padding: 0 40px;
 }
 
-/* Wrapper for full-page views like Dashboard and History */
-.view-content-wrapper {
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  padding: 40px 0;
-}
 
-/* The actual container that holds the content */
-.centered-container {
-  width: 100%;
-  max-width: 1200px; /* Adjust this to control how wide it gets */
-  margin: 0 auto;
-  padding: 0 20px;
-}
 
 .nav-actions {
   display: flex;
@@ -243,7 +229,7 @@ footer {
 
 /* Product Cards */
 
-.product-card, .cart-item {
+.product-card {
   background-color: #edf1ed; /* New light background */
   border-radius: 10px;
   padding: 15px;
@@ -487,123 +473,7 @@ footer {
   height: 32px; 
 }
 
-.cart-item .item-info {
-  grid-column: 1 / 2;
-  grid-row: 1 / 3; /* Let it span the first two rows */
-  padding-right: 10px; /* Buffer zone */
-  overflow: hidden;
-}
 
-/* 2. Force the title text to truncate instead of pushing into the icon */
-.cart-item .item-info span {
-  display: block;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis; 
-  max-width: 220px; /* Adjust based on your sidebar width */
-}
-
-.cart-item .item-info span small {
-  font-weight: 400;
-  color: #888;
-}
-
-.item-card {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  padding: 16px;
-  position: relative;
-}
-
-.item-details {
-  flex: 1; /* This makes the text take up available space but not push the icon */
-  margin-right: 10px; /* Space between text and delete icon */
-}
-
-.delete-button {
-  flex-shrink: 0; /* Prevents the icon from getting squished or moved */
-}
-/* quantity row */
-.cart-item .quantity-controls {
-  display: flex;
-  align-items: center;
-  gap: 10px; /* more space between - qty + */
-}
-
-/* qty buttons */
-.cart-item .quantity-controls button {
-  width: 25px;
-  height: 25px;
-  border-radius: 5px;
-  border: 1px solid #cfcfcf;
-  background: #fff;
-  cursor: pointer;
-
-  font-size: 15px;
-  line-height: 1;
-  display: grid;
-  place-items: center;
-  color: #1b2a47;
-}
-
-/* qty value */
-.cart-item .quantity-controls span {
-  min-width: 26px;
-  text-align: center;
-  font-size: 14px;
-  font-weight: 600;
-  color: #1b2a47;
-}
-
-/* right side total price (big, bottom-right like screenshot) */
-.cart-item > span {
-  grid-column: 2 / 3;
-  grid-row: 3 / 4;
-  justify-self: end;
-
-  font-size: 19px;
-  font-weight: 900;
-  color: #222;
-  padding-right: 4px;
-}
-
-/* trash button top-right */
-.cart-item .remove-btn {
-  grid-column: 2 / 3;    /* Forces icon to the right column */
-  grid-row: 1 / 2;       /* Forces icon to the top row, level with title */
-  justify-self: end;     /* Snaps to the right edge of the card */
-  align-self: start;     /* Snaps to the top edge */
-
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  
-  /* Matches the vertical pill hover shape in your UI */
-  padding: 8px 12px; 
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background-color 0.2s ease;
-  
-  color: #ff8a84;        /* Red icon color */
-}
-
-/* 3. Red hover state */
-.cart-item .remove-btn:hover {
-  background-color: #fee2e2; 
-}
-
-.cart-item .remove-btn img {
-  width: 18px;
-  height: 18px;
-  display: block;
-}
-.cart-item .remove-btn:hover {
-  background-color: #fee2e2; /* Light red background on hover */
-
-}
 
 .qty-controls {
   display: flex;
@@ -729,7 +599,7 @@ footer {
   width: 100%;
   max-width: 900px;
   border-radius: 16px;
-  padding: 28px;
+  padding: 20px; /* Reduced from 28px */
   box-shadow: 0 10px 30px rgba(0,0,0,0.25);
   display: flex;
   flex-direction: column;
@@ -741,12 +611,29 @@ footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 12px; /* Reduced from 20px */
 }
 
-.modal-header h2 {
+.modal-header h2, .modal-title {
   font-size: 1.4rem;
   font-weight: 800;
+  margin: 0;
+  color: var(--brand-navy);
+}
+
+.txn-id-line {
+  margin: 4px 0 0 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.txn-id-label {
+  font-weight: 500;
+}
+
+.txn-id-value {
+  font-weight: 700;
+  color: var(--brand-navy);
 }
 
 .close-modal {
@@ -760,10 +647,10 @@ footer {
 .amount-display {
   background: #f1f5f9;
   border: 1px solid var(--border) !important;
-  padding: 20px;
+  padding: 12px 16px; /* Reduced from 20px */
   border-radius: 7px;
   text-align: left;
-  margin-bottom: 25px;
+  margin-bottom: 15px; /* Reduced from 25px */
 }
 
 .amount-display p {
@@ -773,8 +660,8 @@ footer {
 }
 
 .amount-display h1 {
-  margin: 5px 0 0 0;
-  font-size: 2.5rem;
+  margin: 2px 0 0 0; /* Reduced from 5px */
+  font-size: 2.2rem; /* Reduced from 2.5rem */
   font-weight: 800;
 }
 
@@ -804,7 +691,6 @@ opacity: 1 !important;
 .cash-payment-view, .payment-method-view {
   display: flex;
   flex-direction: column;
-
   gap: 20px;
 }
 
@@ -890,21 +776,23 @@ opacity: 1 !important;
 }
 
 .cancel-btn {
-  padding: 12px;
+  padding: 16px; /* Increased from 12px */
   background: white;
   border: 1px solid #ddd;
-  border-radius:  7px;
+  border-radius:  12px;
   font-weight: 700;
+  font-size: 1rem; /* Added */
   cursor: pointer;
 }
 
 .complete-btn {
-  padding: 12px;
+  padding: 16px; /* Increased from 12px */
   background: #e7e9ed;
   color: #a6a6a6;
   border: none;
-  border-radius: 7px;
+  border-radius: 12px;
   font-weight: 700;
+  font-size: 1rem; /* Added */
   cursor: not-allowed;
   transition: 0.3s;
 }
@@ -999,34 +887,34 @@ opacity: 1 !important;
 .payment-view-container {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 12px; /* Reduced from 20px */
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .payment-layout {
   display: grid;
   grid-template-columns: 1fr 280px; /* Left: form, Right: summary sidebar */
-  gap: 20px;
+  gap: 12px; /* Reduced from 20px */
   align-items: start;
+  width: 100%;
 }
 
 .payment-main {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 15px; /* Increased slightly for better separation of large buttons */
   min-width: 0;
 }
 
 .payment-sidebar {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 10px; /* Reduced from 15px */
   background: #f8f9fa;
-  padding: 16px;
+  padding: 12px; /* Reduced from 16px */
   border-radius: 12px;
   border: 1px solid #eaecef;
-  min-width: 0;
-  position: sticky;
-  top: 0;
 }
 
 /* ===================================================== */
@@ -1046,19 +934,13 @@ opacity: 1 !important;
 
 .method-item {
   width: 100%;
-  height: 110px;
+  height: 95px; /* Reduced from 110px */
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 16px;
-  border: 1.5px solid #e0e0e0;
-  border-radius: 12px;
-  background: white;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  text-align: center;
+  gap: 8px; /* Reduced from 10px */
+  padding: 12px; /* Reduced from 16px */
 }
 
 .method-item:hover {
@@ -1088,7 +970,7 @@ opacity: 1 !important;
 @media (max-width: 900px) {
   .payment-modal {
     max-width: 680px;
-    padding: 22px;
+    padding: 16px; /* Reduced from 22px */
   }
 
   .payment-layout {
@@ -1106,7 +988,7 @@ opacity: 1 !important;
   .payment-modal {
     max-width: 100%;
     border-radius: 12px;
-    padding: 18px;
+    padding: 14px; /* Reduced from 18px */
     overflow: visible;
   }
 
@@ -1148,8 +1030,8 @@ opacity: 1 !important;
   }
 
   .payment-modal {
-    border-radius: 16px 16px 0 0;
-    padding: 16px;
+    border-radius: 24px 24px 0 0;
+    padding: 12px; /* Reduced from 20px */
   }
 
   .method-grid {
@@ -1165,6 +1047,8 @@ opacity: 1 !important;
 
   .modal-actions {
     grid-template-columns: 1fr 1fr;
+    margin-top: 20px;
+    padding-bottom: 30px; /* Safe area for mobile home bar */
   }
 }
 
@@ -1181,11 +1065,11 @@ opacity: 1 !important;
 }
 
 .prediction-btn {
-  padding: 12px 6px;
-  font-size: 0.9rem;
-  font-weight: 700;
-  border-radius: 8px;
-  border: 1px solid #ddd;
+  padding: 16px 8px; /* Increased from 12px 6px */
+  font-size: 1.1rem; /* Increased from 0.9rem */
+  font-weight: 800; /* Increased */
+  border-radius: 10px;
+  border: 1.5px solid #ddd;
   background: white;
   cursor: pointer;
   transition: 0.2s;
@@ -1206,12 +1090,12 @@ opacity: 1 !important;
 .essentials-section {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 10px; /* Reduced from 15px */
   background: #f8f9fa;
-  padding: 15px;
+  padding: 12px; /* Reduced from 15px */
   border-radius: 12px;
   border: 1px solid #e9ecef;
-  margin-bottom: 20px;
+  margin-bottom: 12px; /* Reduced from 20px */
 }
 
 .discount-grid {
@@ -1222,12 +1106,12 @@ opacity: 1 !important;
 }
 
 .discount-btn {
-  padding: 8px 12px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  border: 1px solid #dee2e6;
+  padding: 12px 15px; /* Increased from 8px 12px */
+  font-size: 1rem; /* Increased from 0.85rem */
+  font-weight: 700; /* Increased */
+  border: 1.5px solid #dee2e6;
   background: white;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -1245,9 +1129,9 @@ opacity: 1 !important;
 
 .summary-card {
   background: #f1f4f1;
-  padding: 15px;
+  padding: 12px; /* Reduced from 15px */
   border-radius: 12px;
-  margin-bottom: 15px;
+  margin-bottom: 10px; /* Reduced from 15px */
 }
 
 .summary-row {
@@ -1276,8 +1160,8 @@ opacity: 1 !important;
 
 .modern-input-lg {
   width: 100%;
-  height: 60px;
-  font-size: 2rem;
+  height: 50px; /* Reduced from 60px */
+  font-size: 1.6rem; /* Reduced from 2rem */
   font-weight: 700;
   text-align: right;
   padding: 0 15px;
@@ -1409,12 +1293,12 @@ opacity: 1 !important;
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* Dashboard Main Container */
-.dashboard-view {
-  padding: 20px;
-  overflow-y: auto;
+/* History/Dashboard View Container */
+.dashboard-view, .history-view {
   height: calc(100vh - 80px);
+  overflow-y: auto;
   background: var(--brand-bg) !important;
+  padding: 20px 40px;
 }
 
 .dashboard-title {
@@ -1428,45 +1312,44 @@ opacity: 1 !important;
   flex-direction: column;
   gap: 12px;
   margin-top: 11px;
+  max-height: 300px;
+  overflow-y: auto;
+  padding-right: 8px;
+}
 
 .transaction-card .txn-id {
-  font-size: 0.90rem; /* Smaller font size */
-  color: #1b2a47; /* Optional: Slightly darker color for subtle appearance */
+  font-size: 0.90rem;
+  color: #1b2a47;
 }
   
 .transaction-card .txn-method {
-  display: inline-flex; /* Keeps text in one line */
-  align-items: center; /* Vertically centers the text */
-  padding: 3px 9px; /* Smaller padding for a compact pill shape */
-  border-radius: 50px; /* Fully rounded corners for an oval shape */
-  font-weight: 450; /* Lighter font weight for thinner text */
-  font-size: 0.70rem; /* Smaller font size */
-  white-space: nowrap; /* Prevents text from wrapping */
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 50px;
+  font-weight: 450;
+  font-size: 0.70rem;
+  white-space: nowrap;
 }
 
 .transaction-card .txn-method.cash {
- background: rgba(5, 176, 188, 0.1) !important;
+  background: rgba(5, 176, 188, 0.1) !important;
   border: 1px solid #9ddadd;
   color: #01a3b4;
 }
 
 .transaction-card .txn-method.card {
-   background: rgba(5, 176, 188, 0.1) !important;
+  background: rgba(5, 176, 188, 0.1) !important;
   border: 1px solid #9ddadd;
   color: #01a3b4;
 }
 
 .transaction-card .txn-method.mobile {
-   background: rgba(5, 176, 188, 0.1) !important;
+  background: rgba(5, 176, 188, 0.1) !important;
   border: 1px solid #9ddadd;
   color: #01a3b4;
 }
 
-  /* Critical changes for scrolling: */
-  max-height: 300px;       /* Adjust this height as needed */
-  overflow-y: auto;        /* Adds a scrollbar only when items overflow */
-  padding-right: 8px;      /* Space for the scrollbar so it doesn't touch the text */
-}
 
 .history-scroll-area {
   background-color: #ffffff; /* Light grey background for the scrollable area */
@@ -1541,14 +1424,23 @@ opacity: 1 !important;
 }
 
 
+/* Base Transaction Card (Consolidated) */
 .transaction-card {
-  background-color: #f5f5f5; /* Light grey background from your image */
-  border-radius: 8px;
+  background-color: #f9fbfc;
+  border-radius: 12px;
   padding: 16px 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  border: 1px solid var(--border);
+  transition: all 0.2s ease;
 }
+
+.transaction-card:hover {
+  background-color: #f1f5f9;
+  transform: translateY(-1px);
+}
+
 
 .txn-id {
   font-weight: 700;
@@ -1579,28 +1471,6 @@ opacity: 1 !important;
   font-size: 0.8rem;
 }
 
-/* History View Specific Styles */
-.history-item-container {
-    background: white;
-    border-radius: 12px;
-    margin-bottom: 12px;
-    border: 1px solid #e0e0e0;
-    overflow: hidden;
-}
-
-.history-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 15px 20px;
-    cursor: pointer;
-    transition: background 0.2s;
-}
-
-.history-row:hover {
-    background: #d09090;
-}
-
 /* Container and Stats */
 .history-view {
   height: calc(100vh - 80px); /* Adjust based on your nav height */
@@ -1619,9 +1489,52 @@ opacity: 1 !important;
 .view-inner-container {
     max-width: 1100px; /* Standardized width for all views */
     margin: 0 auto;
-    padding: 20px 40px;
-    width: 100%;
-    box-sizing: border-box;
+    padding: 20px;
+}
+
+.history-view-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.reprint-trigger-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    background: #01a2ad;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 12px rgba(1, 162, 173, 0.15);
+}
+
+.reprint-trigger-btn:hover {
+    background: #008c96;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(1, 162, 173, 0.25);
+}
+
+.reprint-trigger-btn:active {
+    transform: translateY(0);
+}
+
+.receipt-no-badge {
+    font-size: 0.75rem;
+    background: #f7fafc;
+    color: #4a5568;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-weight: 700;
+    border: 1px solid #e2e8f0;
+    margin-left: 8px;
+    display: inline-flex;
+    align-items: center;
 }
 
 .history-search-container {
@@ -1750,16 +1663,18 @@ opacity: 1 !important;
 }
 
 /* Dashboards Stat Icon Fix (From previous step) */
+/* Stat Icon Container (Consolidated) */
 .stat-icon-bg {
-  width: 20px;         /* Reduced from original size */
-  height: 20px;        /* Reduced from original size */
-  background: var(--stat-icon-bg-color) !important;
+  width: 48px;
+  height: 48px;
+  background-color: #f0f2f0;
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;      /* Prevents the circle from squishing */
+  flex-shrink: 0;
 }
+
 
 .stat-img-icon {
   width: 24px;         /* Specific size for the icon */
@@ -1901,14 +1816,7 @@ opacity: 1 !important;
   background: #a5a5a5;  /* Darker color when hovering over the scrollbar thumb */
 }
 
-.transaction-card {
-  background-color: #f5f5f5; /* Light grey background from your image */
-  border-radius: 12px;
-  padding: 16px 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
+
 
 .txn-id {
   font-weight: 700;
@@ -2036,15 +1944,18 @@ opacity: 1 !important;
     margin-bottom: 30px;
 }
 
+/* Stat Card (Consolidated) */
 .stat-card {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 20px;
-  background: #fff;
-  border-radius: 1px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  border: 1px solid var(--border);
 }
+
 
 .stat-info h3 {
     font-size: 0.85rem;
@@ -2066,14 +1977,7 @@ opacity: 1 !important;
     margin-top: 5px;
 }
 
-.stat-icon-bg {
-    background: #e7e9ed; 
-    padding: 10px;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
+
 
 /* 2x2 Main Content Grid */
 .dashboard-main-grid {
@@ -2160,65 +2064,8 @@ opacity: 1 !important;
     gap: 15px;
 }
 
-.transaction-card {
-    background-color: #f9fbfc;
-    border-radius: 6px;
-    padding: 15px 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
 
-/* Container for the icon - ensures it stays small and square */
-.stat-icon-bg {
-  width: 48px;
-  height: 48px;
-  background-color: #f0f2f0; /* Matches the light grey/green tint in your design */
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0; /* Prevents the box from squishing */
-}
 
-/* The actual image icon */
-.stat-img-icon {
-  width: 24px;  /* Adjust this to make the icon larger or smaller inside the box */
-  height: 24px;
-  object-fit: contain;
-}
-
-/* Ensures the stat card content and icon sit side-by-side */
-.stat-card {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-  border: 1px solid #e0e0e0;
-}
-
-.stat-info h3 {
-  font-size: 14px;
-  color: #666;
-  margin: 0 0 8px 0;
-  font-weight: 500;
-}
-
-.stat-value {
-  font-size: 24px;
-  font-weight: 700;
-  margin: 0;
-  color: #333;
-}
-
-.txn-id-label, .txn-id-value  {
-  margin: 0;
-  font-size: 0.9rem;
-  color: #666;
-}
 
 /* ✅ ADDED: Method pill designs for Transaction History */
 /* Add these modifier classes on your method pill element:
