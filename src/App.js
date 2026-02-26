@@ -253,15 +253,25 @@ const getPaymentMethodStats = () => {
   };
 
 
-  const handleCompletePayment = async () => {
+  const handleCompletePayment = async (details = {}) => {
     if (!dbTransactionId) {
       alert("No DB transaction found. Click Proceed to Payment again.");
       return;
     }
 
+    const {
+      customerName = '',
+      discountType = 'none',
+      discountAmount = 0,
+      finalTotal = total,
+      refNo = '',
+      cardLast4 = '',
+      mobileProvider = '',
+      tendered = '',
+    } = details;
 
     try {
-      // --- 1) mark DB transaction as PAID and insert---
+      // --- 1) mark DB transaction as PAID ---
       const { error: updErr } = await supabase
         .from("transactions")
         .update({
@@ -271,9 +281,7 @@ const getPaymentMethodStats = () => {
         })
         .eq("id", dbTransactionId);
 
-
       if (updErr) throw updErr;
-
 
       // --- 2) call your receipt function ---
       const { data: receiptRows, error: rpcErr } = await supabase.rpc(
@@ -281,16 +289,13 @@ const getPaymentMethodStats = () => {
         { p_transaction_id: dbTransactionId }
       );
 
-
       if (rpcErr) throw rpcErr;
 
+      const receipt = Array.isArray(receiptRows) ? receiptRows[0] : receiptRows;
+      const receiptNo = receipt?.receipt_number ?? null;
+      setDbReceiptNumber(receiptNo);
 
-    const receipt = Array.isArray(receiptRows) ? receiptRows[0] : receiptRows;
-    const receiptNo = receipt?.receipt_number ?? null;
-    setDbReceiptNumber(receiptNo);
-
-
-      // --- 3) keep your existing local transaction history logic ---
+      // --- 3) update local transaction history ---
       const now = new Date();
       const formattedHour =
         now.getHours() >= 12
@@ -301,23 +306,20 @@ const getPaymentMethodStats = () => {
             ? "12AM"
             : now.getHours() + "AM";
 
-
       const methodMap = {
         cash: "Cash Payment",
         card: "Credit/Debit Card",
         mobile: "Mobile Payment",
       };
 
-
       const newTransaction = {
-        // Keep your old ID if you want, but it's better to store the real UUID:
-        id: dbTransactionId, // ✅ real DB UUID
-        receiptNumber: receiptNo, // ✅ your sequential receipt
+        id: dbTransactionId,
+        receiptNumber: receiptNo,
         date: now.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
         time: now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
         hour: formattedHour,
-        amount: `$${total.toFixed(2)}`,
-        rawAmount: total,
+        amount: `₱${finalTotal.toFixed(2)}`,
+        rawAmount: finalTotal,
         method: methodMap[paymentMethod],
         itemsCount: cart.reduce((sum, item) => sum + item.quantity, 0),
         items: cart.map((item) => ({
@@ -328,16 +330,18 @@ const getPaymentMethodStats = () => {
         })),
         subtotal,
         tax,
+        customerName,
+        discountType,
+        discountAmount,
       };
 
-
-    setTransactions([newTransaction, ...transactions]);
-    setPaymentStatus("success");
-  } catch (err) {
-    console.error(err);
-    alert(err.message || "Failed to complete payment / generate receipt.");
-  }
-};
+      setTransactions([newTransaction, ...transactions]);
+      setPaymentStatus("success");
+    } catch (err) {
+      console.error(err);
+      alert(err.message || "Failed to complete payment / generate receipt.");
+    }
+  };
 
 
 const handleCancelPayment = async () => {
@@ -556,8 +560,8 @@ const handleCancelPayment = async () => {
 
             <div className="history-stats-row">
               <div className="h-stat-card"><p className="h-stat-label">Total Transactions</p><h2 className="h-stat-value">{transactions.length}</h2></div>
-              <div className="h-stat-card"><p className="h-stat-label">Total Revenue</p><h2 className="h-stat-value">${totalRevenue.toFixed(2)}</h2></div>
-              <div className="h-stat-card"><p className="h-stat-label">Average Transaction</p><h2 className="h-stat-value">${avgTransaction.toFixed(2)}</h2></div>
+              <div className="h-stat-card"><p className="h-stat-label">Total Revenue</p><h2 className="h-stat-value">₱{totalRevenue.toFixed(2)}</h2></div>
+              <div className="h-stat-card"><p className="h-stat-label">Average Transaction</p><h2 className="h-stat-value">₱{avgTransaction.toFixed(2)}</h2></div>
             </div>
 
 
@@ -595,8 +599,8 @@ const handleCancelPayment = async () => {
                           ))}
                         </div>
                         <div className="history-financial-summary">
-                          <div className="f-row"><span>Subtotal:</span> <span>${txn.subtotal.toFixed(2)}</span></div>
-                          <div className="f-row"><span>Tax:</span> <span>${txn.tax.toFixed(2)}</span></div>
+                          <div className="f-row"><span>Subtotal:</span> <span>₱{txn.subtotal.toFixed(2)}</span></div>
+                          <div className="f-row"><span>Tax:</span> <span>₱{txn.tax.toFixed(2)}</span></div>
                           <div className="f-row f-total"><span>Total:</span> <span>{txn.amount}</span></div>
                         </div>
                       </div>
@@ -629,7 +633,7 @@ const handleCancelPayment = async () => {
                   <h3 className="product-name">{product.name}</h3>
                   <p className="cat-label">{product.category}</p>
                   <div className="card-footer">
-                    <div><span className="price">${product.price.toFixed(2)}</span><span className="stock">Stock: {product.stock}</span></div>
+                    <div><span className="price">₱{product.price.toFixed(2)}</span><span className="stock">Stock: {product.stock}</span></div>
                     <button className="add-btn" onClick={() => addToCart(product)}>+</button>
                   </div>
                 </div>
@@ -643,14 +647,14 @@ const handleCancelPayment = async () => {
               {cart.map(item => (
                 <div key={item.id} className="cart-item">
                   <div className="item-details">
-                    <h4 className="cart-item-name">{item.name}</h4><p className="item-price-each">${item.price.toFixed(2)} each</p>
+                    <h4 className="cart-item-name">{item.name}</h4><p className="item-price-each">₱{item.price.toFixed(2)} each</p>
                     <div className="qty-controls">
                       <button onClick={() => updateQty(item.id, -1)}>-</button><span>{item.quantity}</span><button onClick={() => updateQty(item.id, 1)}>+</button>
                     </div>
                   </div>
                   <div className="item-total-section">
                     <button className="delete-item" onClick={() => setCart(cart.filter(i => i.id !== item.id))}><img src={deleteIcon} alt="Delete" /></button>
-                    <p className="item-total">${(item.price * item.quantity).toFixed(2)}</p>
+                    <p className="item-total">₱{(item.price * item.quantity).toFixed(2)}</p>
                   </div>
                 </div>
               ))}
@@ -676,86 +680,22 @@ const handleCancelPayment = async () => {
       )}
 
 
-      {isPaymentModalOpen && (
-        <div className="modal-overlay">
-          {paymentStatus === 'success' ? (
-            <div className="success-modal">
-              <div className="success-icon">✓</div><h2 className="modal-title">Payment Successful!</h2>
-              <p>
-                Receipt Number:{" "}
-                <strong>{dbReceiptNumber ? dbReceiptNumber : "Generating..."}</strong>
-              </p>
-              <p>Transaction completed</p>
-              <button className="close-success-btn" onClick={closePaymentModal}>Back to POS</button>
-            </div>
-          ) : (
-            <div className="payment-modal">
-
-
-
-
-
-              <div className="modal-header">
-                <div>
-                  <h2 className="modal-title">Payment</h2>
-                  <p className="txn-id-line"><span className="txn-id-label">Transaction ID:</span>{" "}<span className="txn-id-value">{dbTransactionId ? dbTransactionId : "Generating..."}</span></p>
-                </div><button className="close-modal" onClick={closePaymentModal}>✕</button></div>
-
-
-
-
-              <div className="amount-display"><p>Total Amount</p><h1 className="total-h1">${total.toFixed(2)}</h1></div>
-              {!paymentMethod ? (
-                <div className="payment-options">
-                  <p className="section-label">Select Payment Method</p>
-                  <div className="method-grid">
-                    <button className="method-item" onClick={() => setPaymentMethod('cash')}><img src={cash_icon} alt="" className="method-img-icon" /><span>Cash</span></button>
-                    <button className="method-item" onClick={() => setPaymentMethod('card')}><img src={card_icon} alt="" className="method-img-icon" /><span>Card</span></button>
-                    <button className="method-item" onClick={() => setPaymentMethod('mobile')}><img src={mobile_icon} alt="" className="method-img-icon" /><span>Mobile</span></button>
-                  </div>
-                </div>
-              ) : paymentMethod === 'cash' ? (
-                <div className="cash-payment-view">
-                  <div className="view-header"><p className="section-label">Cash Payment</p><button className="change-method" onClick={() => setPaymentMethod(null)}>Change Method</button></div>
-                  <div className="input-group">
-                    <div className="label-row"><label className="modern-label">Cash Received</label>{cashReceived && parseFloat(cashReceived) < total && <span className="error-text">Insufficient amount</span>}</div>
-                    <input type="number" className="modern-input-lg" placeholder="0.00" value={cashReceived} onChange={(e) => setCashReceived(e.target.value)} />
-                  </div>
-                  <div className="quick-amounts">
-                    <p className="section-label-sm">Quick Amount</p>
-                    <div className="quick-grid">
-                      <button className="quick-btn" onClick={() => setCashReceived(total.toFixed(2))}>${total.toFixed(2)}</button>
-                      <button className="quick-btn" onClick={() => setCashReceived('80')}>$80</button><button className="quick-btn" onClick={() => setCashReceived('100')}>$100</button>
-                    </div>
-                  </div>
-
-
-                  <div className="change-display">
-                    <p>Change</p>
-                    <h2>${changeAmount.toFixed(2)}</h2>
-                  </div>
-
-
-                  <div className="modal-actions">
-                    <button className="cancel-btn" onClick={handleCancelPayment}>Cancel</button>
-                    <button className={`complete-btn ${parseFloat(cashReceived) >= total ? 'active' : ''}`} disabled={parseFloat(cashReceived) < total || !cashReceived} onClick={handleCompletePayment}>Complete Payment</button>
-                  </div>
-                </div>
-              ) : (
-                <div className="payment-method-view">
-                  <div className="view-header"><p className="section-label">{paymentMethod === 'card' ? 'Card Payment' : 'Mobile Payment'}</p><button className="change-method" onClick={() => setPaymentMethod(null)}>Change Method</button></div>
-                  <div className="reader-status-box">
-                    <div className="reader-img-container"><img src={paymentMethod === 'card' ? card_icon : mobile_icon} alt="" className="status-img-icon" /></div>
-                    <p className="main-prompt">{paymentMethod === 'card' ? 'Please insert or tap card' : 'Scan QR code or tap device'}</p>
-                    <p className="sub-prompt">{paymentMethod === 'card' ? 'Waiting for card reader...' : 'Apple Pay, Google Pay, Samsung Pay'}</p>
-                  </div>
-                  <div className="modal-actions"><button className="cancel-btn" onClick={closePaymentModal}>Cancel</button><button className="complete-btn active" onClick={handleCompletePayment}>Complete Payment</button></div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
+      <PaymentModal
+        isOpen={isPaymentModalOpen}
+        total={total}
+        paymentMethod={paymentMethod}
+        setPaymentMethod={setPaymentMethod}
+        cashReceived={cashReceived}
+        setCashReceived={setCashReceived}
+        changeAmount={changeAmount}
+        paymentStatus={paymentStatus}
+        dbTransactionId={dbTransactionId}
+        dbReceiptNumber={dbReceiptNumber}
+        handleCancelPayment={handleCancelPayment}
+        handleCompletePayment={handleCompletePayment}
+        closePaymentModal={closePaymentModal}
+        icons={{ cash_icon, card_icon, mobile_icon }}
+      />
     </div>
   );
 };
