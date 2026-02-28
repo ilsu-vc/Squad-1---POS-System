@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { calculateReceiptVAT } from '../utils/vatCalculator'; // Added the new VAT service
 import './ReprintModal.css';
 
 const SUPERVISOR_PIN = '1234';
@@ -156,26 +157,42 @@ const ReprintModal = ({ isOpen, onClose, transactions }) => {
 
                 <div className="receipt-divider dashed" />
 
+                {/* UPDATED: New VAT Breakdown for POS-008 */}
                 <div className="receipt-summary">
-                  <div className="receipt-summary-row">
-                    <span>Subtotal</span>
-                    <span>₱{matchedTxn.subtotal.toFixed(2)}</span>
-                  </div>
-                  <div className="receipt-summary-row">
-                    <span>VAT (12%)</span>
-                    <span>₱{matchedTxn.tax.toFixed(2)}</span>
-                  </div>
-                  {matchedTxn.discountType && matchedTxn.discountType !== 'none' && (
-                    <div className="receipt-summary-row discount">
-                      <span>Discount ({matchedTxn.discountType.toUpperCase()})</span>
-                      <span>-₱{(matchedTxn.discountAmount ?? 0).toFixed(2)}</span>
-                    </div>
-                  )}
-                  <div className="receipt-divider" />
-                  <div className="receipt-summary-row total-row">
-                    <span>TOTAL</span>
-                    <span>{matchedTxn.amount}</span>
-                  </div>
+                  {(() => {
+                    // Extract the final total amount properly
+                    const finalTotal = typeof matchedTxn.amount === 'number' 
+                      ? matchedTxn.amount 
+                      : (matchedTxn.subtotal + matchedTxn.tax - (matchedTxn.discountAmount || 0));
+                    
+                    const taxDetails = calculateReceiptVAT(finalTotal);
+
+                    return (
+                      <>
+                        <div className="receipt-summary-row">
+                          <span>VAT-Exclusive Amount</span>
+                          <span>₱{taxDetails.vatExclusive.toFixed(2)}</span>
+                        </div>
+                        <div className="receipt-summary-row">
+                          <span>VAT Amount (12%)</span>
+                          <span>₱{taxDetails.vatAmount.toFixed(2)}</span>
+                        </div>
+                        
+                        {matchedTxn.discountType && matchedTxn.discountType !== 'none' && (
+                          <div className="receipt-summary-row discount">
+                            <span>Discount ({matchedTxn.discountType.toUpperCase()})</span>
+                            <span>-₱{(matchedTxn.discountAmount ?? 0).toFixed(2)}</span>
+                          </div>
+                        )}
+                        
+                        <div className="receipt-divider" />
+                        <div className="receipt-summary-row total-row">
+                          <span>Total (VAT-Inclusive)</span>
+                          <span>₱{taxDetails.totalInclusive.toFixed(2)}</span>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
 
                 <div className="receipt-divider dashed" />
