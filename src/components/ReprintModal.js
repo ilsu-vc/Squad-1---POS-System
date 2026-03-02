@@ -129,6 +129,11 @@ const ReprintModal = ({ isOpen, onClose, transactions }) => {
 
                 <div className="receipt-header">
                   <h3 className="receipt-store-name">PharmaCare Drugstore</h3>
+
+                  {/* NEW: Address + TIN */}
+                  <p className="receipt-store-sub receipt-store-line">123 Sample St., Brgy. Example, City, Philippines</p>
+                  <p className="receipt-store-sub receipt-store-line">TIN: 000-000-000-000</p>
+
                   <p className="receipt-store-sub">Official Receipt</p>
                   <div className="receipt-divider" />
                   <p className="receipt-meta">Receipt #: <strong>{matchedTxn.receiptNumber ?? '—'}</strong></p>
@@ -197,6 +202,12 @@ const ReprintModal = ({ isOpen, onClose, transactions }) => {
 
                 <div className="receipt-divider dashed" />
                 <p className="receipt-footer">Thank you for your purchase!</p>
+
+                {/* NEW: BIR required validity line */}
+                <p className="receipt-footer bir-line">
+                  THIS RECEIPT SHALL BE VALID FOR FIVE (5) YEARS FROM THE DATE OF ATP
+                </p>
+
                 <p className="receipt-footer small">This is a computer-generated receipt.</p>
               </div>
 
@@ -212,7 +223,7 @@ const ReprintModal = ({ isOpen, onClose, transactions }) => {
             </div>
           ) : (
             <div className="reprint-empty-state">
-              <p>🔍 Enter a receipt number or transaction ID above to find the receipt</p>
+              <p>Enter a receipt number or transaction ID above to find the receipt</p>
             </div>
           )}
         </div>
