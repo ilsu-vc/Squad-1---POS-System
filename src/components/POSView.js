@@ -66,7 +66,12 @@ const POSView = ({
 
         <div className="product-grid">
           {filteredProducts.map((product) => (
-            <div key={product.id} className="product-card">
+            <div
+              key={product.id}
+              className="product-card"
+              onClick={() => addToCart(product)}
+              style={{ cursor: 'pointer', userSelect: 'none' }}
+            >
               <div className="img-container">
                 <img src={product.image} alt={product.name} />
               </div>
@@ -77,7 +82,6 @@ const POSView = ({
                   <span className="price">{formatCurrency(product.price)}</span>
                   <span className="stock">Stock: {product.stock}</span>
                 </div>
-                <button className="add-btn" onClick={() => addToCart(product)}>+</button>
               </div>
             </div>
           ))}
