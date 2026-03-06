@@ -2,6 +2,9 @@ import { useState } from 'react';
 import './App.css';
 import { supabase } from './supabaseClient';
 
+// Number format utility
+import { formatCurrency } from './utils/numberformatters.js';
+
 // ── Navigation Icons ──
 import dashboard_CI from './assets/images/dashboard_CI.png';
 import POS_CI       from './assets/images/POS_CI.png';
@@ -51,7 +54,7 @@ const App = () => {
             id: 'TXN-1771607944136',
             date: 'Feb 21, 2026',
             time: '1:19:04 AM',
-            amount: '₱12.31',
+            amount: formatCurrency(12.31), //used text formatter utility for display consistency
             rawAmount: 12.31,
             method: 'Mobile Payment',
             itemsCount: 1,
@@ -136,80 +139,113 @@ const App = () => {
     }
   };
 
+// Mapping for discount types (for database)
+const discountTypeMap = {
+  none: 'None',
+  pwd: 'PWD',
+  senior: 'Senior Citizen',
+};
+
+
   const handleCompletePayment = async (details = {}) => {
-    if (!dbTransactionId) {
-      alert('No DB transaction found. Click Proceed to Payment again.');
-      return;
-    }
+  if (!dbTransactionId) {
+    alert('No DB transaction found. Click Proceed to Payment again.');
+    return;
+  }
 
-    const {
-      customerName   = '',
-      discountType   = 'none',
-      discountAmount = 0,
-      finalTotal     = total,
-    } = details;
+  const {
+  customerName = '',
+  discountType = 'none', //added discount type to the details object
+  discountAmount = 0,
+  finalTotal = total,
+} = details;
 
-    try {
-      // 1) Mark transaction as PAID
-      const { error: updErr } = await supabase
-        .from('transactions')
-        .update({ status: 'paid', paid_at: new Date().toISOString(), vat: Number(tax.toFixed(2)) })
-        .eq('id', dbTransactionId);
+const normalizedDiscountType = discountTypeMap[discountType] || 'None'; // Ensure we store a valid discount type in the database
 
-      if (updErr) throw updErr;
+  try {
+    // 1) Confirm payment + issue receipt in ONE RPC
+    const itemsPayload = cart.map((item) => ({
+      name: item.name,
+      category: item.category ?? null,
+      unit_price: Number(item.price),
+      quantity: Number(item.quantity),
+    }));
 
-      // 2) Generate / fetch receipt
-      const { data: receiptRows, error: rpcErr } = await supabase.rpc(
-        'get_or_create_receipt_for_transaction',
-        { p_transaction_id: dbTransactionId }
-      );
+    const itemsCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
-      if (rpcErr) throw rpcErr;
+    const { data: receiptRows, error: rpcErr } = await supabase.rpc(
+      'confirm_payment_and_issue_receipt',
+      {
+        p_transaction_id: dbTransactionId,
+        p_vat: Number(tax ?? 0),
+        p_subtotal: Number(subtotal ?? 0),
+        p_total_amount: Number(finalTotal ?? total ?? 0),
+        p_payment_method: paymentMethod,
+        p_items_count: itemsCount,
+        p_items: itemsPayload,
+        p_discount_type: normalizedDiscountType,
+        p_discount_amount: Number(discountAmount ?? 0),
+      }
+    );
 
-      const receipt  = Array.isArray(receiptRows) ? receiptRows[0] : receiptRows;
-      const receiptNo = receipt?.receipt_number ?? null;
-      setDbReceiptNumber(receiptNo);
+    if (rpcErr) throw rpcErr;
 
-      // 3) Update local transaction history
-      const now = new Date();
-      const h   = now.getHours();
-      const formattedHour =
-        h >= 12
-          ? h === 12 ? '12PM' : h - 12 + 'PM'
-          : h === 0  ? '12AM' : h + 'AM';
+    const receipt = Array.isArray(receiptRows) ? receiptRows[0] : receiptRows;
+    const receiptNo = receipt?.o_receipt_number ?? null;
+    setDbReceiptNumber(receiptNo);
 
-      const methodMap = { cash: 'Cash Payment', card: 'Credit/Debit Card', mobile: 'Mobile Payment' };
+    // 2) Update local transaction history
+    const now = new Date();
+    const h = now.getHours();
+    const formattedHour =
+      h >= 12
+        ? h === 12 ? '12PM' : h - 12 + 'PM'
+        : h === 0 ? '12AM' : h + 'AM';
 
-      const newTransaction = {
-        id: dbTransactionId,
-        receiptNumber: receiptNo,
-        date:   now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-        time:   now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-        hour:   formattedHour,
-        amount: `₱${finalTotal.toFixed(2)}`,
-        rawAmount:  finalTotal,
-        method:     methodMap[paymentMethod],
-        itemsCount: cart.reduce((sum, item) => sum + item.quantity, 0),
-        items: cart.map((item) => ({
-          name:     item.name,
-          qty:      item.quantity,
-          price:    item.price,
-          category: item.category,
-        })),
-        subtotal,
-        tax,
-        customerName,
-        discountType,
-        discountAmount,
-      };
+    const methodMap = {
+      cash: 'Cash Payment',
+      card: 'Credit/Debit Card',
+      mobile: 'Mobile Payment',
+    };
 
-      setTransactions([newTransaction, ...transactions]);
-      setPaymentStatus('success');
-    } catch (err) {
-      console.error(err);
-      alert(err.message || 'Failed to complete payment / generate receipt.');
-    }
-  };
+    const newTransaction = {
+      id: dbTransactionId,
+      receiptNumber: receiptNo,
+      date: now.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      }),
+      time: now.toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      }),
+      hour: formattedHour,
+      amount: `₱${finalTotal.toFixed(2)}`,
+      rawAmount: finalTotal,
+      method: methodMap[paymentMethod],
+      itemsCount,
+      items: cart.map((item) => ({
+        name: item.name,
+        qty: item.quantity,
+        price: item.price,
+        category: item.category,
+      })),
+      subtotal,
+      tax,
+      customerName,
+      discountType: normalizedDiscountType,
+      discountAmount,
+    };
+
+    setTransactions([newTransaction, ...transactions]);
+    setPaymentStatus('success');
+  } catch (err) {
+    console.error(err);
+    alert(err.message || 'Failed to complete payment / generate receipt.');
+  }
+};
 
   const handleCancelPayment = async () => {
     if (!dbTransactionId) {

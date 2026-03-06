@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react';
 
+// Number format utility
+import { formatCurrency } from '../utils/numberformatters.js';
+
+
 const PaymentForm = ({
   total: initialTotal,
   paymentMethod,
@@ -22,17 +26,18 @@ const PaymentForm = ({
   const [discountAmount, setDiscountAmount] = useState(0);
 
   useEffect(() => {
-    if (discountType === 'none') {
-      setFinalTotal(initialTotal);
-      setDiscountAmount(0);
-    } else {
-      // PH Logic: Remove 12% VAT, then apply 20% discount
-      const vatable = initialTotal / 1.12;
-      const discount = vatable * 0.20;
-      setDiscountAmount(discount);
-      setFinalTotal(initialTotal - (initialTotal - vatable) - discount);
-    }
-  }, [discountType, initialTotal]);
+  if (discountType === 'none') {
+    setFinalTotal(Number(initialTotal.toFixed(2)));
+    setDiscountAmount(0);
+  } else {
+    // PH Logic: Remove 12% VAT, then apply 20% discount
+    const vatable = initialTotal / 1.12;
+    const discount = vatable * 0.20;
+    const discountedTotal = vatable - discount;
+    setDiscountAmount(Number(discount.toFixed(2)));
+    setFinalTotal(Number(discountedTotal.toFixed(2)));
+  }
+}, [discountType, initialTotal]);
 
   // Recalculate change based on discounted total
   const currentCashReceived = parseFloat(cashReceived) || 0;
@@ -167,7 +172,7 @@ const PaymentForm = ({
                         className={`prediction-btn ${parseFloat(cashReceived) === pred ? 'active' : ''}`}
                         onClick={() => setCashReceived(pred.toString())}
                       >
-                        ₱{pred.toLocaleString(undefined, { minimumFractionDigits: finalTotal % 1 === 0 ? 0 : 2 })}
+                        {formatCurrency(pred)}
                       </button>
                     ))}
                   </div>
@@ -259,25 +264,25 @@ const PaymentForm = ({
           <div className="summary-card">
             <div className="summary-row">
               <span>Original Total:</span>
-              <span>₱{initialTotal.toFixed(2)}</span>
+              <span>{formatCurrency(initialTotal)}</span>
             </div>
             {discountType !== 'none' && (
               <>
                 <div className="summary-row discount">
                   <span>Discount ({discountType.toUpperCase()}):</span>
-                  <span>-₱{discountAmount.toFixed(2)}</span>
+                  <span>-{formatCurrency(discountAmount)}</span>
                 </div>
               </>
             )}
             <div className="summary-total">
               <p className="section-label-sm">Final Amount</p>
-              <h2>₱{finalTotal.toFixed(2)}</h2>
+              <h2>{formatCurrency(finalTotal)}</h2>
             </div>
           </div>
 
           <div className="change-display">
             <p className="section-label-sm">Change Due</p>
-            <h2 style={{ fontSize: '2rem', margin: '5px 0' }}>₱{currentChangeAmount.toFixed(2)}</h2>
+            <h2 style={{ fontSize: '2rem', margin: '5px 0' }}>{formatCurrency(currentChangeAmount)}</h2>
           </div>
 
           {currentChangeAmount > 0.001 && (

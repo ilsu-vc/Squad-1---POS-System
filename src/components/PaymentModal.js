@@ -1,5 +1,8 @@
 import PaymentForm from './PaymentForm';
 
+// Number format utility
+import { formatCurrency } from '../utils/numberformatters.js';
+
 const PaymentModal = ({
   isOpen,
   total,
@@ -46,7 +49,7 @@ const PaymentModal = ({
 
           <div className="amount-display">
             <p>Total Amount</p>
-            <h1 className="total-h1">₱{total.toFixed(2)}</h1>
+            <h1 className="total-h1">{formatCurrency(total)}</h1>
           </div>
 
           <PaymentForm
