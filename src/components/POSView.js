@@ -3,6 +3,9 @@ import searchIcon from '../assets/images/search_icon.png';
 import deleteIcon from '../assets/images/delete_icon.png';
 import cartIcon from '../assets/images/cart.png'; // Added cart icon import
 
+// Number format utility
+import { formatCurrency } from '../utils/numberformatters.js';
+
 const POSView = ({
   cart,
   setCart,
@@ -63,7 +66,12 @@ const POSView = ({
 
         <div className="product-grid">
           {filteredProducts.map((product) => (
-            <div key={product.id} className="product-card">
+            <div
+              key={product.id}
+              className="product-card"
+              onClick={() => addToCart(product)}
+              style={{ cursor: 'pointer', userSelect: 'none' }}
+            >
               <div className="img-container">
                 <img src={product.image} alt={product.name} />
               </div>
@@ -71,10 +79,9 @@ const POSView = ({
               <p className="cat-label">{product.category}</p>
               <div className="card-footer">
                 <div>
-                  <span className="price">₱{product.price.toFixed(2)}</span>
+                  <span className="price">{formatCurrency(product.price)}</span>
                   <span className="stock">Stock: {product.stock}</span>
                 </div>
-                <button className="add-btn" onClick={() => addToCart(product)}>+</button>
               </div>
             </div>
           ))}
@@ -127,7 +134,7 @@ const POSView = ({
               <div key={item.id} className="cart-item">
                 <div className="item-details">
                   <h4 className="cart-item-name">{item.name}</h4>
-                  <p className="item-price-each">₱{item.price.toFixed(2)} each</p>
+                  <p className="item-price-each">{formatCurrency(item.price)} each</p>
                   <div className="qty-controls">
                     <button onClick={() => updateQty(item.id, -1)}>-</button>
                     <span>{item.quantity}</span>
@@ -147,7 +154,7 @@ const POSView = ({
                   >
                     <img src={deleteIcon} alt="Delete" />
                   </button>
-                  <p className="item-total">₱{(item.price * item.quantity).toFixed(2)}</p>
+                  <p className="item-total">{formatCurrency(item.price * item.quantity)}</p>
                 </div>
               </div>
             ))
@@ -157,16 +164,16 @@ const POSView = ({
         <div className="billing-summary">
           <div className="bill-row">
             <span>Subtotal:</span>
-            <span id="display-subtotal">₱{subtotal.toFixed(2)}</span>
+            <span id="display-subtotal">{formatCurrency(subtotal)}</span>
           </div>
           <div className="bill-row">
             <span>Tax (12%):</span>
-            <span id="display-vat">₱{tax.toFixed(2)}</span>
+            <span id="display-vat">{formatCurrency(tax)}</span>
           </div>
           <hr />
           <div className="bill-row total">
             <span>Total:</span>
-            <span id="display-grand-total">₱{total.toFixed(2)}</span>
+            <span id="display-grand-total">{formatCurrency(total)}</span>
           </div>
           <button 
             className="pay-btn" 
