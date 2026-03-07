@@ -2,6 +2,10 @@ import React from 'react';
 import { getMethodPillClass } from '../utils/paymentHelpers';
 import searchIcon from '../assets/images/search_icon.png';
 
+// Number format utility
+import { formatCurrency } from '../utils/numberformatters.js';
+
+
 const HistoryView = ({
   transactions,
   historySearch,
@@ -51,11 +55,11 @@ const HistoryView = ({
           </div>
           <div className="h-stat-card">
             <p className="h-stat-label">Total Revenue</p>
-            <h2 className="h-stat-value">₱{totalRevenue.toFixed(2)}</h2>
+            <h2 className="h-stat-value">{formatCurrency(totalRevenue)}</h2>
           </div>
           <div className="h-stat-card">
             <p className="h-stat-label">Average Transaction</p>
-            <h2 className="h-stat-value">₱{avgTransaction.toFixed(2)}</h2>
+            <h2 className="h-stat-value">{formatCurrency(avgTransaction)}</h2>
           </div>
         </div>
 
@@ -94,18 +98,18 @@ const HistoryView = ({
                         <div key={idx} className="item-detail-row">
                           <div className="item-info">
                             <p className="item-name-text">{item.name}</p>
-                            <p className="item-calc-text">₱{item.price} × {item.qty}</p>
+                            <p className="item-calc-text">{formatCurrency(item.price)} × {item.qty}</p>
                           </div>
-                          <p className="item-price-sum">₱{(item.price * item.qty).toFixed(2)}</p>
+                          <p className="item-price-sum">{formatCurrency(item.price * item.qty)}</p>
                         </div>
                       ))}
                     </div>
                     <div className="history-financial-summary">
-                      <div className="f-row"><span>Subtotal:</span> <span>₱{txn.subtotal.toFixed(2)}</span></div>
-                      <div className="f-row"><span>Tax:</span>      <span>₱{txn.tax.toFixed(2)}</span></div>
-                      <div className="f-row f-total"><span>Total:</span> <span>{txn.amount}</span></div>
-                    </div>
-                  </div>
+                      <div className="f-row"><span>Subtotal:</span><span>{formatCurrency(txn.subtotal ?? 0)}</span></div>
+                      <div className="f-row"><span>Tax:</span><span>{formatCurrency(txn.tax ?? 0)}</span></div>
+                      {Number(txn.discountAmount) > 0 && (<div className="f-row f-discount"><span>Discount{txn.discountType && txn.discountType !== 'None'? ` (${txn.discountType})`: ''}:</span><span>-{formatCurrency(txn.discountAmount)}</span></div>)}
+                      <div className="f-row f-total"><span>Total:</span><span>{txn.amount}</span></div></div>
+                                        </div>
                 )}
 
               </div>

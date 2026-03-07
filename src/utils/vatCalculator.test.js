@@ -1,5 +1,6 @@
 import { calculateReceiptVAT } from './vatCalculator';
 
+
 describe('VAT Calculation Service (POS-008)', () => {
   it('calculates 12% inclusive VAT correctly for standard amounts', () => {
     const result = calculateReceiptVAT(112);

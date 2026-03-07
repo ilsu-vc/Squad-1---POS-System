@@ -2,6 +2,9 @@
  * Calculates VAT details based on an inclusive total.
  * Formula from POS-008: VAT = Total / 1.12 * 0.12
  */
+
+
+
 export const calculateReceiptVAT = (totalInclusive) => {
   if (!totalInclusive || totalInclusive <= 0) {
     return {

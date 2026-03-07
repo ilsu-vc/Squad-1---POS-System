@@ -2,6 +2,9 @@ import { useState, useRef } from 'react';
 import { calculateReceiptVAT } from '../utils/vatCalculator'; // Added the new VAT service
 import './ReprintModal.css';
 
+// Number format utility
+import { formatCurrency } from '../utils/numberformatters.js';
+
 const SUPERVISOR_PIN = '1234';
 
 const ReprintModal = ({ isOpen, onClose, transactions }) => {
@@ -153,9 +156,9 @@ const ReprintModal = ({ isOpen, onClose, transactions }) => {
                     <div key={idx} className="receipt-item-row">
                       <div>
                         <span className="receipt-item-name">{item.name}</span>
-                        <span className="receipt-item-calc"> ×{item.qty} @ ₱{item.price.toFixed(2)}</span>
+                        <span className="receipt-item-calc"> ×{item.qty} @ {formatCurrency(item.price)}</span>
                       </div>
-                      <span className="receipt-item-total">₱{(item.price * item.qty).toFixed(2)}</span>
+                      <span className="receipt-item-total">{formatCurrency(item.price * item.qty)}</span>
                     </div>
                   ))}
                 </div>
@@ -176,24 +179,24 @@ const ReprintModal = ({ isOpen, onClose, transactions }) => {
                       <>
                         <div className="receipt-summary-row">
                           <span>VAT-Exclusive Amount</span>
-                          <span>₱{taxDetails.vatExclusive.toFixed(2)}</span>
+                          <span>{formatCurrency(taxDetails.vatExclusive)}</span>
                         </div>
                         <div className="receipt-summary-row">
                           <span>VAT Amount (12%)</span>
-                          <span>₱{taxDetails.vatAmount.toFixed(2)}</span>
+                          <span>{formatCurrency(taxDetails.vatAmount)}</span>
                         </div>
                         
                         {matchedTxn.discountType && matchedTxn.discountType !== 'none' && (
                           <div className="receipt-summary-row discount">
                             <span>Discount ({matchedTxn.discountType.toUpperCase()})</span>
-                            <span>-₱{(matchedTxn.discountAmount ?? 0).toFixed(2)}</span>
+                            <span>-{formatCurrency(matchedTxn.discountAmount ?? 0)}</span>
                           </div>
                         )}
                         
                         <div className="receipt-divider" />
                         <div className="receipt-summary-row total-row">
                           <span>Total (VAT-Inclusive)</span>
-                          <span>₱{taxDetails.totalInclusive.toFixed(2)}</span>
+                          <span>{formatCurrency(taxDetails.totalInclusive)}</span>
                         </div>
                       </>
                     );

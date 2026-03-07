@@ -27,6 +27,9 @@ import transaction_icon   from '../assets/images/transaction_icon.png';
 import avg_transaction    from '../assets/images/avg_transaction.png';
 import items_sold_icon    from '../assets/images/items_sold_icon.png';
 
+// Number format utility
+import { formatCurrency } from '../utils/numberformatters.js';
+
 const DashboardView = ({ transactions }) => {
   const totalRevenue   = transactions.reduce((acc, curr) => acc + curr.rawAmount, 0);
   const totalItemsSold = transactions.reduce((acc, curr) => acc + curr.itemsCount, 0);
@@ -46,7 +49,7 @@ const DashboardView = ({ transactions }) => {
           <div className="stat-card">
             <div className="stat-info">
               <h3>Total Revenue</h3>
-              <p className="stat-value">₱{totalRevenue.toFixed(2)}</p>
+              <p className="stat-value">{formatCurrency(totalRevenue)}</p>
               <p className="stat-subtext">↗ Today</p>
             </div>
             <div className="stat-icon-bg">
@@ -68,7 +71,7 @@ const DashboardView = ({ transactions }) => {
           <div className="stat-card">
             <div className="stat-info">
               <h3>Avg. Transaction</h3>
-              <p className="stat-value">₱{avgTransaction.toFixed(2)}</p>
+              <p className="stat-value">{formatCurrency(avgTransaction)}</p>
               <p className="stat-subtext">Per order</p>
             </div>
             <div className="stat-icon-bg">
