@@ -21,6 +21,8 @@ import HistoryView   from './components/HistoryView';
 import POSView       from './components/POSView';
 import PaymentModal  from './components/PaymentModal';
 import ReprintModal  from './components/ReprintModal';
+import { printReceipt } from './utils/printer-service';
+import { useBarcodeScanner } from './utils/useBarcodeScanner';
 
 
 const App = () => {
@@ -99,6 +101,23 @@ const App = () => {
     ));
   };
 
+// ─────────────────────────────────────────────────────────
+  //  Barcode Scanner Handler
+  // ─────────────────────────────────────────────────────────
+  const handleBarcodeScan = (scannedCode) => {
+    // Note: Ensure your objects in './data/products' have a 'barcode' property!
+    const productFound = products.find(p => p.barcode === scannedCode);
+
+    if (productFound) {
+      addToCart(productFound);
+      // Optional: Add a small audio "beep" here for user feedback
+    } else {
+      alert(`Product not found! Scanned Code: ${scannedCode}`);
+    }
+  };
+
+  // Activate the scanner listener
+  useBarcodeScanner(handleBarcodeScan);
 
   // ─────────────────────────────────────────────────────────
   //  History Handlers
@@ -205,6 +224,14 @@ const App = () => {
 
       setTransactions([newTransaction, ...transactions]);
       setPaymentStatus('success');
+      printReceipt({
+          receiptNumber: newTransaction.receiptNumber,
+          items: newTransaction.items,
+          vatable: newTransaction.subtotal,
+          vatAmount: newTransaction.tax,
+          total: newTransaction.rawAmount
+      });
+      // --------------------------------
     } catch (err) {
       console.error(err);
       alert(err.message || 'Failed to complete payment / generate receipt.');

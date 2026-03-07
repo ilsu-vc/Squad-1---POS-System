@@ -1,4 +1,7 @@
+//Paymentmodal.js
+
 import PaymentForm from './PaymentForm';
+import { printReceipt } from '../utils/printer-service';
 
 const PaymentModal = ({
   isOpen,
