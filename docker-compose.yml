@@ -1,10 +1,8 @@
 # ──────────────────────────────────────────────
-# docker-compose.yml for Squad-1 POS System
+# docker-compose.yml for Squad-1 POS System (Next.js)
 # ──────────────────────────────────────────────
 # Run with:  docker compose up --build
 # Stop with: docker compose down
-
-version: '3.8'
 
 services:
   web:
@@ -20,14 +18,12 @@ services:
     # so changes you make locally auto-refresh in the browser
     volumes:
       - .:/app # Sync your project folder → /app in container
-      - /app/node_modules # BUT keep container's node_modules (don't overwrite with local ones)
+      - /app/node_modules # BUT keep container's node_modules
+      - /app/.next # Keep container's .next build cache
 
     # ENVIRONMENT VARIABLES
-    # These are read from your .env file automatically
     env_file:
       - .env
 
     environment:
-      - CHOKIDAR_USEPOLLING=true # Enables file-watching in Docker (for hot-reload)
-      - WATCHPACK_POLLING=true # Same, for Webpack 5
-      - NODE_OPTIONS=--openssl-legacy-provider # OpenSSL compat for react-scripts 5
+      - WATCHPACK_POLLING=true # Enables file-watching in Docker (for hot-reload)

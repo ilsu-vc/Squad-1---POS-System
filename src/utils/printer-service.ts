@@ -5,7 +5,15 @@
 // This is a browser-safe stub that logs receipt data to the console.
 // To wire up real printing, POST the transactionData to your backend API instead.
 
-export const printReceipt = async (transactionData) => {
+export interface ReceiptData {
+    receiptNumber?: string;
+    items?: Array<{ name: string; qty: number; price: number }>;
+    vatable?: number;
+    vatAmount?: number;
+    total?: number;
+}
+
+export const printReceipt = async (transactionData: ReceiptData): Promise<boolean> => {
     try {
         console.log("=== RECEIPT (browser stub — connect to backend for real printing) ===");
         console.log("Receipt #:", transactionData.receiptNumber || '000000');

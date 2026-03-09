@@ -1,4 +1,4 @@
-// src/utils/cartLogic.test.js
+// src/utils/cartLogic.test.ts
 // A simple test to validate your SCRUM-38 requirements
 
 describe('Cart Operations', () => {
@@ -12,6 +12,6 @@ describe('Cart Operations', () => {
         const tax = Math.round(subtotal * 0.12 * 100) / 100;
 
         expect(subtotal).toBe(25.00);
-        expect(tax).toBe(3.00); 
+        expect(tax).toBe(3.00);
     });
 });
