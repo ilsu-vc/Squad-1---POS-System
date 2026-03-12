@@ -28,6 +28,9 @@ interface POSViewProps {
     tax: number;
     total: number;
     handleProceedToPayment: () => void;
+    onHoldCart: () => void;
+    onViewHeld: () => void;
+    heldCount: number;
 }
 
 const POSView: React.FC<POSViewProps> = ({
@@ -45,6 +48,9 @@ const POSView: React.FC<POSViewProps> = ({
     tax,
     total,
     handleProceedToPayment,
+    onHoldCart,
+    onViewHeld,
+    heldCount,
 }) => {
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [confirmTitle, setConfirmTitle] = useState('Confirm');
@@ -120,19 +126,28 @@ const POSView: React.FC<POSViewProps> = ({
             <aside className="order-sidebar">
                 <div className="sidebar-header">
                     <h2 className="sidebar-title">Current Order</h2>
-                    <button
-                        className="clear-all"
-                        onClick={() => {
-                            if (cart.length === 0) return;
-                            openConfirm({
-                                title: 'Clear Cart',
-                                message: 'Are you sure you want to clear all items from the cart?',
-                                confirmAction: () => setCart([]),
-                            });
-                        }}
-                    >
-                        Clear All
-                    </button>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                            className="clear-all"
+                            style={{ background: '#e0f2fe', color: '#0284c7', borderColor: 'transparent' }}
+                            onClick={onViewHeld}
+                        >
+                            Held Orders ({heldCount})
+                        </button>
+                        <button
+                            className="clear-all"
+                            onClick={() => {
+                                if (cart.length === 0) return;
+                                openConfirm({
+                                    title: 'Clear Cart',
+                                    message: 'Are you sure you want to clear all items from the cart?',
+                                    confirmAction: () => setCart([]),
+                                });
+                            }}
+                        >
+                            Clear All
+                        </button>
+                    </div>
                 </div>
 
                 <p className="item-count">{cart.length} items</p>
@@ -210,6 +225,21 @@ const POSView: React.FC<POSViewProps> = ({
                         style={{ opacity: cart.length === 0 ? 0.5 : 1, cursor: cart.length === 0 ? 'not-allowed' : 'pointer' }}
                     >
                         Proceed to Payment
+                    </button>
+                    <button
+                        className="pay-btn"
+                        onClick={onHoldCart}
+                        disabled={cart.length === 0}
+                        style={{ 
+                            marginTop: '10px', 
+                            background: '#fff', 
+                            color: '#ffffffff', 
+                            border: '1px solid #ffffffff',
+                            opacity: cart.length === 0 ? 0.5 : 1, 
+                            cursor: cart.length === 0 ? 'not-allowed' : 'pointer' 
+                        }}
+                    >
+                        Hold Order
                     </button>
                 </div>
             </aside>

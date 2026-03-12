@@ -2104,40 +2104,41 @@ opacity: 1 !important;
 .confirm-modal {
   background: #fff;
   width: 100%;
-  max-width: 380px;
-  border-radius: 8px;
-  padding: 22px;
+  max-width: 480px;
+  border-radius: 12px;
+  padding: 32px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
   animation: popIn 0.18s ease-out;
 }
 
 .confirm-title {
-  margin: 0 0 10px;
-  font-size: 18px;
+  margin: 0 0 15px;
+  font-size: 24px;
   font-weight: 700;
   color: #222;
 }
 
 .confirm-message {
-  margin: 0 0 18px;
-  font-size: 14px;
-  line-height: 1.45;
+  margin: 0 0 24px;
+  font-size: 18px;
+  line-height: 1.5;
   color: #555;
 }
 
 .confirm-actions {
   display: flex;
-  gap: 10px;
+  gap: 16px;
   justify-content: flex-end;
 }
 
 .confirm-btn {
   border: none;
-  border-radius: 6px;
-  padding: 10px 14px;
-  font-size: 14px;
+  border-radius: 8px;
+  padding: 16px 24px;
+  font-size: 18px;
   font-weight: 600;
   cursor: pointer;
+  min-width: 120px;
 }
 
 .confirm-btn.cancel {
@@ -2155,7 +2156,7 @@ opacity: 1 !important;
 }
 
 .confirm-btn.confirm:hover {
-  background: #c92929;
+  background: #018a93;
 }
 
 @keyframes popIn {

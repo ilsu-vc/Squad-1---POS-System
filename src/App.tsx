@@ -29,6 +29,8 @@ import ReprintModal from './components/ReprintModal';
 import { printReceipt } from './utils/printer-service';
 import { useBarcodeScanner } from './utils/useBarcodeScanner';
 import { Transaction } from './utils/chartHelpers';
+import { useTransactionHold } from './hooks/useTransactionHold';
+import HeldTransactionsModal from './components/HeldTransactionsModal';
 
 interface CartItem extends Product {
     quantity: number;
@@ -56,6 +58,8 @@ const App: React.FC = () => {
     const [cashReceived, setCashReceived] = useState('');
     const [paymentStatus, setPaymentStatus] = useState('idle');
     const [isReprintModalOpen, setIsReprintModalOpen] = useState(false);
+    const [isHeldModalOpen, setIsHeldModalOpen] = useState(false);
+    const [appAlert, setAppAlert] = useState<{isOpen: boolean; title: string; message: string}>({isOpen: false, title: '', message: ''});
 
     const [transactions, setTransactions] = useState<Transaction[]>(() => {
         if (typeof window === 'undefined') return [];
@@ -96,6 +100,11 @@ const App: React.FC = () => {
 
 
     // ─────────────────────────────────────────────────────────
+    //  Hooks & Effects
+    // ─────────────────────────────────────────────────────────
+    const { heldTransactions, holdCart, removeHold, resumeHold } = useTransactionHold();
+
+    // ─────────────────────────────────────────────────────────
     //  Cart Handlers
     // ─────────────────────────────────────────────────────────
     const addToCart = (product: Product) => {
@@ -113,6 +122,26 @@ const App: React.FC = () => {
         setCart(cart.map((item) =>
             item.id === id ? { ...item, quantity: Math.max(1, item.quantity + delta) } : item
         ));
+    };
+
+    const handleHoldCart = () => {
+        const { success, message } = holdCart(cart, total);
+        if (success) {
+            setCart([]);
+            setAppAlert({ isOpen: true, title: 'Success', message: 'Order placed on hold.' });
+        } else {
+            setAppAlert({ isOpen: true, title: 'Notice', message: message || 'Failed to place order on hold.' });
+        }
+    };
+
+    const handleResumeHold = (id: string) => {
+        if (cart.length > 0) {
+            if (!window.confirm('Your current cart has items. Resuming a hold will clear your current cart. Proceed?')) {
+                return;
+            }
+        }
+        const resumedCart = resumeHold(id);
+        if (resumedCart) setCart(resumedCart);
     };
 
     // ─────────────────────────────────────────────────────────
@@ -360,6 +389,9 @@ const App: React.FC = () => {
                     tax={tax}
                     total={total}
                     handleProceedToPayment={handleProceedToPayment}
+                    onHoldCart={handleHoldCart}
+                    onViewHeld={() => setIsHeldModalOpen(true)}
+                    heldCount={heldTransactions.length}
                 />
             )}
 
@@ -386,6 +418,32 @@ const App: React.FC = () => {
                 onClose={() => setIsReprintModalOpen(false)}
                 transactions={transactions}
             />
+
+            <HeldTransactionsModal
+                isOpen={isHeldModalOpen}
+                onClose={() => setIsHeldModalOpen(false)}
+                heldTransactions={heldTransactions}
+                onResume={handleResumeHold}
+                onDelete={removeHold}
+            />
+
+            {/* ── App Alert Modal ── */}
+            {appAlert.isOpen && (
+                <div className="confirm-overlay" onClick={() => setAppAlert({ ...appAlert, isOpen: false })}>
+                    <div className="confirm-modal" onClick={(e) => e.stopPropagation()}>
+                        <h3 className="confirm-title">{appAlert.title}</h3>
+                        <p className="confirm-message">{appAlert.message}</p>
+                        <div className="confirm-actions" style={{ justifyContent: 'center' }}>
+                            <button
+                                className="confirm-btn confirm"
+                                onClick={() => setAppAlert({ ...appAlert, isOpen: false })}
+                            >
+                                OK
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
         </div>
     );
