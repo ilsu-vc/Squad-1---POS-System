@@ -1,0 +1,43 @@
+/* Pie chart tooltips styling */
+.recharts-tooltip-item {
+  color: var(--brand-navy);
+  font-weight: 600;
+}
+
+.recharts-tooltip {
+  background-color: var(--surface); /* Make the tooltip background light */
+  border-radius: 6px;
+  padding: 10px;
+  border: 1px solid var(--border);
+}
+
+/* Pie chart labels styling */
+.recharts-pie-label {
+  font-size: 10px;
+  font-weight: 500;
+  fill: var(--brand-navy);
+}
+
+/* Legend and category labels */
+.recharts-legend {
+  background: var(--surface);
+  padding: 15px;
+  border-radius: 6px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.recharts-legend-item {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.recharts-legend-item .recharts-legend-icon {
+  margin-right: 10px;
+}
+
+/* Hover effect for Pie chart sectors */
+.recharts-pie-sector:hover {
+  opacity: 0.8;
+  cursor: pointer;
+}

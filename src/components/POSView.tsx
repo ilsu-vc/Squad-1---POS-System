@@ -5,8 +5,8 @@ import { Product } from '../data/products';
 import searchIcon from '../assets/images/search_icon.png';
 import deleteIcon from '../assets/images/delete_icon.png';
 import cartIcon from '../assets/images/cart.png';
+import StockAlert from './StockAlert';
 
-// Number format utility
 import { formatCurrency } from '../utils/numberformatters';
 
 interface CartItem extends Product {
@@ -31,6 +31,14 @@ interface POSViewProps {
     onHoldCart: () => void;
     onViewHeld: () => void;
     heldCount: number;
+    stockAlert: {
+        isOpen: boolean;
+        type: 'no-stock' | 'low-stock';
+        productName: string;
+        stock: number;
+        threshold: number;
+    };
+    onCloseStockAlert: () => void;
 }
 
 const POSView: React.FC<POSViewProps> = ({
@@ -51,6 +59,8 @@ const POSView: React.FC<POSViewProps> = ({
     onHoldCart,
     onViewHeld,
     heldCount,
+    stockAlert,
+    onCloseStockAlert,
 }) => {
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [confirmTitle, setConfirmTitle] = useState('Confirm');
@@ -66,14 +76,15 @@ const POSView: React.FC<POSViewProps> = ({
 
     const closeConfirm = () => setConfirmOpen(false);
 
-    const getImgSrc = (img: any): string => {
-        return typeof img === 'string' ? img : img?.src ?? '';
+    const getImgSrc = (img: any): string | null => {
+        if (!img) return null;
+        if (typeof img === 'string' && img.trim() !== '') return img;
+        if (img?.src) return img.src;
+        return null;
     };
 
     return (
         <main className="pos-content">
-
-            {/* ── Product Inventory Panel ── */}
             <div className="inventory-section">
                 <div className="search-box">
                     <img src={getImgSrc(searchIcon)} alt="" className="search-icon-img" />
@@ -122,7 +133,6 @@ const POSView: React.FC<POSViewProps> = ({
                 </div>
             </div>
 
-            {/* ── Order Sidebar ── */}
             <aside className="order-sidebar">
                 <div className="sidebar-header">
                     <h2 className="sidebar-title">Current Order</h2>
@@ -154,15 +164,17 @@ const POSView: React.FC<POSViewProps> = ({
 
                 <div className="cart-list">
                     {cart.length === 0 ? (
-                        /* ── Empty Cart View ── */
-                        <div className="empty-cart-state" style={{
-                            textAlign: 'center',
-                            padding: '40px 20px',
-                            color: '#888',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center'
-                        }}>
+                        <div
+                            className="empty-cart-state"
+                            style={{
+                                textAlign: 'center',
+                                padding: '40px 20px',
+                                color: '#888',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center'
+                            }}
+                        >
                             <img
                                 src={getImgSrc(cartIcon)}
                                 alt="Cart is empty"
@@ -172,7 +184,6 @@ const POSView: React.FC<POSViewProps> = ({
                             <p style={{ fontSize: '0.9rem', margin: 0 }}>Add items to get started</p>
                         </div>
                     ) : (
-                        /* ── Active Cart Items ── */
                         cart.map((item) => (
                             <div key={item.id} className="cart-item">
                                 <div className="item-details">
@@ -230,13 +241,13 @@ const POSView: React.FC<POSViewProps> = ({
                         className="pay-btn"
                         onClick={onHoldCart}
                         disabled={cart.length === 0}
-                        style={{ 
-                            marginTop: '10px', 
-                            background: '#fff', 
-                            color: '#ffffffff', 
+                        style={{
+                            marginTop: '10px',
+                            background: '#fff',
+                            color: '#ffffffff',
                             border: '1px solid #ffffffff',
-                            opacity: cart.length === 0 ? 0.5 : 1, 
-                            cursor: cart.length === 0 ? 'not-allowed' : 'pointer' 
+                            opacity: cart.length === 0 ? 0.5 : 1,
+                            cursor: cart.length === 0 ? 'not-allowed' : 'pointer'
                         }}
                     >
                         Hold Order
@@ -244,7 +255,6 @@ const POSView: React.FC<POSViewProps> = ({
                 </div>
             </aside>
 
-            {/* ── Confirmation Popup Modal ── */}
             {confirmOpen && (
                 <div className="confirm-overlay" onClick={closeConfirm}>
                     <div className="confirm-modal" onClick={(e) => e.stopPropagation()}>
@@ -268,6 +278,14 @@ const POSView: React.FC<POSViewProps> = ({
                 </div>
             )}
 
+            <StockAlert
+                isOpen={stockAlert.isOpen}
+                onClose={onCloseStockAlert}
+                type={stockAlert.type}
+                productName={stockAlert.productName}
+                stock={stockAlert.stock}
+                threshold={stockAlert.threshold}
+            />
         </main>
     );
 };

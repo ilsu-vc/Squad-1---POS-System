@@ -15,6 +15,7 @@ interface HistoryViewProps {
     expandedTxn: string | null;
     toggleHistoryItem: (id: string) => void;
     setIsReprintModalOpen: (value: boolean) => void;
+    onPartialRefund: (txn: Transaction) => void;
 }
 
 const HistoryView: React.FC<HistoryViewProps> = ({
@@ -24,6 +25,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({
     expandedTxn,
     toggleHistoryItem,
     setIsReprintModalOpen,
+    onPartialRefund,
 }) => {
     const totalRevenue = transactions.reduce((acc, curr) => acc + curr.rawAmount, 0);
     const avgTransaction = transactions.length > 0 ? totalRevenue / transactions.length : 0;
@@ -31,7 +33,8 @@ const HistoryView: React.FC<HistoryViewProps> = ({
     const filtered = transactions.filter(
         (t) =>
             t.id.toLowerCase().includes(historySearch.toLowerCase()) ||
-            (t.receiptNumber && String(t.receiptNumber).toLowerCase().includes(historySearch.toLowerCase()))
+            (t.receiptNumber && String(t.receiptNumber).toLowerCase().includes(historySearch.toLowerCase())) ||
+            (t.tags && t.tags.some(tag => tag.toLowerCase().includes(historySearch.toLowerCase())))
     );
 
     return (
@@ -88,7 +91,11 @@ const HistoryView: React.FC<HistoryViewProps> = ({
                                             {txn.receiptNumber && (
                                                 <span className="receipt-no-badge">OR: {txn.receiptNumber}</span>
                                             )}
-                                            <span className={`method-pill ${getMethodPillClass(txn.method)}`}>{txn.method}</span>
+                                            {txn.type === 'refund' ? (
+                                                <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: '#fee2e2', color: '#dc2626', letterSpacing: '0.03em' }}>REFUND</span>
+                                            ) : (
+                                                <span className={`method-pill ${getMethodPillClass(txn.method)}`}>{txn.method}</span>
+                                            )}
                                         </div>
                                         <p className="txn-meta-text">
                                             {txn.date}, {txn.time} • {txn.itemsCount} items
@@ -115,11 +122,67 @@ const HistoryView: React.FC<HistoryViewProps> = ({
                                                 </div>
                                             ))}
                                         </div>
+                                        
+                                        {txn.notes && (
+                                            <div className="history-section" style={{ marginTop: '12px' }}>
+                                                <p className="body-section-title">Notes</p>
+                                                <p style={{ fontSize: '0.9rem', color: '#475569', backgroundColor: '#f8fafc', padding: '8px', borderRadius: '4px', borderLeft: '3px solid #cbd5e1' }}>
+                                                    {txn.notes}
+                                                </p>
+                                            </div>
+                                        )}
+
+                                        {txn.tags && txn.tags.length > 0 && (
+                                            <div className="history-section" style={{ marginTop: '12px' }}>
+                                                <p className="body-section-title">Tags</p>
+                                                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                                    {txn.tags.map((tag, idx) => (
+                                                        <span key={idx} style={{ fontSize: '0.75rem', padding: '2px 8px', borderRadius: '12px', backgroundColor: '#e2e8f0', color: '#475569', fontWeight: 500 }}>
+                                                            {tag}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {txn.type === 'refund' && txn.originalTransactionId && (
+                                            <div className="history-section" style={{ marginTop: '12px' }}>
+                                                <p className="body-section-title">Refund Reference</p>
+                                                <p style={{ fontSize: '0.85rem', color: '#dc2626', fontWeight: 600 }}>
+                                                    Original Transaction: {txn.originalTransactionId}
+                                                </p>
+                                            </div>
+                                        )}
+
                                         <div className="history-financial-summary">
                                             <div className="f-row"><span>Subtotal:</span><span>{formatCurrency(txn.subtotal ?? 0)}</span></div>
                                             <div className="f-row"><span>Tax:</span><span>{formatCurrency(txn.tax ?? 0)}</span></div>
                                             {Number(txn.discountAmount) > 0 && (<div className="f-row f-discount"><span>Discount{txn.discountType && txn.discountType !== 'None' ? ` (${txn.discountType})` : ''}:</span><span>-{formatCurrency(txn.discountAmount!)}</span></div>)}
-                                            <div className="f-row f-total"><span>Total:</span><span>{txn.amount}</span></div></div>
+                                            <div className="f-row f-total"><span>Total:</span><span>{txn.amount}</span></div>
+                                        </div>
+
+                                        {txn.type !== 'refund' && (
+                                            <div style={{ marginTop: '14px', display: 'flex', justifyContent: 'flex-end' }}>
+                                                <button
+                                                    onClick={() => onPartialRefund(txn)}
+                                                    style={{
+                                                        padding: '7px 14px',
+                                                        borderRadius: '8px',
+                                                        border: '1px solid #fca5a5',
+                                                        background: '#fff',
+                                                        color: '#dc2626',
+                                                        fontWeight: 700,
+                                                        fontSize: '0.82rem',
+                                                        cursor: 'pointer',
+                                                        transition: 'background 0.15s',
+                                                    }}
+                                                    onMouseEnter={(e) => (e.currentTarget.style.background = '#fee2e2')}
+                                                    onMouseLeave={(e) => (e.currentTarget.style.background = '#fff')}
+                                                >
+                                                    ↩ Partial Refund
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
 

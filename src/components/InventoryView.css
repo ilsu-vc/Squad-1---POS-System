@@ -1,0 +1,41 @@
+/* Inventory */
+.inventory-product-img {
+  width: 50px;
+  height: 50px;
+  object-fit: contain;
+  display: block;
+}
+
+.inventory-table th,
+.inventory-table td {
+  padding: 14px 30px; /* top-bottom, left-right */
+}
+
+.inventory-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 500px; /* adjust if you want */
+}
+
+.inventory-edit-btn {
+  border: none;
+  background: #1f6feb;
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: 0.2s ease;
+}
+.status-cell.out-stock {
+  background-color: #ffe5e5;
+}
+
+.status-cell.low-stock {
+  background-color: #fff7cc;
+}
+
+.status-cell.in-stock {
+  background-color: transparent;
+}

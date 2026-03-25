@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 
 // Number format utility
 import { formatCurrency } from '../utils/numberformatters';
+import SplitPaymentForm, { PaymentEntry } from './SplitPaymentForm';
 
 interface PaymentIcons {
     cash_icon: any;
@@ -22,6 +23,7 @@ interface PaymentFormProps {
     handleCompletePayment: (details?: any) => void;
     closePaymentModal?: () => void;
     icons: PaymentIcons;
+    canApproveDiscount?: boolean;
 }
 
 const PaymentForm: React.FC<PaymentFormProps> = ({
@@ -33,13 +35,23 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
     handleCancelPayment,
     handleCompletePayment,
     icons: { cash_icon, card_icon, mobile_icon },
+    canApproveDiscount = false,
 }) => {
     // --- Essential States ---
     const [customerName, setCustomerName] = useState('');
     const [discountType, setDiscountType] = useState('none'); // 'none', 'senior', 'pwd'
+    const [notes, setNotes] = useState('');
+    const [selectedTags, setSelectedTags] = useState<string[]>([]);
     const [refNo, setRefNo] = useState('');
     const [cardLast4, setCardLast4] = useState('');
-    const [mobileProvider, setMobileProvider] = useState('GCash'); // GCash, Maya, GrabPay
+    const [mobileProvider, setMobileProvider] = useState('GCash'); // GCash, Maya
+    const [isSplitMode, setIsSplitMode] = useState(false);
+
+    const toggleTag = (tag: string) => {
+        setSelectedTags(prev =>
+            prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+        );
+    };
 
     // --- Derived Calculations ---
     const [finalTotal, setFinalTotal] = useState(initialTotal);
@@ -119,10 +131,100 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
             cardLast4,
             mobileProvider,
             tendered: cashReceived,
+            notes,
+            tags: selectedTags,
         };
         handleCompletePayment(details);
     };
 
+    const onSplitComplete = (entries: PaymentEntry[]) => {
+        const totalCash = entries
+            .filter(e => e.method === 'cash')
+            .reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
+        const totalPaid = entries.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
+        const change = Math.max(0, totalCash - (totalCash - Math.max(0, totalPaid - finalTotal)));
+
+        handleCompletePayment({
+            customerName,
+            discountType,
+            discountAmount,
+            finalTotal,
+            splitPayments: entries,
+            changeAmount: change,
+            notes,
+            tags: selectedTags,
+        });
+    };
+
+    // ── Split mode ──────────────────────────────────────────────────────────
+    if (isSplitMode) {
+        return (
+            <div className="payment-view-container">
+                <div className="essentials-section" style={{ marginBottom: 12 }}>
+                    <div className="input-group">
+                        <label className="section-label-sm">Customer Name (Optional)</label>
+                        <input
+                            type="text"
+                            className="modern-input"
+                            value={customerName}
+                            onChange={(e) => setCustomerName(e.target.value)}
+                            placeholder="Walking Customer"
+                        />
+                    </div>
+
+                    <div className="input-group" style={{ marginTop: '15px' }}>
+                        <label className="section-label-sm">Transaction Tags</label>
+                        <div className="discount-grid">
+                            {['Bulk Order', 'Delivery', 'Special Request'].map(tag => (
+                                <button
+                                    key={tag}
+                                    className={`discount-btn ${selectedTags.includes(tag) ? 'active' : ''}`}
+                                    onClick={() => toggleTag(tag)}
+                                >
+                                    {tag}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    <div className="input-group" style={{ marginTop: '15px' }}>
+                        <label className="section-label-sm">Transaction Notes ({notes.length}/500)</label>
+                        <textarea
+                            className="modern-input"
+                            style={{ height: '60px', resize: 'none', paddingTop: '10px' }}
+                            value={notes}
+                            onChange={(e) => setNotes(e.target.value.slice(0, 500))}
+                            placeholder="Add special instructions..."
+                        />
+                    </div>
+
+                    <div className="discount-section">
+                        <label className="section-label-sm">Applied Discount</label>
+                        <div className="discount-grid">
+                            {(['none', 'senior', 'pwd'] as const).map(type => (
+                                <button
+                                    key={type}
+                                    className={`discount-btn ${discountType === type ? 'active' : ''}`}
+                                    onClick={() => setDiscountType(type)}
+                                    disabled={!canApproveDiscount && type !== 'none'}
+                                >
+                                    {type === 'none' ? 'No Discount' : type.toUpperCase()}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+                <SplitPaymentForm
+                    finalTotal={finalTotal}
+                    icons={{ cash_icon, card_icon, mobile_icon }}
+                    onComplete={onSplitComplete}
+                    onCancel={handleCancelPayment}
+                    onBack={() => setIsSplitMode(false)}
+                />
+            </div>
+        );
+    }
+
+    // ── Single method selection ──────────────────────────────────────────────
     if (!paymentMethod) {
         return (
             <div className="payment-options">
@@ -139,6 +241,10 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                     <button className="method-item" onClick={() => setPaymentMethod('mobile')}>
                         <img src={getImgSrc(mobile_icon)} alt="" className="method-img-icon" />
                         <span>Mobile</span>
+                    </button>
+                    <button className="method-item split-method-item" onClick={() => setIsSplitMode(true)}>
+                        <span className="split-method-icon-badge">⊕</span>
+                        <span>Split Payment</span>
                     </button>
                 </div>
             </div>
@@ -167,6 +273,32 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                             />
                         </div>
 
+                        <div className="input-group" style={{ marginTop: '15px' }}>
+                            <label className="section-label-sm">Transaction Tags</label>
+                            <div className="discount-grid">
+                                {['Bulk Order', 'Delivery', 'Special Request'].map(tag => (
+                                    <button
+                                        key={tag}
+                                        className={`discount-btn ${selectedTags.includes(tag) ? 'active' : ''}`}
+                                        onClick={() => toggleTag(tag)}
+                                    >
+                                        {tag}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="input-group" style={{ marginTop: '15px' }}>
+                            <label className="section-label-sm">Transaction Notes ({notes.length}/500)</label>
+                            <textarea
+                                className="modern-input"
+                                style={{ height: '80px', resize: 'none', paddingTop: '10px' }}
+                                value={notes}
+                                onChange={(e) => setNotes(e.target.value.slice(0, 500))}
+                                placeholder="Add special instructions or customer requests..."
+                            />
+                        </div>
+
                         <div className="discount-section">
                             <label className="section-label-sm">Applied Discount</label>
                             <div className="discount-grid">
@@ -175,6 +307,8 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                                         key={type}
                                         className={`discount-btn ${discountType === type ? 'active' : ''}`}
                                         onClick={() => setDiscountType(type)}
+                                        disabled={!canApproveDiscount && type !== 'none'}
+                                        title={!canApproveDiscount && type !== 'none' ? 'Requires supervisor approval' : undefined}
                                     >
                                         {type === 'none' ? 'No Discount' : type.toUpperCase()}
                                     </button>

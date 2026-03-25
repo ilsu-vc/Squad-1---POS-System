@@ -1,0 +1,120 @@
+/* src/components/HourlySalesReportView.css */
+
+.hourly-sales-wrapper {
+  padding: 24px 32px;
+  background-color: #f4f7fa; /* Matches the light grey app background */
+  min-height: calc(100vh - 70px);
+  font-family: 'Inter', sans-serif;
+  color: #333;
+}
+
+/* Top Header Actions (Dropdown + Export/Print) */
+.hs-top-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.hs-dropdown {
+  padding: 8px 16px;
+  font-size: 16px;
+  font-weight: 600;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background-color: white;
+  color: #1e293b;
+  min-width: 250px;
+}
+
+.hs-action-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.hs-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background-color: white;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  color: #3b82f6; /* Blue text to match image */
+  font-weight: 500;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.hs-btn:hover {
+  background-color: #f1f5f9;
+}
+
+/* Cards */
+.hs-card {
+  background-color: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* Filter Section */
+.hs-filter-section {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 16px 24px;
+}
+
+.hs-filter-label {
+  font-weight: 600;
+  font-size: 14px;
+  color: #1e293b;
+}
+
+.hs-date-range {
+  display: flex;
+  align-items: center;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.hs-date-range-item {
+  padding: 8px 16px;
+  font-size: 14px;
+  color: #64748b;
+  background: white;
+}
+
+.hs-date-range-item.active {
+  color: #0f172a;
+  font-weight: 500;
+}
+
+.hs-date-range-separator {
+  color: #cbd5e1;
+}
+
+.hs-date-range-icon {
+  padding: 8px 12px;
+  border-left: 1px solid #e2e8f0;
+  background-color: white;
+  cursor: pointer;
+}
+
+/* Chart Title */
+.hs-chart-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 30px;
+}
+
+.hs-chart-container {
+  height: 400px;
+  width: 100%;
+}

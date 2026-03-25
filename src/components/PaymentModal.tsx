@@ -27,6 +27,8 @@ interface PaymentModalProps {
     handleCompletePayment: (details?: any) => void;
     closePaymentModal: () => void;
     icons: PaymentIcons;
+    canApproveDiscount: boolean;
+    onOpenGiftReceipt?: () => void;
 }
 
 const PaymentModal: React.FC<PaymentModalProps> = ({
@@ -44,6 +46,8 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
     handleCompletePayment,
     closePaymentModal,
     icons,
+    canApproveDiscount,
+    onOpenGiftReceipt,
 }) => {
     if (!isOpen) return null;
 
@@ -58,7 +62,16 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                         <strong>{dbReceiptNumber ? dbReceiptNumber : "Generating..."}</strong>
                     </p>
                     <p>Transaction completed</p>
-                    <button className="close-success-btn" onClick={closePaymentModal}>Back to POS</button>
+                    <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginTop: '16px', flexWrap: 'wrap' }}>
+                        <button className="close-success-btn" onClick={closePaymentModal}>Back to POS</button>
+                        <button
+                            className="close-success-btn"
+                            style={{ background: '#16a34a', color: 'white', border: 'none' }}
+                            onClick={onOpenGiftReceipt}
+                        >
+                            🎁 Print Gift Receipt
+                        </button>
+                    </div>
                 </div>
             ) : (
                 <div className="payment-modal">
@@ -89,6 +102,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                         handleCompletePayment={handleCompletePayment}
                         closePaymentModal={closePaymentModal}
                         icons={icons}
+                        canApproveDiscount={canApproveDiscount}
                     />
                 </div>
             )}

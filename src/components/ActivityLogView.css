@@ -1,0 +1,365 @@
+:root {
+  --primary-teal: #00a1a1;
+  --bg-light: #f8fafb;
+  --text-dark: #1e293b;
+  --text-muted: #64748b;
+  --border-color: #eef2f6;
+  --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+}
+
+.al-container {
+  padding: 32px;
+  background-color: var(--bg-light);
+  font-family: 'Inter', -apple-system, sans-serif;
+  max-width: 1700px; 
+  margin: 0 auto;
+  min-height: 100vh;
+}
+
+/* Header & Stats */
+.al-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 28px;
+}
+
+.al-main-title {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin: 0;
+}
+
+.al-subtitle {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  margin-top: 4px;
+}
+
+.al-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-bottom: 28px;
+}
+
+.al-card {
+  background: white;
+  padding: 22px;
+  border-radius: 14px;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--card-shadow);
+  transition: transform 0.2s ease;
+}
+
+.al-card:hover {
+  transform: translateY(-2px);
+}
+
+.al-card-label {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.al-card-value {
+  font-size: 30px;
+  margin: 6px 0 0 0;
+  color: var(--primary-teal);
+  font-weight: 700;
+}
+
+/* Toolbar */
+.al-toolbar {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 12px;
+  background: white;
+  padding: 16px;
+  border-radius: 14px;
+  margin-bottom: 24px;
+  align-items: center;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--card-shadow);
+}
+
+.al-search-wrapper {
+  flex: 2;
+  min-width: 300px;
+  position: relative;
+}
+
+.al-search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--primary-teal);
+  opacity: 0.8;
+}
+
+.al-input-search {
+  width: 100%;
+  padding: 11px 14px 11px 42px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fdfdfd;
+  font-size: 14px;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.al-input-search:focus {
+  outline: none;
+  border-color: var(--primary-teal);
+}
+
+/* CUSTOM DROPDOWN WITH SCROLLBAR */
+.al-custom-dropdown {
+  position: relative;
+  flex: 0.8;
+  min-width: 180px;
+}
+
+.al-dropdown-trigger {
+  padding: 11px 16px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: white;
+  font-size: 14px;
+  color: var(--text-dark);
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+
+.al-dropdown-trigger:hover, .al-dropdown-trigger.active {
+  border-color: var(--primary-teal);
+}
+
+.al-dropdown-menu {
+  position: absolute;
+  top: 110%;
+  left: 0;
+  width: 100%;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+  z-index: 100;
+  padding: 6px;
+  /* Scroll Settings */
+  max-height: 240px; 
+  overflow-y: auto;
+}
+
+/* Custom Styled Scrollbar */
+.al-dropdown-menu::-webkit-scrollbar {
+  width: 6px;
+}
+
+.al-dropdown-menu::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 8px 0;
+}
+
+.al-dropdown-menu::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+.al-dropdown-menu::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-teal);
+}
+
+.al-dropdown-item {
+  padding: 10px 14px;
+  font-size: 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--text-dark);
+  transition: all 0.2s;
+}
+
+.al-dropdown-item:hover {
+  background: #e0f2f2;
+  color: var(--primary-teal);
+}
+
+.al-dropdown-item.selected-item {
+  background: var(--primary-teal);
+  color: white;
+  font-weight: 600;
+}
+
+/* DATE PICKER */
+.al-date-picker {
+  flex: 0.5;
+  min-width: 160px;
+  padding: 11px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  color: var(--text-dark);
+  font-size: 14px;
+  cursor: pointer;
+  background: white;
+}
+
+.al-button-group {
+  display: flex;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+/* Buttons */
+.al-btn-primary {
+  background: var(--primary-teal);
+  color: white;
+  border: none;
+  padding: 11px 20px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.al-btn-primary:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 4px 12px rgba(0, 161, 161, 0.2);
+}
+
+.al-btn-secondary {
+  background: white;
+  color: var(--text-dark);
+  border: 1px solid #e2e8f0;
+  padding: 11px 20px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+
+.al-btn-secondary:hover {
+  background: #f8fafc;
+}
+
+/* Table Styles */
+.al-table-card {
+  background: white;
+  border-radius: 14px;
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+  box-shadow: var(--card-shadow);
+}
+
+.al-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.al-table th {
+  background: #fbfcfd;
+  padding: 16px 20px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  border-bottom: 2px solid var(--border-color);
+}
+
+.al-table td {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color);
+  vertical-align: middle;
+}
+
+.al-user-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.al-avatar {
+  width: 36px;
+  height: 36px;
+  background: #e0f2f1;
+  color: var(--primary-teal);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.al-user-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-dark);
+}
+
+.al-user-email {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.al-badge {
+  padding: 5px 12px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: #f1f5f9;
+  color: #475569;
+  display: inline-block;
+}
+
+.al-details-cell {
+  font-size: 14px;
+  color: var(--text-dark);
+  max-width: 650px; 
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.al-time, .al-entity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+/* Animations */
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.al-empty-state {
+  padding: 60px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 15px;
+}

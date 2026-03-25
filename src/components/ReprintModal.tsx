@@ -3,6 +3,7 @@
 import React, { useState, useRef } from 'react';
 import { calculateReceiptVAT } from '../utils/vatCalculator';
 import { Transaction } from '../utils/chartHelpers';
+import GiftReceiptModal from './GiftReceiptModal';
 import './ReprintModal.css';
 
 // Number format utility
@@ -21,6 +22,7 @@ const ReprintModal: React.FC<ReprintModalProps> = ({ isOpen, onClose, transactio
     const [pinInput, setPinInput] = useState('');
     const [pinError, setPinError] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
+    const [isGiftReceiptOpen, setIsGiftReceiptOpen] = useState(false);
     const printRef = useRef<HTMLDivElement>(null);
 
     if (!isOpen) return null;
@@ -65,182 +67,210 @@ const ReprintModal: React.FC<ReprintModalProps> = ({ isOpen, onClose, transactio
         setPinInput('');
         setPinError('');
         setSearchQuery('');
+        setIsGiftReceiptOpen(false);
         onClose();
     };
 
     return (
-        <div className="reprint-overlay" onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}>
+        <>
+            <div className="reprint-overlay" onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}>
 
-            {/* ── STEP 1: SUPERVISOR PIN ── */}
-            {step === 'pin' && (
-                <div className="reprint-modal pin-modal">
-                    <div className="reprint-modal-header">
-                        <div>
-                            <h2 className="reprint-title">Supervisor Approval</h2>
-                            <p className="reprint-subtitle">Enter supervisor PIN to continue</p>
+                {/* ── STEP 1: SUPERVISOR PIN ── */}
+                {step === 'pin' && (
+                    <div className="reprint-modal pin-modal">
+                        <div className="reprint-modal-header">
+                            <div>
+                                <h2 className="reprint-title">Supervisor Approval</h2>
+                                <p className="reprint-subtitle">Enter supervisor PIN to continue</p>
+                            </div>
+                            <button className="reprint-close-btn" onClick={handleClose}>✕</button>
                         </div>
-                        <button className="reprint-close-btn" onClick={handleClose}>✕</button>
-                    </div>
 
-                    <div className="pin-dots-row">
-                        {[0, 1, 2, 3].map(i => (
-                            <div key={i} className={`pin-dot ${pinInput.length > i ? 'filled' : ''} ${pinError ? 'error' : ''}`} />
-                        ))}
-                    </div>
-
-                    {pinError && <p className="pin-error-msg">{pinError}</p>}
-
-                    <div className="pin-pad">
-                        {['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'].map((d, idx) => (
-                            <button
-                                key={idx}
-                                className={`pin-key ${d === '' ? 'pin-key-empty' : ''}`}
-                                onClick={() => {
-                                    if (d === '⌫') handlePinClear();
-                                    else if (d !== '') handlePinDigit(d);
-                                }}
-                                disabled={d === ''}
-                            >
-                                {d}
-                            </button>
-                        ))}
-                    </div>
-
-                    <button className="reprint-cancel-btn" onClick={handleClose}>Cancel</button>
-                </div>
-            )}
-
-            {/* ── STEP 2: SEARCH & PRINT ── */}
-            {step === 'search' && (
-                <div className="reprint-modal search-modal">
-                    <div className="reprint-modal-header">
-                        <div>
-                            <h2 className="reprint-title">Reprint Receipt</h2>
-                            <p className="reprint-subtitle">Search by receipt number or transaction ID</p>
+                        <div className="pin-dots-row">
+                            {[0, 1, 2, 3].map(i => (
+                                <div key={i} className={`pin-dot ${pinInput.length > i ? 'filled' : ''} ${pinError ? 'error' : ''}`} />
+                            ))}
                         </div>
-                        <button className="reprint-close-btn" onClick={handleClose}>✕</button>
+
+                        {pinError && <p className="pin-error-msg">{pinError}</p>}
+
+                        <div className="pin-pad">
+                            {['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'].map((d, idx) => (
+                                <button
+                                    key={idx}
+                                    className={`pin-key ${d === '' ? 'pin-key-empty' : ''}`}
+                                    onClick={() => {
+                                        if (d === '⌫') handlePinClear();
+                                        else if (d !== '') handlePinDigit(d);
+                                    }}
+                                    disabled={d === ''}
+                                >
+                                    {d}
+                                </button>
+                            ))}
+                        </div>
+
+                        <button className="reprint-cancel-btn" onClick={handleClose}>Cancel</button>
                     </div>
+                )}
 
-                    <div className="reprint-search-row">
-                        <input
-                            type="text"
-                            className="reprint-search-input"
-                            placeholder="Enter receipt # or transaction ID..."
-                            value={searchQuery}
-                            onChange={e => setSearchQuery(e.target.value)}
-                            autoFocus
-                        />
-                    </div>
+                {/* ── STEP 2: SEARCH & PRINT ── */}
+                {step === 'search' && (
+                    <div className="reprint-modal search-modal">
+                        <div className="reprint-modal-header">
+                            <div>
+                                <h2 className="reprint-title">Reprint Receipt</h2>
+                                <p className="reprint-subtitle">Search by receipt number or transaction ID</p>
+                            </div>
+                            <button className="reprint-close-btn" onClick={handleClose}>✕</button>
+                        </div>
 
-                    {/* Receipt Card */}
-                    {q && matchedTxn ? (
-                        <>
-                            <div className="receipt-print-area" ref={printRef}>
-                                {/* REPRINT watermark */}
-                                <div className="reprint-watermark">REPRINT</div>
+                        <div className="reprint-search-row">
+                            <input
+                                type="text"
+                                className="reprint-search-input"
+                                placeholder="Enter receipt # or transaction ID..."
+                                value={searchQuery}
+                                onChange={e => setSearchQuery(e.target.value)}
+                                autoFocus
+                            />
+                        </div>
 
-                                <div className="receipt-header">
-                                    <h3 className="receipt-store-name">PharmaCare Drugstore</h3>
+                        {/* Receipt Card */}
+                        {q && matchedTxn ? (
+                            <>
+                                <div className="receipt-print-area" ref={printRef}>
+                                    {/* REPRINT watermark */}
+                                    <div className="reprint-watermark">REPRINT</div>
 
-                                    {/* Address + TIN */}
-                                    <p className="receipt-store-sub receipt-store-line">123 Sample St., Brgy. Example, City, Philippines</p>
-                                    <p className="receipt-store-sub receipt-store-line">TIN: 000-000-000-000</p>
+                                    <div className="receipt-header">
+                                        <h3 className="receipt-store-name">PharmaCare Drugstore</h3>
 
-                                    <p className="receipt-store-sub">Official Receipt</p>
-                                    <div className="receipt-divider" />
-                                    <p className="receipt-meta">Receipt #: <strong>{matchedTxn.receiptNumber ?? '—'}</strong></p>
-                                    <p className="receipt-meta">Transaction ID: <strong>{matchedTxn.id}</strong></p>
-                                    <p className="receipt-meta">Date: <strong>{matchedTxn.date}</strong></p>
-                                    <p className="receipt-meta">Time: <strong>{matchedTxn.time}</strong></p>
-                                    <p className="receipt-meta">Payment: <strong>{matchedTxn.method}</strong></p>
-                                    {matchedTxn.customerName && (
-                                        <p className="receipt-meta">Customer: <strong>{matchedTxn.customerName}</strong></p>
-                                    )}
-                                </div>
+                                        {/* Address + TIN */}
+                                        <p className="receipt-store-sub receipt-store-line">123 Sample St., Brgy. Example, City, Philippines</p>
+                                        <p className="receipt-store-sub receipt-store-line">TIN: 000-000-000-000</p>
 
-                                <div className="receipt-divider dashed" />
+                                        {matchedTxn.type === 'refund' ? (
+                                            <p className="receipt-store-sub" style={{ fontWeight: 700, color: '#dc2626', fontSize: '1rem' }}>PARTIAL REFUND</p>
+                                        ) : (
+                                            <p className="receipt-store-sub">Official Receipt</p>
+                                        )}
+                                        <div className="receipt-divider" />
+                                        <p className="receipt-meta">Receipt #: <strong>{matchedTxn.receiptNumber ?? '—'}</strong></p>
+                                        <p className="receipt-meta">Transaction ID: <strong>{matchedTxn.id}</strong></p>
+                                        {matchedTxn.type === 'refund' && matchedTxn.originalTransactionId && (
+                                            <p className="receipt-meta" style={{ color: '#dc2626' }}>Original Transaction: <strong>{matchedTxn.originalTransactionId}</strong></p>
+                                        )}
+                                        <p className="receipt-meta">Date: <strong>{matchedTxn.date}</strong></p>
+                                        <p className="receipt-meta">Time: <strong>{matchedTxn.time}</strong></p>
+                                        <p className="receipt-meta">Payment: <strong>{matchedTxn.method}</strong></p>
+                                        {matchedTxn.customerName && (
+                                            <p className="receipt-meta">Customer: <strong>{matchedTxn.customerName}</strong></p>
+                                        )}
+                                    </div>
 
-                                <div className="receipt-items">
-                                    {matchedTxn.items.map((item, idx) => (
-                                        <div key={idx} className="receipt-item-row">
-                                            <div>
-                                                <span className="receipt-item-name">{item.name}</span>
-                                                <span className="receipt-item-calc"> ×{item.qty} @ {formatCurrency(item.price)}</span>
+                                    <div className="receipt-divider dashed" />
+
+                                    <div className="receipt-items">
+                                        {matchedTxn.items.map((item, idx) => (
+                                            <div key={idx} className="receipt-item-row">
+                                                <div>
+                                                    <span className="receipt-item-name">{item.name}</span>
+                                                    <span className="receipt-item-calc"> ×{item.qty} @ {formatCurrency(item.price)}</span>
+                                                </div>
+                                                <span className="receipt-item-total">{formatCurrency(item.price * item.qty)}</span>
                                             </div>
-                                            <span className="receipt-item-total">{formatCurrency(item.price * item.qty)}</span>
-                                        </div>
-                                    ))}
-                                </div>
+                                        ))}
+                                    </div>
 
-                                <div className="receipt-divider dashed" />
+                                    <div className="receipt-divider dashed" />
 
-                                {/* VAT Breakdown */}
-                                <div className="receipt-summary">
-                                    {(() => {
-                                        // Extract the final total amount properly
-                                        const finalTotal = typeof matchedTxn.amount === 'number'
-                                            ? matchedTxn.amount
-                                            : (matchedTxn.subtotal + matchedTxn.tax - (matchedTxn.discountAmount || 0));
+                                    {/* VAT Breakdown */}
+                                    <div className="receipt-summary">
+                                        {(() => {
+                                            const finalTotal = typeof matchedTxn.amount === 'number'
+                                                ? matchedTxn.amount
+                                                : (matchedTxn.subtotal + matchedTxn.tax - (matchedTxn.discountAmount || 0));
 
-                                        const taxDetails = calculateReceiptVAT(finalTotal);
+                                            const taxDetails = calculateReceiptVAT(finalTotal);
 
-                                        return (
-                                            <>
-                                                <div className="receipt-summary-row">
-                                                    <span>VAT-Exclusive Amount</span>
-                                                    <span>{formatCurrency(taxDetails.vatExclusive)}</span>
-                                                </div>
-                                                <div className="receipt-summary-row">
-                                                    <span>VAT Amount (12%)</span>
-                                                    <span>{formatCurrency(taxDetails.vatAmount)}</span>
-                                                </div>
-
-                                                {matchedTxn.discountType && matchedTxn.discountType !== 'none' && (
-                                                    <div className="receipt-summary-row discount">
-                                                        <span>Discount ({matchedTxn.discountType.toUpperCase()})</span>
-                                                        <span>-{formatCurrency(matchedTxn.discountAmount ?? 0)}</span>
+                                            return (
+                                                <>
+                                                    <div className="receipt-summary-row">
+                                                        <span>VAT-Exclusive Amount</span>
+                                                        <span>{formatCurrency(taxDetails.vatExclusive)}</span>
                                                     </div>
-                                                )}
+                                                    <div className="receipt-summary-row">
+                                                        <span>VAT Amount (12%)</span>
+                                                        <span>{formatCurrency(taxDetails.vatAmount)}</span>
+                                                    </div>
 
-                                                <div className="receipt-divider" />
-                                                <div className="receipt-summary-row total-row">
-                                                    <span>Total (VAT-Inclusive)</span>
-                                                    <span>{formatCurrency(taxDetails.totalInclusive)}</span>
-                                                </div>
-                                            </>
-                                        );
-                                    })()}
+                                                    {matchedTxn.discountType && matchedTxn.discountType !== 'none' && (
+                                                        <div className="receipt-summary-row discount">
+                                                            <span>Discount ({matchedTxn.discountType.toUpperCase()})</span>
+                                                            <span>-{formatCurrency(matchedTxn.discountAmount ?? 0)}</span>
+                                                        </div>
+                                                    )}
+
+                                                    <div className="receipt-divider" />
+                                                    <div className="receipt-summary-row total-row">
+                                                        <span>Total (VAT-Inclusive)</span>
+                                                        <span>{formatCurrency(taxDetails.totalInclusive)}</span>
+                                                    </div>
+                                                </>
+                                            );
+                                        })()}
+                                    </div>
+
+                                    <div className="receipt-divider dashed" />
+                                    <p className="receipt-footer">Thank you for your purchase!</p>
+
+                                    {/* BIR required validity line */}
+                                    <p className="receipt-footer bir-line">
+                                        THIS RECEIPT SHALL BE VALID FOR FIVE (5) YEARS FROM THE DATE OF ATP
+                                    </p>
+
+                                    <p className="receipt-footer small">This is a computer-generated receipt.</p>
                                 </div>
 
-                                <div className="receipt-divider dashed" />
-                                <p className="receipt-footer">Thank you for your purchase!</p>
-
-                                {/* BIR required validity line */}
-                                <p className="receipt-footer bir-line">
-                                    THIS RECEIPT SHALL BE VALID FOR FIVE (5) YEARS FROM THE DATE OF ATP
-                                </p>
-
-                                <p className="receipt-footer small">This is a computer-generated receipt.</p>
+                                <div className="reprint-actions no-print">
+                                    <button className="reprint-cancel-btn" onClick={handleClose}>Close</button>
+                                    <button className="reprint-print-btn" onClick={handlePrint}>🖨 Print Receipt</button>
+                                    <button
+                                        className="reprint-print-btn"
+                                        style={{ background: '#16a34a' }}
+                                        onClick={() => setIsGiftReceiptOpen(true)}
+                                    >
+                                        🎁 Gift Receipt
+                                    </button>
+                                </div>
+                            </>
+                        ) : q && !matchedTxn ? (
+                            <div className="reprint-not-found">
+                                <p>No transaction found for &quot;<strong>{searchQuery}</strong>&quot;</p>
+                                <p className="reprint-not-found-sub">Try a different receipt number or transaction ID</p>
                             </div>
-
-                            <div className="reprint-actions no-print">
-                                <button className="reprint-cancel-btn" onClick={handleClose}>Close</button>
-                                <button className="reprint-print-btn" onClick={handlePrint}>🖨 Print Receipt</button>
+                        ) : (
+                            <div className="reprint-empty-state">
+                                <p>Enter a receipt number or transaction ID above to find the receipt</p>
                             </div>
-                        </>
-                    ) : q && !matchedTxn ? (
-                        <div className="reprint-not-found">
-                            <p>No transaction found for &quot;<strong>{searchQuery}</strong>&quot;</p>
-                            <p className="reprint-not-found-sub">Try a different receipt number or transaction ID</p>
-                        </div>
-                    ) : (
-                        <div className="reprint-empty-state">
-                            <p>Enter a receipt number or transaction ID above to find the receipt</p>
-                        </div>
-                    )}
-                </div>
+                        )}
+                    </div>
+                )}
+            </div>
+
+            {matchedTxn && (
+                <GiftReceiptModal
+                    isOpen={isGiftReceiptOpen}
+                    onClose={() => setIsGiftReceiptOpen(false)}
+                    transactionId={matchedTxn.id}
+                    receiptNumber={matchedTxn.receiptNumber ? String(matchedTxn.receiptNumber) : null}
+                    items={matchedTxn.items.map(i => ({ name: i.name, qty: i.qty }))}
+                    date={matchedTxn.date}
+                    time={matchedTxn.time}
+                />
             )}
-        </div>
+        </>
     );
 };
 

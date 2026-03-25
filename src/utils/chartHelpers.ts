@@ -21,6 +21,10 @@ export interface Transaction {
     customerName?: string;
     discountType?: string;
     discountAmount?: number;
+    notes?: string;
+    tags?: string[];
+    type?: 'sale' | 'refund';
+    originalTransactionId?: string;
 }
 
 export interface RevenueByHour {

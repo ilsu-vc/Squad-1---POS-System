@@ -1,0 +1,39 @@
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.inventory-edit-shell {
+  width: min(950px, 95vw);
+  max-height: 90vh;
+  overflow-y: auto;
+  border-radius: 20px;
+  background: #fff;
+  position: relative;
+  z-index: 10000;
+}
+
+.inventory-edit-btn {
+  border: none;
+  background: #1f6feb;
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: 0.2s ease;
+}
+
+.inventory-edit-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.inventory-edit-btn:active {
+  transform: translateY(0);
+}
