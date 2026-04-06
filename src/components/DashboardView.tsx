@@ -147,7 +147,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ transactions }) => {
             </div>
 
             <div className="dashboard-chart-wrap">
-              <ResponsiveContainer>
+              <ResponsiveContainer width="100%" height={260}>
                 <BarChart data={revenueByHour}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#dbe4ef" />
                   <XAxis
@@ -187,7 +187,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ transactions }) => {
             </div>
 
             <div className="dashboard-chart-wrap">
-              <ResponsiveContainer>
+              <ResponsiveContainer width="100%" height={260}>
                 <PieChart>
                   <Pie
                     data={categoryData}

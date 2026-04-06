@@ -62,6 +62,7 @@ import { requirePermission } from './utils/permissionMiddleware';
 import { logUserActivity } from './utils/activityLogger';
 import { productApi } from './services/productApi';
 import { receiptApi } from './services/receiptApi';
+import { salesApi } from './services/salesApi';
 import { authFetch } from './utils/authFetch';
 
 interface CartItem extends Product {
@@ -381,6 +382,15 @@ const App: React.FC = () => {
     if (profile?.id) {
       loadActiveShift(profile.id);
       loadLatestHandover();
+      // ── Sync transactions from DB on every login/restart ──
+      salesApi.fetchTransactions().then((result: any) => {
+        if (result?.transactions && Array.isArray(result.transactions)) {
+          setTransactions(result.transactions);
+          localStorage.setItem('pharma_transactions', JSON.stringify(result.transactions));
+        }
+      }).catch((err: any) => {
+        console.warn('Could not fetch transactions from DB, falling back to localStorage:', err);
+      });
     } else {
       setActiveShift(null);
       setLatestHandover(null);
@@ -967,7 +977,9 @@ const App: React.FC = () => {
         tags,
       };
 
-      setTransactions([newTransaction, ...transactions]);
+      const updated = [newTransaction, ...transactions];
+      setTransactions(updated);
+      localStorage.setItem('pharma_transactions', JSON.stringify(updated));
       setPaymentStatus('success');
       setLastCompletedTransaction({
         id: dbTransactionId,

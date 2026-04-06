@@ -161,6 +161,91 @@ app.post('/transactions/cancel', generalLimiter, validate(CancelTransactionSchem
   }
 });
 
+// ── Get All Transactions (for History page & Dashboard) ───────────────────────
+app.get('/transactions', generalLimiter, async (req: Request, res: Response) => {
+  try {
+    const { data: txns, error: txnErr } = await getSupabase(req)
+      .from('transactions')
+      .select(`
+        id,
+        status,
+        total_amount,
+        vat,
+        subtotal,
+        payment_method,
+        items_count,
+        discount_type,
+        discount_amount,
+        notes,
+        tags,
+        created_at,
+        transaction_items (
+          item_name,
+          category,
+          unit_price,
+          quantity
+        ),
+        receipts (
+          receipt_number
+        )
+      `)
+      .eq('status', 'completed')
+      .order('created_at', { ascending: false });
+
+    if (txnErr) return res.status(500).json({ error: txnErr.message });
+
+    const formatted = (txns || []).map((t: any) => {
+      const createdAt = new Date(t.created_at);
+      const h = createdAt.getHours();
+      const hour =
+        h >= 12 ? (h === 12 ? '12PM' : `${h - 12}PM`) : h === 0 ? '12AM' : `${h}AM`;
+
+      const rawAmount = Number(t.total_amount ?? 0);
+      const receiptNumber =
+        Array.isArray(t.receipts) && t.receipts.length > 0
+          ? t.receipts[0].receipt_number ?? null
+          : t.receipts?.receipt_number ?? null;
+
+      return {
+        id: t.id,
+        receiptNumber,
+        date: createdAt.toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+        }),
+        time: createdAt.toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+        }),
+        hour,
+        amount: `₱${rawAmount.toFixed(2)}`,
+        rawAmount,
+        method: t.payment_method ?? 'Unknown',
+        itemsCount: Number(t.items_count ?? 0),
+        items: (t.transaction_items || []).map((item: any) => ({
+          name: item.item_name,
+          qty: Number(item.quantity),
+          price: Number(item.unit_price),
+          category: item.category ?? undefined,
+        })),
+        subtotal: Number(t.subtotal ?? 0),
+        tax: Number(t.vat ?? 0),
+        discountType: t.discount_type ?? 'None',
+        discountAmount: Number(t.discount_amount ?? 0),
+        notes: t.notes ?? undefined,
+        tags: Array.isArray(t.tags) ? t.tags : [],
+        type: 'sale' as const,
+      };
+    });
+
+    res.json({ transactions: formatted });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // ── Update Transaction Notes/Tags ─────────────────────────────────────────────
 app.put('/transactions/:id/notes', generalLimiter, validate(UpdateNotesSchema), async (req: Request, res: Response) => {
   const { id } = req.params;

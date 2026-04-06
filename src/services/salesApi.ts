@@ -50,4 +50,8 @@ export const salesApi = {
     });
     return res.json();
   },
+  async fetchTransactions(): Promise<{ transactions: any[] }> {
+    const res = await authFetch(`${BASE}/transactions`);
+    return res.json();
+  },
 };
