@@ -13,12 +13,13 @@
 const http = require('http');
 
 const SERVICES = [
-  { name: 'auth-service',      port: 4001 },
-  { name: 'product-service',   port: 4002 },
-  { name: 'sales-service',     port: 4003 },
-  { name: 'reporting-service', port: 4004 },
-  { name: 'role-service',      port: 4005 },
-  { name: 'receipt-service',   port: 4006 },
+  { name: 'auth-service',        port: 4001 },
+  { name: 'product-service',     port: 4002 },
+  { name: 'sales-service',       port: 4003 },
+  { name: 'reporting-service',   port: 4004 },
+  { name: 'role-service',        port: 4005 },
+  { name: 'receipt-service',     port: 4006 },
+  { name: 'transaction-service', port: 4007 },
 ];
 
 /**

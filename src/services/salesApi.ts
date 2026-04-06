@@ -1,10 +1,11 @@
 import { authFetch } from '../utils/authFetch';
 /**
  * salesApi.ts
- * Frontend client for sales-service (port 4003).
+ * Frontend client for transaction-service (port 4007).
+ * Transaction processing logic is now owned by transaction-service.
  */
 
-const BASE = '/api/sales';
+const BASE = '/api/transactions';
 
 export const salesApi = {
   async initiateTransaction(): Promise<{ transactionId: string }> {

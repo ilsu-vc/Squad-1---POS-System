@@ -5,6 +5,7 @@ import { createClient } from '@supabase/supabase-js';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import { z, ZodSchema } from 'zod';
+import amqp from 'amqplib';
 
 dotenv.config();
 
@@ -26,14 +27,105 @@ app.use(cors());
 app.use(express.json({ limit: '10kb' }));
 
 // ── Supabase Client Factory (JWT-forwarding) ──────────────────────────────────
-const getSupabase = (req: Request) => {
-  const authHeader = req.headers.authorization;
+const getSupabase = (req?: Request) => {
+  const authHeader = req?.headers?.authorization;
   return createClient(supabaseUrl!, supabaseKey!, {
     global: { headers: authHeader ? { Authorization: authHeader } : {} }
   });
 };
 
+// Service-level Supabase client (no user JWT — uses the anon key directly)
+const serviceSupabase = createClient(supabaseUrl!, supabaseKey!);
+
 const PORT = process.env.PORT || 4004;
+
+// ── RabbitMQ Consumer ─────────────────────────────────────────────────────────
+const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://guest:guest@localhost:5672';
+const EXCHANGE_NAME = 'transaction_events';
+const QUEUE_NAME = 'reporting_queue';
+
+let rabbitConnected = false;
+
+async function connectRabbitMQConsumer(retries = 5): Promise<void> {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const connection = await amqp.connect(RABBITMQ_URL);
+      const channel = await connection.createChannel();
+
+      // Assert the exchange and queue, then bind them
+      await channel.assertExchange(EXCHANGE_NAME, 'fanout', { durable: true });
+      await channel.assertQueue(QUEUE_NAME, { durable: true });
+      await channel.bindQueue(QUEUE_NAME, EXCHANGE_NAME, '');
+
+      // Prefetch 1 message at a time for reliable processing
+      await channel.prefetch(1);
+
+      console.log(`✅ [ReportingService] Connected to RabbitMQ — consuming from "${QUEUE_NAME}"`);
+      rabbitConnected = true;
+
+      channel.consume(QUEUE_NAME, async (msg) => {
+        if (!msg) return;
+
+        try {
+          const envelope = JSON.parse(msg.content.toString());
+          console.log(`[ReportingService] Received event: ${envelope.event}`);
+
+          if (envelope.event === 'transaction.completed') {
+            const { transactionId, receiptNumber, totalAmount, paymentMethod, itemsCount, items, completedAt } = envelope.data;
+
+            // Build a descriptive activity log message
+            const itemsSummary = Array.isArray(items)
+              ? items.map((i: any) => `${i.name || i.item_name} x${i.quantity}`).join(', ')
+              : `${itemsCount} item(s)`;
+
+            const details = `Sale completed — Receipt: ${receiptNumber || 'N/A'}, Total: ₱${Number(totalAmount ?? 0).toFixed(2)}, Method: ${paymentMethod}, Items: ${itemsSummary}`;
+
+            // Insert SALE activity log using the service-level Supabase client
+            const { error } = await serviceSupabase.from('user_activity_logs').insert({
+              user_id: null, // Transaction events don't carry user context
+              user_email: null,
+              action_type: 'SALE',
+              action_details: details,
+              entity_type: 'transaction',
+              entity_id: transactionId,
+            });
+
+            if (error) {
+              console.error('[ReportingService] Failed to log SALE activity:', error.message);
+            } else {
+              console.log(`[ReportingService] SALE activity logged for transaction ${transactionId}`);
+            }
+          }
+
+          // Acknowledge the message after successful processing
+          channel.ack(msg);
+        } catch (err: any) {
+          console.error('[ReportingService] Error processing message:', err.message);
+          // Negative ack — requeue the message for retry
+          channel.nack(msg, false, true);
+        }
+      });
+
+      connection.on('error', (err) => {
+        console.error('[ReportingService] RabbitMQ connection error:', err.message);
+        rabbitConnected = false;
+      });
+      connection.on('close', () => {
+        console.warn('[ReportingService] RabbitMQ connection closed. Reconnecting...');
+        rabbitConnected = false;
+        setTimeout(() => connectRabbitMQConsumer(retries), 5000);
+      });
+
+      return;
+    } catch (err: any) {
+      console.warn(`[ReportingService] RabbitMQ connection attempt ${i + 1}/${retries} failed: ${err.message}`);
+      if (i < retries - 1) {
+        await new Promise(resolve => setTimeout(resolve, 3000));
+      }
+    }
+  }
+  console.error('[ReportingService] Could not connect to RabbitMQ after all retries. Events will not be consumed.');
+}
 
 // ── Rate Limiters ─────────────────────────────────────────────────────────────
 // 100 requests / 15 min per IP — reporting endpoints are generally read-heavy
@@ -79,7 +171,7 @@ const CreateActivityLogSchema = z.object({
 
 // ── Health ────────────────────────────────────────────────────────────────────
 app.get('/health', generalLimiter, (req: Request, res: Response) => {
-  res.json({ service: 'reporting-service', status: 'ok', port: PORT });
+  res.json({ service: 'reporting-service', status: 'ok', port: PORT, rabbitmq: rabbitConnected ? 'connected' : 'disconnected' });
 });
 
 // ── Activity Logs ─────────────────────────────────────────────────────────────
@@ -139,6 +231,9 @@ app.get('/shift-records', generalLimiter, async (req: Request, res: Response) =>
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`✅ reporting-service running on port ${PORT}`);
+// ── Start Server ──────────────────────────────────────────────────────────────
+connectRabbitMQConsumer().then(() => {
+  app.listen(PORT, () => {
+    console.log(`✅ reporting-service running on port ${PORT}`);
+  });
 });

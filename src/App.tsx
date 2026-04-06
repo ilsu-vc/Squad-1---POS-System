@@ -272,6 +272,32 @@ const App: React.FC = () => {
     };
   }, []);
 
+  // ── Sync Transaction History Real-time ──
+  useEffect(() => {
+    const channel = supabase
+      .channel('live-transactions')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'transactions' },
+        async () => {
+          try {
+            const result: any = await salesApi.fetchTransactions();
+            if (result?.transactions && Array.isArray(result.transactions)) {
+              setTransactions(result.transactions);
+              localStorage.setItem('pharma_transactions', JSON.stringify(result.transactions));
+            }
+          } catch (err) {
+            console.warn('Real-time sync failed:', err);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
     if (typeof window === 'undefined') return [];
     const saved = localStorage.getItem('pharma_transactions');
@@ -856,7 +882,7 @@ const App: React.FC = () => {
     }
     if (!ensureActiveShift()) return;
     try {
-      const result: any = await authFetch('/api/sales/transactions/initiate', { method: 'POST' }).then((r) => r.json());
+      const result: any = await authFetch('/api/transactions/transactions/initiate', { method: 'POST' }).then((r) => r.json());
       if (result.error) throw new Error(result.error);
       setDbTransactionId(result.transactionId);
       setDbReceiptNumber(null);
@@ -916,7 +942,7 @@ const App: React.FC = () => {
       }));
       const itemsCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
-      const saleResult: any = await authFetch('/api/sales/transactions/complete', {
+      const saleResult: any = await authFetch('/api/transactions/transactions/complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1034,7 +1060,7 @@ const App: React.FC = () => {
       return;
     }
     try {
-      const result: any = await authFetch('/api/sales/transactions/cancel', {
+      const result: any = await authFetch('/api/transactions/transactions/cancel', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ transactionId: dbTransactionId }),

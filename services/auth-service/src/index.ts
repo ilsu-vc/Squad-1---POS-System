@@ -87,10 +87,10 @@ const ClockInSchema = z.object({
 });
 
 const ClockOutSchema = z.object({
-  shiftId: z.string().uuid('Invalid shiftId format'),
+  shiftId: z.union([z.string(), z.number()]),
   userId: z.string().uuid('Invalid userId format'),
-  clockOutAt: z.string().datetime({ message: 'Invalid dateTime format' }),
-  totalHours: z.number().min(0).max(24).optional(),
+  clockOutAt: z.string().datetime({ offset: true, message: 'Invalid dateTime format' }),
+  totalHours: z.number().min(0).max(1000).optional(),
   handoverNotes: z.string().max(2000).optional(),
   cashDiscrepancies: z.string().max(1000).optional(),
   issues: z.string().max(1000).optional(),

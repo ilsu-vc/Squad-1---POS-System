@@ -1,6 +1,18 @@
-version: '3.8'
-
 services:
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   frontend:
     build:
       context: .
@@ -14,6 +26,7 @@ services:
       - REPORTING_SERVICE_URL=http://reporting-service:4004
       - ROLE_SERVICE_URL=http://role-service:4005
       - RECEIPT_SERVICE_URL=http://receipt-service:4006
+      - TRANSACTION_SERVICE_URL=http://transaction-service:4007
     env_file:
       - .env
     depends_on:
@@ -23,6 +36,7 @@ services:
       - reporting-service
       - role-service
       - receipt-service
+      - transaction-service
 
   auth-service:
     build:
@@ -66,8 +80,12 @@ services:
       - "4004:4004"
     environment:
       - PORT=4004
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
     env_file:
       - .env
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
 
   role-service:
     build:
@@ -90,3 +108,19 @@ services:
       - PORT=4006
     env_file:
       - .env
+
+  transaction-service:
+    build:
+      context: ./services/transaction-service
+      dockerfile: Dockerfile
+    ports:
+      - "4007:4007"
+    environment:
+      - PORT=4007
+      - PRODUCT_SERVICE_URL=http://product-service:4002
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+    env_file:
+      - .env
+    depends_on:
+      rabbitmq:
+        condition: service_healthy

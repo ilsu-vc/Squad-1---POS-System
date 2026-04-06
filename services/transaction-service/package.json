@@ -1,7 +1,7 @@
 {
-  "name": "reporting-service",
+  "name": "transaction-service",
   "version": "1.0.0",
-  "description": "Activity logs, shift reports, transaction history microservice",
+  "description": "Transaction processing microservice — owns transactions, transaction_items, receipts, and held_transactions",
   "main": "dist/index.js",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",

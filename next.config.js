@@ -23,6 +23,7 @@ const nextConfig = {
         REPORTING_SERVICE_URL: process.env.REPORTING_SERVICE_URL || 'http://localhost:4004',
         ROLE_SERVICE_URL: process.env.ROLE_SERVICE_URL || 'http://localhost:4005',
         RECEIPT_SERVICE_URL: process.env.RECEIPT_SERVICE_URL || 'http://localhost:4006',
+        TRANSACTION_SERVICE_URL: process.env.TRANSACTION_SERVICE_URL || 'http://localhost:4007',
     },
 };
 
