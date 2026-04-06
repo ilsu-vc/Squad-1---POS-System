@@ -140,6 +140,40 @@ app.post('/transactions/complete', paymentLimiter, validate(CompleteTransactionS
       await getSupabase(req).from('transactions').update({ notes, tags }).eq('id', transactionId);
     }
 
+    // ── Notify product-service to decrement stock ─────────────────────────────
+    if (Array.isArray(items)) {
+      const authHeader = req.headers.authorization;
+      const productServiceUrl = process.env.PRODUCT_SERVICE_URL || 'http://localhost:4002';
+      
+      // We use Promise.allSettled so that one failed decrement doesn't block others
+      // or crash the successful transaction response.
+      Promise.allSettled(
+        items.map(async (item: any) => {
+          if (!item.product_id) return;
+          try {
+            console.log(`[SalesService] Decrementing stock for product ${item.product_id} by ${item.quantity}`);
+            const response = await fetch(`${productServiceUrl}/products/${item.product_id}/decrement`, {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+                ...(authHeader ? { Authorization: authHeader } : {}),
+              },
+              body: JSON.stringify({ quantity: Number(item.quantity) || 1 }),
+            });
+            
+            if (response.ok) {
+              console.log(`[SalesService] Successfully decremented stock for product ${item.product_id}`);
+            } else {
+              const errText = await response.text();
+              console.error(`[SalesService] Failed to decrement stock for product ${item.product_id}: ${response.status} ${errText}`);
+            }
+          } catch (err) {
+            console.error(`[SalesService] Error calling decrement for product ${item.product_id}:`, err);
+          }
+        })
+      );
+    }
+
     res.json({ receiptNumber, transactionId });
   } catch (err: any) {
     res.status(500).json({ error: 'Internal server error' });
@@ -194,51 +228,67 @@ app.get('/transactions', generalLimiter, async (req: Request, res: Response) => 
 
     if (txnErr) return res.status(500).json({ error: txnErr.message });
 
-    const formatted = (txns || []).map((t: any) => {
-      const createdAt = new Date(t.created_at);
-      const h = createdAt.getHours();
-      const hour =
-        h >= 12 ? (h === 12 ? '12PM' : `${h - 12}PM`) : h === 0 ? '12AM' : `${h}AM`;
+    const formatted = (txns || [])
+      .map((t: any) => {
+        try {
+          if (!t.created_at) return null;
+          const createdAt = new Date(t.created_at);
+          if (isNaN(createdAt.getTime())) return null;
 
-      const rawAmount = Number(t.total_amount ?? 0);
-      const receiptNumber =
-        Array.isArray(t.receipts) && t.receipts.length > 0
-          ? t.receipts[0].receipt_number ?? null
-          : t.receipts?.receipt_number ?? null;
+          const h = createdAt.getHours();
+          const hour =
+            h >= 12 ? (h === 12 ? '12PM' : `${h - 12}PM`) : h === 0 ? '12AM' : `${h}AM`;
 
-      return {
-        id: t.id,
-        receiptNumber,
-        date: createdAt.toLocaleDateString('en-US', {
-          month: 'short',
-          day: 'numeric',
-          year: 'numeric',
-        }),
-        time: createdAt.toLocaleTimeString([], {
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-        }),
-        hour,
-        amount: `₱${rawAmount.toFixed(2)}`,
-        rawAmount,
-        method: t.payment_method ?? 'Unknown',
-        itemsCount: Number(t.items_count ?? 0),
-        items: (t.transaction_items || []).map((item: any) => ({
-          name: item.item_name,
-          qty: Number(item.quantity),
-          price: Number(item.unit_price),
-          category: item.category ?? undefined,
-        })),
-        subtotal: Number(t.subtotal ?? 0),
-        tax: Number(t.vat ?? 0),
-        discountType: t.discount_type ?? 'None',
-        discountAmount: Number(t.discount_amount ?? 0),
-        notes: t.notes ?? undefined,
-        tags: Array.isArray(t.tags) ? t.tags : [],
-        type: 'sale' as const,
-      };
-    });
+          const rawAmount = Number(t.total_amount ?? 0);
+          
+          // Safely map receipt number from potential array or object
+          let receiptNumber = null;
+          if (t.receipts) {
+            if (Array.isArray(t.receipts) && t.receipts.length > 0) {
+              receiptNumber = t.receipts[0].receipt_number;
+            } else if (!Array.isArray(t.receipts)) {
+              receiptNumber = (t.receipts as any).receipt_number;
+            }
+          }
+
+          return {
+            id: t.id,
+            receiptNumber,
+            date: createdAt.toLocaleDateString('en-US', {
+              month: 'short',
+              day: 'numeric',
+              year: 'numeric',
+            }),
+            time: createdAt.toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit',
+            }),
+            hour,
+            amount: `₱${rawAmount.toFixed(2)}`,
+            rawAmount,
+            method: t.payment_method ?? 'Unknown',
+            itemsCount: Number(t.items_count ?? 0),
+            items: (t.transaction_items || []).map((item: any) => ({
+              name: item.item_name,
+              qty: Number(item.quantity),
+              price: Number(item.unit_price),
+              category: item.category ?? undefined,
+            })),
+            subtotal: Number(t.subtotal ?? 0),
+            tax: Number(t.vat ?? 0),
+            discountType: t.discount_type ?? 'None',
+            discountAmount: Number(t.discount_amount ?? 0),
+            notes: t.notes ?? undefined,
+            tags: Array.isArray(t.tags) ? t.tags : [],
+            type: 'sale' as const,
+          };
+        } catch (e) {
+          console.error(`Error formatting transaction ${t.id}:`, e);
+          return null;
+        }
+      })
+      .filter((t): t is any => t !== null);
 
     res.json({ transactions: formatted });
   } catch (err: any) {

@@ -1,28 +1,30 @@
-# ──────────────────────────────────────────────
-# Dockerfile for Squad-1 POS System (Next.js)
-# ──────────────────────────────────────────────
+FROM node:20-alpine AS builder
 
-# 1. BASE IMAGE
-FROM node:20-alpine
-
-# 2. WORKING DIRECTORY
 WORKDIR /app
 
-# 3. COPY PACKAGE FILES FIRST
-COPY package*.json ./
+# Copy package info and lock files
+COPY package.json package-lock.json* ./
+RUN npm install
 
-# 4. INSTALL DEPENDENCIES
-RUN npm install --legacy-peer-deps
-
-# 5. COPY THE REST OF YOUR CODE
+# Copy source files
 COPY . .
 
-# 6. ENVIRONMENT VARIABLES
-ENV WATCHPACK_POLLING=true
+# Build the Next.js app
+RUN npm run build
 
-# 7. EXPOSE PORT
-#    Next.js dev server runs on port 3000 by default
+# Production image
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/next.config.js ./next.config.js
+
 EXPOSE 3000
 
-# 8. START COMMAND
-CMD ["npm", "run", "dev"]
+ENV PORT 3000
+ENV NODE_ENV production
+
+CMD ["npm", "start"]

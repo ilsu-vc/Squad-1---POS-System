@@ -1,30 +1,21 @@
-# ──────────────────────────────────────────────
-# docker-compose.yml — Squad-1 POS Microservices
-# ──────────────────────────────────────────────
-# Run:  docker compose up --build
-# Stop: docker compose down
+version: '3.8'
 
 services:
-
-  # ── Frontend (Next.js) ─────────────────────────────────────────────────────
   frontend:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
       - "3000:3000"
-    volumes:
-      - .:/app
-      - /app/node_modules
-      - /app/.next
-    env_file:
-      - .env
     environment:
-      - WATCHPACK_POLLING=true
       - AUTH_SERVICE_URL=http://auth-service:4001
       - PRODUCT_SERVICE_URL=http://product-service:4002
       - SALES_SERVICE_URL=http://sales-service:4003
       - REPORTING_SERVICE_URL=http://reporting-service:4004
       - ROLE_SERVICE_URL=http://role-service:4005
       - RECEIPT_SERVICE_URL=http://receipt-service:4006
+    env_file:
+      - .env
     depends_on:
       - auth-service
       - product-service
@@ -33,62 +24,69 @@ services:
       - role-service
       - receipt-service
 
-  # ── Auth Service ───────────────────────────────────────────────────────────
   auth-service:
-    build: ./services/auth-service
+    build:
+      context: ./services/auth-service
+      dockerfile: Dockerfile
     ports:
       - "4001:4001"
-    env_file:
-      - .env
     environment:
       - PORT=4001
+    env_file:
+      - .env
 
-  # ── Product Service ────────────────────────────────────────────────────────
   product-service:
-    build: ./services/product-service
+    build:
+      context: ./services/product-service
+      dockerfile: Dockerfile
     ports:
       - "4002:4002"
-    env_file:
-      - .env
     environment:
       - PORT=4002
+    env_file:
+      - .env
 
-  # ── Sales Service ──────────────────────────────────────────────────────────
   sales-service:
-    build: ./services/sales-service
+    build:
+      context: ./services/sales-service
+      dockerfile: Dockerfile
     ports:
       - "4003:4003"
-    env_file:
-      - .env
     environment:
       - PORT=4003
+      - PRODUCT_SERVICE_URL=http://product-service:4002
+    env_file:
+      - .env
 
-  # ── Reporting Service ──────────────────────────────────────────────────────
   reporting-service:
-    build: ./services/reporting-service
+    build:
+      context: ./services/reporting-service
+      dockerfile: Dockerfile
     ports:
       - "4004:4004"
-    env_file:
-      - .env
     environment:
       - PORT=4004
+    env_file:
+      - .env
 
-  # ── Role Service ───────────────────────────────────────────────────────────
   role-service:
-    build: ./services/role-service
+    build:
+      context: ./services/role-service
+      dockerfile: Dockerfile
     ports:
       - "4005:4005"
-    env_file:
-      - .env
     environment:
       - PORT=4005
-
-  # ── Receipt Service ────────────────────────────────────────────────────────
-  receipt-service:
-    build: ./services/receipt-service
-    ports:
-      - "4006:4006"
     env_file:
       - .env
+
+  receipt-service:
+    build:
+      context: ./services/receipt-service
+      dockerfile: Dockerfile
+    ports:
+      - "4006:4006"
     environment:
       - PORT=4006
+    env_file:
+      - .env

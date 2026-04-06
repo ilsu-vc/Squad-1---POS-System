@@ -74,7 +74,10 @@ const HourlySalesReportView: React.FC<Props> = ({ onSwitchReport }) => {
     });
 
     transactions.forEach((t) => {
+      if (!t.created_at) return;
       const date = new Date(t.created_at);
+      if (isNaN(date.getTime())) return;
+
       const hourIndex = date.getHours();
 
       const targetBucket = hours.find((h) => h.hourNumber === hourIndex);

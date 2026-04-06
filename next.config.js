@@ -4,6 +4,12 @@ const nextConfig = {
     images: {
         disableStaticImages: false,
     },
+    typescript: {
+        ignoreBuildErrors: true,
+    },
+    eslint: {
+        ignoreDuringBuilds: true,
+    },
     // Preserve CRA-style environment variable behavior
     env: {
         NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,

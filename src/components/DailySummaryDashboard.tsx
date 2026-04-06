@@ -19,6 +19,10 @@ interface Props {
 }
 
 const getManilaDateString = (date: Date): string => {
+  if (isNaN(date.getTime())) {
+    return 'Invalid Date';
+  }
+
   const parts = new Intl.DateTimeFormat('en-US', {
     timeZone: 'Asia/Manila',
     year: 'numeric',
@@ -204,6 +208,7 @@ const DailySummaryDashboard: React.FC<Props> = ({ transactions: localTransaction
 
     const todayLocal = localTransactions.filter((t) => {
       const tDate = new Date(`${t.date} ${t.time}`);
+      if (isNaN(tDate.getTime())) return false;
       return getManilaDateString(tDate) === today;
     });
 

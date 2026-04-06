@@ -39,9 +39,10 @@ interface DashboardViewProps {
 }
 
 const DashboardView: React.FC<DashboardViewProps> = ({ transactions }) => {
-  const totalRevenue = transactions.reduce((acc, curr) => acc + curr.rawAmount, 0);
-  const totalItemsSold = transactions.reduce((acc, curr) => acc + curr.itemsCount, 0);
-  const avgTransactionVal = transactions.length > 0 ? totalRevenue / transactions.length : 0;
+  const isTxnsArray = Array.isArray(transactions);
+  const totalRevenue = isTxnsArray ? transactions.reduce((acc, curr) => acc + (curr?.rawAmount || 0), 0) : 0;
+  const totalItemsSold = isTxnsArray ? transactions.reduce((acc, curr) => acc + (curr?.itemsCount || 0), 0) : 0;
+  const avgTransactionVal = (isTxnsArray && transactions.length > 0) ? totalRevenue / transactions.length : 0;
 
   const revenueByHour = getRevenueByHour(transactions);
   const categoryData = getCategoryData(transactions);

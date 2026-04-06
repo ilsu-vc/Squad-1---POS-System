@@ -74,34 +74,47 @@ export const getRevenueByHour = (transactions: Transaction[]): RevenueByHour[] =
         '12PM', '1PM', '2PM', '3PM', '4PM', '5PM',
         '6PM', '7PM', '8PM', '9PM', '10PM', '11PM',
     ];
+    
+    if (!Array.isArray(transactions)) {
+        return hours.map(h => ({ time: h, amount: 0 }));
+    }
+
     return hours.map((h) => ({
         time: h,
         amount: transactions
-            .filter((t) => t.hour === h)
-            .reduce((acc, curr) => acc + curr.rawAmount, 0),
+            .filter((t) => t && t.hour === h)
+            .reduce((acc, curr) => acc + (curr?.rawAmount || 0), 0),
     }));
 };
 
 export const getCategoryData = (transactions: Transaction[]): CategoryData[] => {
+    if (!Array.isArray(transactions)) {
+        return [{ name: 'None', value: 0 }];
+    }
+
     const counts: Record<string, number> = {};
     transactions.forEach((t) => {
-        t.items.forEach((item) => {
-            if (item.category) {
-                counts[item.category] = (counts[item.category] || 0) + item.qty;
-            }
-        });
+        if (t && Array.isArray(t.items)) {
+            t.items.forEach((item) => {
+                if (item?.category) {
+                    counts[item.category] = (counts[item.category] || 0) + (item.qty || 0);
+                }
+            });
+        }
     });
     const data = Object.keys(counts).map((key) => ({ name: key, value: counts[key] }));
     return data.length > 0 ? data : [{ name: 'None', value: 0 }];
 };
 
 export const getPaymentMethodStats = (transactions: Transaction[]): PaymentMethodStat[] => {
+    if (!Array.isArray(transactions)) return [];
+    
     const totalCount = transactions.length;
     if (totalCount === 0) return [];
 
     const methods = ['Mobile Payment', 'Credit/Debit Card', 'Cash Payment'];
     return methods.map((m, index) => {
-        const count = transactions.filter((t) => t.method === m).length;
+        const count = transactions.filter((t) => t && t.method === m).length;
         const percentage = Math.round((count / totalCount) * 100);
         return {
             name: m,

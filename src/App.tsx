@@ -581,7 +581,7 @@ const App: React.FC = () => {
       await loadActiveShift(profile.id);
       await logUserActivity({
         profile,
-        actionType: 'clock_in',
+        actionType: 'SHIFT_CLOCK_IN',
         actionDetails: `User clocked in at ${new Date().toLocaleString()}`,
         entityType: 'shift',
         entityId: profile.id,
@@ -639,7 +639,7 @@ const App: React.FC = () => {
 
       await logUserActivity({
         profile,
-        actionType: 'clock_out',
+        actionType: 'SHIFT_CLOCK_OUT',
         actionDetails: `User clocked out. Total hours: ${totalHours.toFixed(2)}. Notes: ${handoverNotes || 'None'}`,
         entityType: 'shift',
         entityId: String(activeShift.id),
@@ -687,7 +687,7 @@ const App: React.FC = () => {
 
       await logUserActivity({
         profile,
-        actionType: 'order_held',
+        actionType: 'ORDER_HELD',
         actionDetails: `Held order with ${cart.length} cart item(s), total ₱${total.toFixed(2)}`,
         entityType: 'held_order',
         entityId: null,
@@ -737,7 +737,7 @@ const App: React.FC = () => {
 
       await logUserActivity({
         profile,
-        actionType: 'held_order_resumed',
+        actionType: 'ORDER_RESUMED',
         actionDetails: `Resumed held order ${id}`,
         entityType: 'held_order',
         entityId: id,
@@ -767,7 +767,7 @@ const App: React.FC = () => {
 
     await logUserActivity({
       profile,
-      actionType: 'held_order_deleted',
+      actionType: 'ORDER_DELETED',
       actionDetails: `Deleted held order ${id}`,
       entityType: 'held_order',
       entityId: id,
@@ -830,7 +830,7 @@ const App: React.FC = () => {
 
     logUserActivity({
       profile,
-      actionType: 'refund_processed',
+      actionType: 'REFUND',
       actionDetails: `Processed partial refund of ${formatCurrency(refundTotal)} from transaction ${originalTxn.id}`,
       entityType: 'transaction',
       entityId: refundTxn.id,
@@ -908,6 +908,7 @@ const App: React.FC = () => {
 
     try {
       const itemsPayload = cart.map((item) => ({
+        product_id: item.id,
         name: item.name,
         category: item.category ?? null,
         unit_price: Number(item.price),
@@ -995,7 +996,7 @@ const App: React.FC = () => {
 
       await logUserActivity({
         profile,
-        actionType: 'sale_completed',
+        actionType: 'SALE',
         actionDetails: `Completed sale worth ₱${finalTotal.toFixed(2)} with ${activityMethodLabel} payment`,
         entityType: 'transaction',
         entityId: dbTransactionId,
@@ -1004,7 +1005,7 @@ const App: React.FC = () => {
       if (discountType !== 'none' && Number(discountAmount) > 0) {
         await logUserActivity({
           profile,
-          actionType: 'discount_applied',
+          actionType: 'DISCOUNT_APPLIED',
           actionDetails: `Applied ${normalizedDiscountType} discount worth ₱${Number(discountAmount).toFixed(2)} on sale ${dbTransactionId}`,
           entityType: 'transaction',
           entityId: dbTransactionId,

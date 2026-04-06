@@ -73,11 +73,11 @@ const validate = (schema: ZodSchema) => (req: Request, res: Response, next: Next
 const ALLOWED_ROLES = ['admin', 'manager', 'cashier', 'staff'] as const;
 
 const UpdateRoleSchema = z.object({
-  role: z.enum(ALLOWED_ROLES, { errorMap: () => ({ message: 'Invalid role value' }) }),
+  role: z.enum(ALLOWED_ROLES, 'Invalid role value'),
 });
 
 const ToggleActiveSchema = z.object({
-  is_active: z.boolean({ required_error: 'is_active (boolean) is required' }),
+  is_active: z.boolean(),
 });
 
 const ResetPasswordSchema = z.object({
