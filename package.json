@@ -7,7 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "jest"
+    "test": "jest --testPathPattern=src/utils",
+    "test:smoke": "jest --testPathPattern=tests/smoke --testEnvironment=node",
+    "test:security": "jest --testPathPattern=tests/security --testEnvironment=node",
+    "test:e2e": "jest --testPathPattern=tests/e2e --testEnvironment=node --runInBand"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",
@@ -28,8 +31,10 @@
     "@types/node": "^20.0.0",
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",
+    "chromedriver": "^131.0.5",
     "jest": "^29.0.0",
     "jest-environment-jsdom": "^29.0.0",
+    "selenium-webdriver": "^4.41.0",
     "ts-jest": "^29.0.0",
     "typescript": "^5.0.0"
   }

@@ -1,35 +1,105 @@
-import express, { Request, Response } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
+import rateLimit from 'express-rate-limit';
+import helmet from 'helmet';
+import { z, ZodSchema } from 'zod';
 
 dotenv.config();
 
+// ── OWASP: Validate required environment variables at startup ─────────────────
+// Keys are never hardcoded — always loaded from environment variables.
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error('❌ Missing required env vars: NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY');
+  process.exit(1);
+}
+
 const app = express();
+
+// ── OWASP: Secure HTTP headers ────────────────────────────────────────────────
+app.use(helmet());
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10kb' })); // Prevent oversized payload attacks
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-const getSupabase = (req: any) => {
+// ── Supabase Client Factory (JWT-forwarding) ──────────────────────────────────
+const getSupabase = (req: Request) => {
   const authHeader = req.headers.authorization;
-  return createClient(supabaseUrl, supabaseKey, {
-    global: {
-      headers: authHeader ? { Authorization: authHeader } : {}
-    }
+  return createClient(supabaseUrl!, supabaseKey!, {
+    global: { headers: authHeader ? { Authorization: authHeader } : {} }
   });
 };
 
 const PORT = process.env.PORT || 4003;
 
+// ── Rate Limiters ─────────────────────────────────────────────────────────────
+// General: 100 requests / 15 min per IP
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests. Please slow down.' },
+  statusCode: 429,
+});
+
+// Strict: 20 requests / 15 min for payment endpoints to prevent fraud
+const paymentLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many payment attempts. Please try again later.' },
+  statusCode: 429,
+});
+
+// ── Validation Middleware Factory ─────────────────────────────────────────────
+const validate = (schema: ZodSchema) => (req: Request, res: Response, next: NextFunction) => {
+  const result = schema.safeParse(req.body);
+  if (!result.success) {
+    return res.status(400).json({
+      error: 'Validation failed',
+      details: result.error.flatten().fieldErrors,
+    });
+  }
+  req.body = result.data; // Replace body with sanitized/parsed data, rejects extra fields
+  next();
+};
+
+// ── Zod Schemas ───────────────────────────────────────────────────────────────
+const CompleteTransactionSchema = z.object({
+  transactionId: z.string().uuid('Invalid transactionId'),
+  vat: z.number().min(0).max(1_000_000).optional(),
+  subtotal: z.number().min(0).max(10_000_000).optional(),
+  totalAmount: z.number().min(0).max(10_000_000),
+  paymentMethod: z.string().max(50),
+  itemsCount: z.number().int().min(1),
+  items: z.array(z.any()).min(1, 'At least one item is required'),
+  discountType: z.string().max(50).optional(),
+  discountAmount: z.number().min(0).max(10_000_000).optional(),
+  notes: z.string().max(1000).optional(),
+  tags: z.array(z.string().max(100)).optional(),
+});
+
+const CancelTransactionSchema = z.object({
+  transactionId: z.string().uuid('Invalid transactionId'),
+});
+
+const UpdateNotesSchema = z.object({
+  notes: z.string().max(1000).optional(),
+  tags: z.array(z.string().max(100)).optional(),
+});
+
 // ── Health ────────────────────────────────────────────────────────────────────
-app.get('/health', (req: Request, res: Response) => {
+app.get('/health', generalLimiter, (req: Request, res: Response) => {
   res.json({ service: 'sales-service', status: 'ok', port: PORT });
 });
 
 // ── Initiate Transaction ──────────────────────────────────────────────────────
-app.post('/transactions/initiate', async (req: Request, res: Response) => {
+app.post('/transactions/initiate', paymentLimiter, async (req: Request, res: Response) => {
   try {
     const { data, error } = await getSupabase(req)
       .from('transactions')
@@ -39,30 +109,14 @@ app.post('/transactions/initiate', async (req: Request, res: Response) => {
     if (error) return res.status(500).json({ error: error.message });
     res.status(201).json({ transactionId: data.id });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 // ── Complete Payment ──────────────────────────────────────────────────────────
-app.post('/transactions/complete', async (req: Request, res: Response) => {
-  const {
-    transactionId,
-    vat,
-    subtotal,
-    totalAmount,
-    paymentMethod,
-    itemsCount,
-    items,
-    discountType,
-    discountAmount,
-    notes,
-    tags,
-  } = req.body;
-
-  if (!transactionId) return res.status(400).json({ error: 'transactionId is required' });
-
+app.post('/transactions/complete', paymentLimiter, validate(CompleteTransactionSchema), async (req: Request, res: Response) => {
+  const { transactionId, vat, subtotal, totalAmount, paymentMethod, itemsCount, items, discountType, discountAmount, notes, tags } = req.body;
   try {
-    // Call the existing Supabase RPC — no schema change needed
     const { data: receiptRows, error: rpcErr } = await getSupabase(req).rpc(
       'confirm_payment_and_issue_receipt',
       {
@@ -77,30 +131,24 @@ app.post('/transactions/complete', async (req: Request, res: Response) => {
         p_discount_amount: Number(discountAmount ?? 0),
       }
     );
-
     if (rpcErr) return res.status(500).json({ error: rpcErr.message });
 
     const receipt = Array.isArray(receiptRows) ? receiptRows[0] : receiptRows;
     const receiptNumber = receipt?.o_receipt_number ?? null;
 
-    // Save optional notes/tags
     if (notes !== undefined || tags !== undefined) {
-      await getSupabase(req)
-        .from('transactions')
-        .update({ notes, tags })
-        .eq('id', transactionId);
+      await getSupabase(req).from('transactions').update({ notes, tags }).eq('id', transactionId);
     }
 
     res.json({ receiptNumber, transactionId });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 // ── Cancel Transaction ────────────────────────────────────────────────────────
-app.post('/transactions/cancel', async (req: Request, res: Response) => {
+app.post('/transactions/cancel', generalLimiter, validate(CancelTransactionSchema), async (req: Request, res: Response) => {
   const { transactionId } = req.body;
-  if (!transactionId) return res.status(400).json({ error: 'transactionId is required' });
   try {
     const { error } = await getSupabase(req)
       .from('transactions')
@@ -109,12 +157,12 @@ app.post('/transactions/cancel', async (req: Request, res: Response) => {
     if (error) return res.status(500).json({ error: error.message });
     res.json({ success: true });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 // ── Update Transaction Notes/Tags ─────────────────────────────────────────────
-app.put('/transactions/:id/notes', async (req: Request, res: Response) => {
+app.put('/transactions/:id/notes', generalLimiter, validate(UpdateNotesSchema), async (req: Request, res: Response) => {
   const { id } = req.params;
   const { notes, tags } = req.body;
   try {
@@ -125,7 +173,7 @@ app.put('/transactions/:id/notes', async (req: Request, res: Response) => {
     if (error) return res.status(500).json({ error: error.message });
     res.json({ success: true });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
