@@ -13,6 +13,35 @@ services:
       timeout: 5s
       retries: 5
 
+  api-gateway:
+    build:
+      context: ./services/api-gateway
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - INVENTORY_SERVICE_URL=http://inventory-service:4002
+      - AUTH_SERVICE_URL=http://auth-service:4001
+      - TRANSACTION_SERVICE_URL=http://transaction-service:4007
+      - REPORTING_SERVICE_URL=http://reporting-service:4004
+      - ROLE_SERVICE_URL=http://role-service:4005
+      - RECEIPT_SERVICE_URL=http://receipt-service:4006
+      - FRONTEND_URL=http://frontend:3000
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+    env_file:
+      - .env
+    depends_on:
+      - auth-service
+      - inventory-service
+      - sales-service
+      - reporting-service
+      - role-service
+      - receipt-service
+      - transaction-service
+      - frontend
+
   frontend:
     build:
       context: .
@@ -21,7 +50,7 @@ services:
       - "3000:3000"
     environment:
       - AUTH_SERVICE_URL=http://auth-service:4001
-      - PRODUCT_SERVICE_URL=http://product-service:4002
+      - INVENTORY_SERVICE_URL=http://inventory-service:4002
       - SALES_SERVICE_URL=http://sales-service:4003
       - REPORTING_SERVICE_URL=http://reporting-service:4004
       - ROLE_SERVICE_URL=http://role-service:4005
@@ -31,7 +60,7 @@ services:
       - .env
     depends_on:
       - auth-service
-      - product-service
+      - inventory-service
       - sales-service
       - reporting-service
       - role-service
@@ -49,9 +78,9 @@ services:
     env_file:
       - .env
 
-  product-service:
+  inventory-service:
     build:
-      context: ./services/product-service
+      context: ./services/inventory-service
       dockerfile: Dockerfile
     ports:
       - "4002:4002"
@@ -68,7 +97,7 @@ services:
       - "4003:4003"
     environment:
       - PORT=4003
-      - PRODUCT_SERVICE_URL=http://product-service:4002
+      - INVENTORY_SERVICE_URL=http://inventory-service:4002
     env_file:
       - .env
 
@@ -117,7 +146,7 @@ services:
       - "4007:4007"
     environment:
       - PORT=4007
-      - PRODUCT_SERVICE_URL=http://product-service:4002
+      - INVENTORY_SERVICE_URL=http://inventory-service:4002
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
     env_file:
       - .env

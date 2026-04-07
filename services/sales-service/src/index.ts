@@ -1,7 +1,6 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 
 dotenv.config();
@@ -15,19 +14,10 @@ app.use(express.json({ limit: '10kb' }));
 
 const PORT = process.env.PORT || 4003;
 
-const generalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Too many requests. Please slow down.' },
-  statusCode: 429,
-});
-
 // ── Health ────────────────────────────────────────────────────────────────────
 // Transaction processing has been moved to transaction-service (port 4007).
 // This service is retained as a placeholder to avoid breaking Docker Compose.
-app.get('/health', generalLimiter, (_req: Request, res: Response) => {
+app.get('/health', (_req: Request, res: Response) => {
   res.json({
     service: 'sales-service',
     status: 'ok',

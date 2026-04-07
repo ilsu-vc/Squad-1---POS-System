@@ -2,7 +2,6 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
-import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import { z, ZodSchema } from 'zod';
 
@@ -34,17 +33,6 @@ const getSupabase = (req: Request) => {
 };
 
 const PORT = process.env.PORT || 4006;
-
-// ── Rate Limiters ─────────────────────────────────────────────────────────────
-// 100 requests / 15 min per IP — gracefully returns 429 with Retry-After header
-const generalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Too many requests. Please slow down.' },
-  statusCode: 429,
-});
 
 // ── Validation Middleware Factory ─────────────────────────────────────────────
 const validate = (schema: ZodSchema) => (req: Request, res: Response, next: NextFunction) => {
@@ -84,13 +72,13 @@ const PrintReceiptSchema = z.object({
 });
 
 // ── Health ────────────────────────────────────────────────────────────────────
-app.get('/health', generalLimiter, (req: Request, res: Response) => {
+app.get('/health', (req: Request, res: Response) => {
   res.json({ service: 'receipt-service', status: 'ok', port: PORT });
 });
 
 // ── Print Receipt ────────────────────────────────────────────────────────────
 // Validates structure before passing to printer to prevent injection via receipt data
-app.post('/print', generalLimiter, validate(PrintReceiptSchema), async (req: Request, res: Response) => {
+app.post('/print', validate(PrintReceiptSchema), async (req: Request, res: Response) => {
   const { receiptNumber, items, vatable, vatAmount, total, splitPayments } = req.body;
   try {
     console.log('=== RECEIPT (receipt-service) ===');
@@ -120,7 +108,7 @@ app.post('/print', generalLimiter, validate(PrintReceiptSchema), async (req: Req
 });
 
 // ── Fetch Receipt Data ─────────────────────────────────────────────────────────
-app.get('/receipt/:transactionId', generalLimiter, async (req: Request, res: Response) => {
+app.get('/receipt/:transactionId', async (req: Request, res: Response) => {
   const { transactionId } = req.params;
   // Reject non-UUID formats to prevent path traversal/injection
   if (!/^[0-9a-f-]{36}$/i.test(transactionId)) {

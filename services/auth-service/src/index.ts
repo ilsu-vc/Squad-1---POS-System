@@ -2,7 +2,6 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
-import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import { z, ZodSchema } from 'zod';
 
@@ -39,28 +38,6 @@ const getSupabase = (req: Request) => {
 };
 
 const PORT = process.env.PORT || 4001;
-
-// ── OWASP: Rate Limiters ───────────────────────────────────────────────────────
-// Strict limiter for sensitive auth endpoints (login, password) — prevents brute-force.
-// 10 attempts per 15 minutes per IP; returns a graceful 429 with a Retry-After header.
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10,
-  standardHeaders: true,   // Return rate limit info in RateLimit-* headers
-  legacyHeaders: false,
-  message: { error: 'Too many attempts. Please try again after 15 minutes.' },
-  statusCode: 429,
-});
-
-// General limiter for all other endpoints — 100 requests per 15 minutes per IP.
-const generalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Too many requests. Please slow down.' },
-  statusCode: 429,
-});
 
 // ── Validation Middleware Factory ─────────────────────────────────────────────
 // Validates request body against a Zod schema; rejects unexpected fields.
@@ -102,13 +79,12 @@ const ChangePasswordSchema = z.object({
 });
 
 // ── Health ────────────────────────────────────────────────────────────────────
-app.get('/health', generalLimiter, (req: Request, res: Response) => {
+app.get('/health', (req: Request, res: Response) => {
   res.json({ service: 'auth-service', status: 'ok', port: PORT });
 });
 
 // ── Session & Profile ─────────────────────────────────────────────────────────
-// Rate-limited strictly: prevents password brute-force attacks (OWASP A07)
-app.post('/login', authLimiter, validate(LoginSchema), async (req: Request, res: Response) => {
+app.post('/login', validate(LoginSchema), async (req: Request, res: Response) => {
   const { email, password } = req.body;
   try {
     const { data, error } = await getSupabase(req).auth.signInWithPassword({ email, password });
@@ -119,7 +95,7 @@ app.post('/login', authLimiter, validate(LoginSchema), async (req: Request, res:
   }
 });
 
-app.post('/logout', generalLimiter, async (req: Request, res: Response) => {
+app.post('/logout', async (req: Request, res: Response) => {
   try {
     const { error } = await getSupabase(req).auth.signOut();
     if (error) return res.status(500).json({ error: error.message });
@@ -129,7 +105,7 @@ app.post('/logout', generalLimiter, async (req: Request, res: Response) => {
   }
 });
 
-app.get('/session', generalLimiter, async (req: Request, res: Response) => {
+app.get('/session', async (req: Request, res: Response) => {
   try {
     const { data, error } = await getSupabase(req).auth.getSession();
     if (error) return res.status(401).json({ error: error.message });
@@ -139,7 +115,7 @@ app.get('/session', generalLimiter, async (req: Request, res: Response) => {
   }
 });
 
-app.get('/profile/:userId', generalLimiter, async (req: Request, res: Response) => {
+app.get('/profile/:userId', async (req: Request, res: Response) => {
   const { userId } = req.params;
   // Basic UUID format check on URL param
   if (!/^[0-9a-f-]{36}$/i.test(userId)) {
@@ -159,7 +135,7 @@ app.get('/profile/:userId', generalLimiter, async (req: Request, res: Response) 
 });
 
 // ── Shift Management ───────────────────────────────────────────────────────────
-app.post('/shift/clock-in', generalLimiter, validate(ClockInSchema), async (req: Request, res: Response) => {
+app.post('/shift/clock-in', validate(ClockInSchema), async (req: Request, res: Response) => {
   const { userId } = req.body;
   try {
     const { data, error } = await getSupabase(req)
@@ -174,7 +150,7 @@ app.post('/shift/clock-in', generalLimiter, validate(ClockInSchema), async (req:
   }
 });
 
-app.post('/shift/clock-out', generalLimiter, validate(ClockOutSchema), async (req: Request, res: Response) => {
+app.post('/shift/clock-out', validate(ClockOutSchema), async (req: Request, res: Response) => {
   const { shiftId, userId, clockOutAt, totalHours, handoverNotes, cashDiscrepancies, issues, pendingItems } = req.body;
   try {
     const { error } = await getSupabase(req)
@@ -196,7 +172,7 @@ app.post('/shift/clock-out', generalLimiter, validate(ClockOutSchema), async (re
   }
 });
 
-app.get('/shift/active/:userId', generalLimiter, async (req: Request, res: Response) => {
+app.get('/shift/active/:userId', async (req: Request, res: Response) => {
   const { userId } = req.params;
   if (!/^[0-9a-f-]{36}$/i.test(userId)) {
     return res.status(400).json({ error: 'Invalid userId format' });
@@ -217,7 +193,7 @@ app.get('/shift/active/:userId', generalLimiter, async (req: Request, res: Respo
   }
 });
 
-app.get('/shift/latest-handover', generalLimiter, async (req: Request, res: Response) => {
+app.get('/shift/latest-handover', async (req: Request, res: Response) => {
   try {
     const { data, error } = await getSupabase(req)
       .from('shift_records')
@@ -236,7 +212,7 @@ app.get('/shift/latest-handover', generalLimiter, async (req: Request, res: Resp
 
 // ── Password ───────────────────────────────────────────────────────────────────
 // Rate-limited strictly: prevents password-spraying attacks (OWASP A07)
-app.post('/password/change', authLimiter, validate(ChangePasswordSchema), async (req: Request, res: Response) => {
+app.post('/password/change', validate(ChangePasswordSchema), async (req: Request, res: Response) => {
   const { newPassword } = req.body;
   try {
     const { error } = await getSupabase(req).auth.updateUser({ password: newPassword });

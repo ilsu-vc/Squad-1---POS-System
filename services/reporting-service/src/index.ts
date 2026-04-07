@@ -170,12 +170,12 @@ const CreateActivityLogSchema = z.object({
 });
 
 // ── Health ────────────────────────────────────────────────────────────────────
-app.get('/health', generalLimiter, (req: Request, res: Response) => {
+app.get('/health', (req: Request, res: Response) => {
   res.json({ service: 'reporting-service', status: 'ok', port: PORT, rabbitmq: rabbitConnected ? 'connected' : 'disconnected' });
 });
 
 // ── Activity Logs ─────────────────────────────────────────────────────────────
-app.get('/activity-logs', generalLimiter, async (req: Request, res: Response) => {
+app.get('/activity-logs', async (req: Request, res: Response) => {
   try {
     const { data, error } = await getSupabase(req)
       .from('user_activity_logs')
@@ -189,7 +189,7 @@ app.get('/activity-logs', generalLimiter, async (req: Request, res: Response) =>
 });
 
 // Strictly validated — activity logs are audit records and must not accept arbitrary data
-app.post('/activity-logs', generalLimiter, validate(CreateActivityLogSchema), async (req: Request, res: Response) => {
+app.post('/activity-logs', validate(CreateActivityLogSchema), async (req: Request, res: Response) => {
   const { userId, userEmail, actionType, actionDetails, entityType, entityId } = req.body;
   try {
     const { error } = await getSupabase(req).from('user_activity_logs').insert({
@@ -208,7 +208,7 @@ app.post('/activity-logs', generalLimiter, validate(CreateActivityLogSchema), as
 });
 
 // ── Shift Records ─────────────────────────────────────────────────────────────
-app.get('/shift-records', generalLimiter, async (req: Request, res: Response) => {
+app.get('/shift-records', async (req: Request, res: Response) => {
   try {
     const { data, error } = await getSupabase(req)
       .from('shift_records')

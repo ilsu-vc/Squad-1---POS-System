@@ -2,7 +2,6 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
-import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import { z, ZodSchema } from 'zod';
 
@@ -34,17 +33,6 @@ const getSupabase = (req: Request) => {
 };
 
 const PORT = process.env.PORT || 4002;
-
-// ── Rate Limiters ─────────────────────────────────────────────────────────────
-// 100 requests per 15 minutes per IP — gracefully returns 429 with Retry-After header
-const generalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Too many requests. Please slow down.' },
-  statusCode: 429,
-});
 
 // ── Validation Middleware Factory ─────────────────────────────────────────────
 const validate = (schema: ZodSchema) => (req: Request, res: Response, next: NextFunction) => {
@@ -86,12 +74,12 @@ const DecrementStockSchema = z.object({
 const RESERVED_STATUSES = ['Pending', 'Approved', 'In-Transit'];
 
 // ── Health ────────────────────────────────────────────────────────────────────
-app.get('/health', generalLimiter, (req: Request, res: Response) => {
+app.get('/health', (req: Request, res: Response) => {
   res.json({ service: 'product-service', status: 'ok', port: PORT });
 });
 
 // ── Products ──────────────────────────────────────────────────────────────────
-app.patch('/products/:id/decrement', generalLimiter, validate(DecrementStockSchema), async (req: Request, res: Response) => {
+app.patch('/products/:id/decrement', validate(DecrementStockSchema), async (req: Request, res: Response) => {
   const { id } = req.params;
   const { quantity } = req.body;
 
@@ -130,7 +118,7 @@ app.patch('/products/:id/decrement', generalLimiter, validate(DecrementStockSche
   }
 });
 
-app.get('/products', generalLimiter, async (req: Request, res: Response) => {
+app.get('/products', async (req: Request, res: Response) => {
   try {
     const supabase = getSupabase(req);
     const { data: products, error: pErr } = await supabase
@@ -180,7 +168,7 @@ app.get('/products', generalLimiter, async (req: Request, res: Response) => {
   }
 });
 
-app.put('/products/:id', generalLimiter, validate(UpdateProductSchema), async (req: Request, res: Response) => {
+app.put('/products/:id', validate(UpdateProductSchema), async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
     const { data, error } = await getSupabase(req)
@@ -197,7 +185,7 @@ app.put('/products/:id', generalLimiter, validate(UpdateProductSchema), async (r
 });
 
 // ── Transfers ─────────────────────────────────────────────────────────────────
-app.get('/transfers', generalLimiter, async (req: Request, res: Response) => {
+app.get('/transfers', async (req: Request, res: Response) => {
   try {
     const { data, error } = await getSupabase(req)
       .from('requesttransfers')
@@ -210,7 +198,7 @@ app.get('/transfers', generalLimiter, async (req: Request, res: Response) => {
   }
 });
 
-app.post('/transfers', generalLimiter, validate(CreateTransferSchema), async (req: Request, res: Response) => {
+app.post('/transfers', validate(CreateTransferSchema), async (req: Request, res: Response) => {
   try {
     const { data, error } = await getSupabase(req)
       .from('requesttransfers')
@@ -224,7 +212,7 @@ app.post('/transfers', generalLimiter, validate(CreateTransferSchema), async (re
   }
 });
 
-app.put('/transfers/:id', generalLimiter, validate(UpdateTransferSchema), async (req: Request, res: Response) => {
+app.put('/transfers/:id', validate(UpdateTransferSchema), async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
     const { data, error } = await getSupabase(req)

@@ -18,7 +18,7 @@ const nextConfig = {
     // Microservice URLs — read by Next.js API gateway routes (server-side only)
     serverRuntimeConfig: {
         AUTH_SERVICE_URL: process.env.AUTH_SERVICE_URL || 'http://localhost:4001',
-        PRODUCT_SERVICE_URL: process.env.PRODUCT_SERVICE_URL || 'http://localhost:4002',
+        INVENTORY_SERVICE_URL: process.env.INVENTORY_SERVICE_URL || 'http://localhost:4002',
         SALES_SERVICE_URL: process.env.SALES_SERVICE_URL || 'http://localhost:4003',
         REPORTING_SERVICE_URL: process.env.REPORTING_SERVICE_URL || 'http://localhost:4004',
         ROLE_SERVICE_URL: process.env.ROLE_SERVICE_URL || 'http://localhost:4005',

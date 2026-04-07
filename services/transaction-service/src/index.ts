@@ -2,7 +2,6 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
-import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import { z, ZodSchema } from 'zod';
 import amqp from 'amqplib';
@@ -87,26 +86,6 @@ function publishTransactionCompleted(payload: object): void {
   }
 }
 
-// ── Rate Limiters ─────────────────────────────────────────────────────────────
-const generalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Too many requests. Please slow down.' },
-  statusCode: 429,
-});
-
-// Strict: 20 requests / 15 min for payment endpoints to prevent fraud
-const paymentLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 20,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Too many payment attempts. Please try again later.' },
-  statusCode: 429,
-});
-
 // ── Validation Middleware Factory ─────────────────────────────────────────────
 const validate = (schema: ZodSchema) => (req: Request, res: Response, next: NextFunction) => {
   const result = schema.safeParse(req.body);
@@ -182,12 +161,12 @@ const RefundSchema = z.object({
 
 // ── Helper: fire-and-forget stock decrements via product-service ───────────────
 async function decrementStock(items: any[], authHeader: string | undefined) {
-  const productServiceUrl = process.env.PRODUCT_SERVICE_URL || 'http://localhost:4002';
+  const inventoryServiceUrl = process.env.INVENTORY_SERVICE_URL || 'http://localhost:4002';
   Promise.allSettled(
     items.map(async (item: any) => {
       if (!item.product_id) return;
       try {
-        const response = await fetch(`${productServiceUrl}/products/${item.product_id}/decrement`, {
+        const response = await fetch(`${inventoryServiceUrl}/products/${item.product_id}/decrement`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
@@ -213,13 +192,13 @@ async function decrementStock(items: any[], authHeader: string | undefined) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ── Health ────────────────────────────────────────────────────────────────────
-app.get('/health', generalLimiter, (_req: Request, res: Response) => {
+app.get('/health', (_req: Request, res: Response) => {
   res.json({ service: 'transaction-service', status: 'ok', port: PORT, rabbitmq: rabbitChannel ? 'connected' : 'disconnected' });
 });
 
 // ── POST /transactions ────────────────────────────────────────────────────────
 // RESTful: creates a pending transaction and immediately completes it in one call.
-app.post('/transactions', paymentLimiter, validate(CreateTransactionSchema), async (req: Request, res: Response) => {
+app.post('/transactions', validate(CreateTransactionSchema), async (req: Request, res: Response) => {
   const { vat, subtotal, totalAmount, paymentMethod, itemsCount, items, discountType, discountAmount, notes, tags } = req.body;
   try {
     // Step 1: create a pending transaction row
@@ -279,7 +258,7 @@ app.post('/transactions', paymentLimiter, validate(CreateTransactionSchema), asy
 
 // ── GET /transactions ─────────────────────────────────────────────────────────
 // Returns all completed transactions (for History page & Dashboard).
-app.get('/transactions', generalLimiter, async (req: Request, res: Response) => {
+app.get('/transactions', async (req: Request, res: Response) => {
   try {
     const { data: txns, error: txnErr } = await getSupabase(req)
       .from('transactions')
@@ -380,7 +359,7 @@ app.get('/transactions', generalLimiter, async (req: Request, res: Response) => 
 
 // ── GET /transactions/:id ─────────────────────────────────────────────────────
 // Fetch a single transaction by ID with its items and receipt.
-app.get('/transactions/:id', generalLimiter, async (req: Request, res: Response) => {
+app.get('/transactions/:id', async (req: Request, res: Response) => {
   const { id } = req.params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) {
     return res.status(400).json({ error: 'Invalid transaction ID format' });
@@ -457,7 +436,7 @@ app.get('/transactions/:id', generalLimiter, async (req: Request, res: Response)
 
 // ── GET /transactions/:id/receipt ─────────────────────────────────────────────
 // Fetch the receipt record for a given transaction ID.
-app.get('/transactions/:id/receipt', generalLimiter, async (req: Request, res: Response) => {
+app.get('/transactions/:id/receipt', async (req: Request, res: Response) => {
   const { id } = req.params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) {
     return res.status(400).json({ error: 'Invalid transaction ID format' });
@@ -480,7 +459,7 @@ app.get('/transactions/:id/receipt', generalLimiter, async (req: Request, res: R
 
 // ── POST /transactions/hold ───────────────────────────────────────────────────
 // Saves the current cart as a held transaction in the held_transactions table.
-app.post('/transactions/hold', generalLimiter, validate(HoldTransactionSchema), async (req: Request, res: Response) => {
+app.post('/transactions/hold', validate(HoldTransactionSchema), async (req: Request, res: Response) => {
   const { label, total, items } = req.body;
   try {
     const { data, error } = await getSupabase(req)
@@ -504,7 +483,7 @@ app.post('/transactions/hold', generalLimiter, validate(HoldTransactionSchema), 
 
 // ── POST /transactions/hold/:id/resume ────────────────────────────────────────
 // Resumes a held transaction: returns cart items and removes the hold record.
-app.post('/transactions/hold/:id/resume', generalLimiter, async (req: Request, res: Response) => {
+app.post('/transactions/hold/:id/resume', async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
     const { data: held, error: fetchErr } = await getSupabase(req)
@@ -538,7 +517,7 @@ app.post('/transactions/hold/:id/resume', generalLimiter, async (req: Request, r
 
 // ── POST /transactions/refund ─────────────────────────────────────────────────
 // Records a refund against an original completed transaction.
-app.post('/transactions/refund', paymentLimiter, validate(RefundSchema), async (req: Request, res: Response) => {
+app.post('/transactions/refund', validate(RefundSchema), async (req: Request, res: Response) => {
   const { originalTransactionId, items, refundSubtotal, refundTax, refundTotal, reason } = req.body;
   try {
     // Verify the original transaction exists and is completed
@@ -605,7 +584,7 @@ app.post('/transactions/refund', paymentLimiter, validate(RefundSchema), async (
 
 // ── POST /transactions/initiate ───────────────────────────────────────────────
 // Legacy 2-step flow: creates a pending transaction ID for the POS checkout modal.
-app.post('/transactions/initiate', paymentLimiter, async (req: Request, res: Response) => {
+app.post('/transactions/initiate', async (req: Request, res: Response) => {
   try {
     const { data, error } = await getSupabase(req)
       .from('transactions')
@@ -621,7 +600,7 @@ app.post('/transactions/initiate', paymentLimiter, async (req: Request, res: Res
 
 // ── POST /transactions/complete ───────────────────────────────────────────────
 // Legacy 2-step flow: completes an already-initiated pending transaction.
-app.post('/transactions/complete', paymentLimiter, validate(CompleteTransactionSchema), async (req: Request, res: Response) => {
+app.post('/transactions/complete', validate(CompleteTransactionSchema), async (req: Request, res: Response) => {
   const { transactionId, vat, subtotal, totalAmount, paymentMethod, itemsCount, items, discountType, discountAmount, notes, tags } = req.body;
   try {
     const { data: receiptRows, error: rpcErr } = await getSupabase(req).rpc(
@@ -667,7 +646,7 @@ app.post('/transactions/complete', paymentLimiter, validate(CompleteTransactionS
 });
 
 // ── POST /transactions/cancel ─────────────────────────────────────────────────
-app.post('/transactions/cancel', generalLimiter, validate(CancelTransactionSchema), async (req: Request, res: Response) => {
+app.post('/transactions/cancel', validate(CancelTransactionSchema), async (req: Request, res: Response) => {
   const { transactionId } = req.body;
   try {
     const { error } = await getSupabase(req)
@@ -682,7 +661,7 @@ app.post('/transactions/cancel', generalLimiter, validate(CancelTransactionSchem
 });
 
 // ── PUT /transactions/:id/notes ───────────────────────────────────────────────
-app.put('/transactions/:id/notes', generalLimiter, validate(UpdateNotesSchema), async (req: Request, res: Response) => {
+app.put('/transactions/:id/notes', validate(UpdateNotesSchema), async (req: Request, res: Response) => {
   const { id } = req.params;
   const { notes, tags } = req.body;
   try {

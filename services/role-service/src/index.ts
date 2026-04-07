@@ -2,7 +2,6 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
-import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import { z, ZodSchema } from 'zod';
 
@@ -35,27 +34,6 @@ const getSupabase = (req: Request) => {
 
 const PORT = process.env.PORT || 4005;
 
-// ── Rate Limiters ─────────────────────────────────────────────────────────────
-// General: 100 requests / 15 min per IP
-const generalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Too many requests. Please slow down.' },
-  statusCode: 429,
-});
-
-// Strict: 15 per 15 min for sensitive ops like password reset (OWASP A07)
-const sensitiveOpLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 15,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Too many requests. Please try again after 15 minutes.' },
-  statusCode: 429,
-});
-
 // ── Validation Middleware Factory ─────────────────────────────────────────────
 const validate = (schema: ZodSchema) => (req: Request, res: Response, next: NextFunction) => {
   const result = schema.safeParse(req.body);
@@ -85,12 +63,12 @@ const ResetPasswordSchema = z.object({
 });
 
 // ── Health ────────────────────────────────────────────────────────────────────
-app.get('/health', generalLimiter, (req: Request, res: Response) => {
+app.get('/health', (req: Request, res: Response) => {
   res.json({ service: 'role-service', status: 'ok', port: PORT });
 });
 
 // ── List Users ────────────────────────────────────────────────────────────────
-app.get('/users', generalLimiter, async (req: Request, res: Response) => {
+app.get('/users', async (req: Request, res: Response) => {
   try {
     const { data, error } = await getSupabase(req)
       .from('user_profiles')
@@ -104,7 +82,7 @@ app.get('/users', generalLimiter, async (req: Request, res: Response) => {
 });
 
 // ── Get Single User ───────────────────────────────────────────────────────────
-app.get('/users/:id', generalLimiter, async (req: Request, res: Response) => {
+app.get('/users/:id', async (req: Request, res: Response) => {
   const { id } = req.params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) {
     return res.status(400).json({ error: 'Invalid user id format' });
@@ -123,7 +101,7 @@ app.get('/users/:id', generalLimiter, async (req: Request, res: Response) => {
 });
 
 // ── Update User Role ──────────────────────────────────────────────────────────
-app.put('/users/:id/role', generalLimiter, validate(UpdateRoleSchema), async (req: Request, res: Response) => {
+app.put('/users/:id/role', validate(UpdateRoleSchema), async (req: Request, res: Response) => {
   const { id } = req.params;
   const { role } = req.body;
   if (!/^[0-9a-f-]{36}$/i.test(id)) {
@@ -151,7 +129,7 @@ app.put('/users/:id/role', generalLimiter, validate(UpdateRoleSchema), async (re
 });
 
 // ── Toggle Active Status ──────────────────────────────────────────────────────
-app.put('/users/:id/active', generalLimiter, validate(ToggleActiveSchema), async (req: Request, res: Response) => {
+app.put('/users/:id/active', validate(ToggleActiveSchema), async (req: Request, res: Response) => {
   const { id } = req.params;
   const { is_active } = req.body;
   if (!/^[0-9a-f-]{36}$/i.test(id)) {
@@ -172,8 +150,7 @@ app.put('/users/:id/active', generalLimiter, validate(ToggleActiveSchema), async
 });
 
 // ── Reset User Password (admin action) ───────────────────────────────────────
-// Rate-limited strictly to prevent email-based enumeration attacks (OWASP A01)
-app.post('/users/reset-password', sensitiveOpLimiter, validate(ResetPasswordSchema), async (req: Request, res: Response) => {
+app.post('/users/reset-password', validate(ResetPasswordSchema), async (req: Request, res: Response) => {
   const { email } = req.body;
   try {
     const { error } = await getSupabase(req).auth.resetPasswordForEmail(email);
