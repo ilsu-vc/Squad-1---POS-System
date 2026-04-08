@@ -16,9 +16,11 @@ import PaymentMethodReportView from './PaymentMethodReportView';
 import DiscountUsageReportView from './DiscountUsageReportView';
 import DailySummaryDashboard from './DailySummaryDashboard';
 import { Transaction } from '../utils/chartHelpers';
+import { UserProfile } from '../types/auth';
 
 interface ReportsAndAnalysisViewProps {
   transactions: Transaction[];
+  profile: UserProfile | null;
 }
 
 const TABS = [
@@ -37,7 +39,7 @@ const THEME = {
   gray: '#e2e8f0',
 };
 
-const ReportsAndAnalysisView: React.FC<ReportsAndAnalysisViewProps> = ({ transactions }) => {
+const ReportsAndAnalysisView: React.FC<ReportsAndAnalysisViewProps> = ({ transactions, profile }) => {
   const [activeReport, setActiveReport] = useState<string>('daily-summary');
   const [isMounted, setIsMounted] = useState(false);
 
@@ -225,7 +227,7 @@ const ReportsAndAnalysisView: React.FC<ReportsAndAnalysisViewProps> = ({ transac
                 )}
 
                 {activeReport === 'hourly' && (
-                  <HourlySalesReportView onSwitchReport={handleSwitchReport} />
+                  <HourlySalesReportView onSwitchReport={handleSwitchReport} profile={profile} />
                 )}
 
                 {activeReport === 'product' && ProductPerformanceReportView && (

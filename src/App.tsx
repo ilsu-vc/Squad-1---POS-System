@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useRef } from 'react';
 import './App.css';
 import { supabase } from './supabaseClient';
+import { reportingApi } from './services/reportingApi';
 import {
   FiChevronDown,
   FiUser,
@@ -99,6 +100,7 @@ const App: React.FC = () => {
   const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
   const [cashReceived, setCashReceived] = useState('');
   const [paymentStatus, setPaymentStatus] = useState('idle');
+  const [apiChangeAmount, setApiChangeAmount] = useState<number>(0);
   const [isReprintModalOpen, setIsReprintModalOpen] = useState(false);
   const [isGiftReceiptOpen, setIsGiftReceiptOpen] = useState(false);
   const [lastCompletedTransaction, setLastCompletedTransaction] = useState<{
@@ -136,6 +138,7 @@ const App: React.FC = () => {
   const userMenuRef = useRef<HTMLDivElement>(null);
   const [products, setProducts] = useState<any[]>([]);
   const [transferRequests, setTransferRequests] = useState<any[]>([]);
+  const [isCompletingTransaction, setIsCompletingTransaction] = useState(false);
 
   const [stockAlert, setStockAlert] = useState<{
     isOpen: boolean;
@@ -871,6 +874,7 @@ const App: React.FC = () => {
     setPaymentMethod(null);
     setCashReceived('');
     setPaymentStatus('idle');
+    setApiChangeAmount(0);
     if (paymentStatus === 'success') setCart([]);
   };
 
@@ -889,7 +893,11 @@ const App: React.FC = () => {
       setIsPaymentModalOpen(true);
     } catch (err: any) {
       console.error(err);
-      alert(err.message || 'Failed to create transaction.');
+      setAppAlert({
+        isOpen: true,
+        title: 'Error',
+        message: err.message || 'Failed to create transaction.'
+      });
     }
   };
 
@@ -909,14 +917,18 @@ const App: React.FC = () => {
 
     const { discountType = 'none' } = details;
     if (discountType !== 'none') {
-      const discountCheck = requirePermission(profile, 'discount.approve', 'Only a Supervisor, Manager, or Admin can apply discounts.');
+      const discountCheck = requirePermission(profile, 'discount.approve', 'Only a Cashier, Supervisor, Manager, or Admin can apply discounts.');
       if (!discountCheck.allowed) {
         setAppAlert({ isOpen: true, title: 'Approval Required', message: discountCheck.message || 'Approval required.' });
         return;
       }
     }
     if (!dbTransactionId) {
-      alert('No DB transaction found. Click Proceed to Payment again.');
+      setAppAlert({
+        isOpen: true,
+        title: 'Error',
+        message: 'No DB transaction found. Click Proceed to Payment again.'
+      });
       return;
     }
 
@@ -932,6 +944,7 @@ const App: React.FC = () => {
     const isSplit = Array.isArray(splitPayments) && splitPayments.length > 1;
     const effectivePaymentMethod = isSplit ? 'Split' : paymentMethod ?? 'cash';
 
+    setIsCompletingTransaction(true);
     try {
       const itemsPayload = cart.map((item) => ({
         product_id: item.id,
@@ -942,6 +955,9 @@ const App: React.FC = () => {
       }));
       const itemsCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
+      const amountPaidFromSplit = isSplit ? splitPayments!.reduce((s: number, e: any) => s + (parseFloat(e.amount) || 0), 0) : undefined;
+      const finalAmountPaid = isSplit ? amountPaidFromSplit : Number(details.tendered ?? finalTotal ?? total ?? 0);
+
       const saleResult: any = await authFetch('/api/transactions/transactions/complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -950,6 +966,7 @@ const App: React.FC = () => {
           vat: Number(tax ?? 0),
           subtotal: Number(subtotal ?? 0),
           totalAmount: Number(finalTotal ?? total ?? 0),
+          amountPaid: finalAmountPaid,
           paymentMethod: effectivePaymentMethod,
           itemsCount,
           items: itemsPayload,
@@ -963,6 +980,15 @@ const App: React.FC = () => {
       if (saleResult.error) throw new Error(saleResult.error);
       const receiptNo = saleResult.receiptNumber ?? null;
       setDbReceiptNumber(receiptNo);
+      setApiChangeAmount(saleResult.changeAmount ?? 0);
+
+      // Fetch the actual receipt data immediately to fulfill requirement
+      try {
+        const receiptData = await authFetch(`/api/transactions/transactions/${dbTransactionId}/receipt`).then((r) => r.json());
+        console.log('Fetched receipt data:', receiptData);
+      } catch (receiptErr) {
+        console.warn('Failed to fetch receipt details:', receiptErr);
+      }
 
       const now = new Date();
       const h = now.getHours();
@@ -1040,7 +1066,11 @@ const App: React.FC = () => {
 
       await receiptApi.printReceipt({
         receiptNumber: newTransaction.receiptNumber ?? undefined,
-        items: newTransaction.items,
+        items: newTransaction.items.map(i => ({
+          name: i.name,
+          quantity: i.qty,
+          price: Number(i.price)
+        })),
         vatable: newTransaction.subtotal,
         vatAmount: newTransaction.tax,
         total: newTransaction.rawAmount,
@@ -1050,7 +1080,13 @@ const App: React.FC = () => {
       await refreshInventoryData();
     } catch (err: any) {
       console.error(err);
-      alert(err.message || 'Failed to complete payment / generate receipt.');
+      setAppAlert({
+        isOpen: true,
+        title: 'Error',
+        message: err.message || 'Failed to complete payment / generate receipt.'
+      });
+    } finally {
+      setIsCompletingTransaction(false);
     }
   };
 
@@ -1072,7 +1108,11 @@ const App: React.FC = () => {
       setIsPaymentModalOpen(false);
     } catch (err: any) {
       console.error(err);
-      alert(err.message || 'Failed to cancel transaction.');
+      setAppAlert({
+        isOpen: true,
+        title: 'Error',
+        message: err.message || 'Failed to cancel transaction.'
+      });
     }
   };
 
@@ -1183,6 +1223,21 @@ const App: React.FC = () => {
   };
 
   const handleLogout = async () => {
+    // Log logout activity before signing out
+    if (profile) {
+      try {
+        await reportingApi.logActivity({
+          userId: profile.id,
+          userEmail: profile.email || '',
+          actionType: 'LOGOUT',
+          actionDetails: 'User logged out',
+          entityType: 'user',
+          entityId: profile.id,
+        });
+      } catch (logErr) {
+        console.warn('Failed to log logout activity:', logErr);
+      }
+    }
     await supabase.auth.signOut();
     window.location.reload();
   };
@@ -1444,11 +1499,11 @@ const App: React.FC = () => {
           )}
 
           {activeTab === 'Activity Log' && hasPermission(profile.role, 'reports.view') && (
-            <ActivityLogView />
+            <ActivityLogView profile={profile} />
           )}
 
           {activeTab === 'Reports and Analysis' && hasPermission(profile.role, 'reports.view') && (
-            <ReportsAndAnalysisView transactions={transactions} />
+            <ReportsAndAnalysisView transactions={transactions} profile={profile} />
           )}
 
           {activeTab === 'Inventory' && hasPermission(profile.role, 'inventory.view') && (
@@ -1504,8 +1559,10 @@ const App: React.FC = () => {
             handleCompletePayment={handleCompletePayment}
             closePaymentModal={closePaymentModal}
             icons={{ cash_icon, card_icon, mobile_icon }}
-            canApproveDiscount={hasPermission(profile.role, 'discount.approve')}
-            onOpenGiftReceipt={() => setIsGiftReceiptOpen(true)}
+            canApproveDiscount={hasPermission(profile?.role || '', 'discount.approve')}
+            apiChangeAmount={apiChangeAmount}
+            isSubmitting={isCompletingTransaction}
+            onOpenGiftReceipt={() => {setIsGiftReceiptOpen(true)}}
           />
 
           <ReprintModal

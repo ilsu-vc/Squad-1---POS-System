@@ -24,6 +24,7 @@ interface PaymentFormProps {
     closePaymentModal?: () => void;
     icons: PaymentIcons;
     canApproveDiscount?: boolean;
+    isSubmitting?: boolean;
 }
 
 const PaymentForm: React.FC<PaymentFormProps> = ({
@@ -36,6 +37,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
     handleCompletePayment,
     icons: { cash_icon, card_icon, mobile_icon },
     canApproveDiscount = false,
+    isSubmitting = false,
 }) => {
     // --- Essential States ---
     const [customerName, setCustomerName] = useState('');
@@ -211,15 +213,16 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                                 </button>
                             ))}
                         </div>
+                        <SplitPaymentForm
+                            finalTotal={finalTotal}
+                            icons={{ cash_icon, card_icon, mobile_icon }}
+                            onComplete={onSplitComplete}
+                            onCancel={handleCancelPayment}
+                            onBack={() => setIsSplitMode(false)}
+                            isSubmitting={isSubmitting}
+                        />
                     </div>
                 </div>
-                <SplitPaymentForm
-                    finalTotal={finalTotal}
-                    icons={{ cash_icon, card_icon, mobile_icon }}
-                    onComplete={onSplitComplete}
-                    onCancel={handleCancelPayment}
-                    onBack={() => setIsSplitMode(false)}
-                />
             </div>
         );
     }
@@ -473,7 +476,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                         if (paymentMethod === 'card') return (refNo.trim() === '' || cardLast4.length !== 4);
                         if (paymentMethod === 'mobile') return (refNo.trim() === '');
                         return true;
-                    })()}
+                    })() || isSubmitting}
                     onClick={onComplete}
                 >
                     Complete Payment

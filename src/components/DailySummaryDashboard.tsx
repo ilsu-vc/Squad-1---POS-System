@@ -101,7 +101,7 @@ const DailySummaryDashboard: React.FC<Props> = ({ transactions: localTransaction
           .select('id, total_amount', { count: 'exact' })
           .gte('created_at', todayUtcRange.start)
           .lte('created_at', todayUtcRange.end)
-          .eq('status', 'completed');
+          .eq('status', 'paid');
 
         if (salesError) throw salesError;
 
@@ -118,7 +118,7 @@ const DailySummaryDashboard: React.FC<Props> = ({ transactions: localTransaction
           .select('id, total_amount', { count: 'exact' })
           .gte('created_at', lastWeekUtcRange.start)
           .lte('created_at', lastWeekUtcRange.end)
-          .eq('status', 'completed');
+          .eq('status', 'paid');
 
         if (lwSalesError) throw lwSalesError;
 

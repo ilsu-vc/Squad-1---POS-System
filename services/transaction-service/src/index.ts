@@ -126,6 +126,7 @@ const CompleteTransactionSchema = z.object({
   vat: z.number().min(0).max(1_000_000).optional(),
   subtotal: z.number().min(0).max(10_000_000).optional(),
   totalAmount: z.number().min(0).max(10_000_000),
+  amountPaid: z.number().min(0).max(10_000_000).optional(),
   paymentMethod: z.string().max(50),
   itemsCount: z.number().int().min(1),
   items: z.array(z.any()).min(1, 'At least one item is required'),
@@ -264,6 +265,7 @@ app.get('/transactions', async (req: Request, res: Response) => {
       .from('transactions')
       .select(`
         id,
+        tx_no,
         status,
         total_amount,
         vat,
@@ -272,11 +274,9 @@ app.get('/transactions', async (req: Request, res: Response) => {
         items_count,
         discount_type,
         discount_amount,
-        notes,
-        tags,
         created_at,
         transaction_items (
-          item_name,
+          name,
           category,
           unit_price,
           quantity
@@ -285,10 +285,13 @@ app.get('/transactions', async (req: Request, res: Response) => {
           receipt_number
         )
       `)
-      .eq('status', 'completed')
+      .eq('status', 'paid')
       .order('created_at', { ascending: false });
 
-    if (txnErr) return res.status(500).json({ error: txnErr.message });
+    if (txnErr) {
+      console.error('[GET /transactions] Database Error:', txnErr);
+      return res.status(500).json({ error: txnErr.message });
+    }
 
     const formatted = (txns || [])
       .map((t: any) => {
@@ -331,7 +334,7 @@ app.get('/transactions', async (req: Request, res: Response) => {
             method: t.payment_method ?? 'Unknown',
             itemsCount: Number(t.items_count ?? 0),
             items: (t.transaction_items || []).map((item: any) => ({
-              name: item.item_name,
+              name: item.name,
               qty: Number(item.quantity),
               price: Number(item.unit_price),
               category: item.category ?? undefined,
@@ -443,15 +446,16 @@ app.get('/transactions/:id/receipt', async (req: Request, res: Response) => {
   }
   try {
     const { data, error } = await getSupabase(req)
-      .from('receipts')
-      .select('*')
-      .eq('transaction_id', id)
-      .maybeSingle();
+      .from('transactions')
+      .select('*, receipts(*)')
+      .eq('id', id)
+      .single();
 
     if (error) return res.status(500).json({ error: error.message });
-    if (!data) return res.status(404).json({ error: 'Receipt not found for this transaction' });
+    if (!data || !data.receipts) return res.status(404).json({ error: 'Receipt not found for this transaction' });
 
-    res.json({ receipt: data });
+    const receiptData = Array.isArray(data.receipts) ? data.receipts[0] : data.receipts;
+    res.json({ receipt: receiptData });
   } catch (err: any) {
     res.status(500).json({ error: 'Internal server error' });
   }
@@ -530,7 +534,7 @@ app.post('/transactions/refund', validate(RefundSchema), async (req: Request, re
     if (origErr || !original) {
       return res.status(404).json({ error: 'Original transaction not found' });
     }
-    if (original.status !== 'completed') {
+    if (original.status !== 'paid') {
       return res.status(400).json({ error: 'Can only refund completed transactions' });
     }
 
@@ -556,7 +560,8 @@ app.post('/transactions/refund', validate(RefundSchema), async (req: Request, re
     // Insert refund items into transaction_items
     const refundItems = items.map((item: any) => ({
       transaction_id: refundTxn.id,
-      item_name: item.name,
+      product_id: item.product_id,
+      name: item.name,
       category: item.category ?? null,
       unit_price: item.unit_price,
       quantity: item.quantity,
@@ -601,7 +606,7 @@ app.post('/transactions/initiate', async (req: Request, res: Response) => {
 // ── POST /transactions/complete ───────────────────────────────────────────────
 // Legacy 2-step flow: completes an already-initiated pending transaction.
 app.post('/transactions/complete', validate(CompleteTransactionSchema), async (req: Request, res: Response) => {
-  const { transactionId, vat, subtotal, totalAmount, paymentMethod, itemsCount, items, discountType, discountAmount, notes, tags } = req.body;
+  const { transactionId, vat, subtotal, totalAmount, amountPaid, paymentMethod, itemsCount, items, discountType, discountAmount, notes, tags } = req.body;
   try {
     const { data: receiptRows, error: rpcErr } = await getSupabase(req).rpc(
       'confirm_payment_and_issue_receipt',
@@ -639,7 +644,10 @@ app.post('/transactions/complete', validate(CompleteTransactionSchema), async (r
       completedAt: new Date().toISOString(),
     });
 
-    res.json({ receiptNumber, transactionId });
+    // Calculate change amount on backend
+    const changeAmount = amountPaid !== undefined ? Math.max(0, amountPaid - Number(totalAmount ?? 0)) : 0;
+
+    res.json({ receiptNumber, transactionId, changeAmount });
   } catch (err: any) {
     res.status(500).json({ error: 'Internal server error' });
   }

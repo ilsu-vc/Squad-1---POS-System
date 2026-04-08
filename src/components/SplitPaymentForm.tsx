@@ -24,6 +24,7 @@ interface SplitPaymentFormProps {
   onComplete: (entries: PaymentEntry[]) => void;
   onCancel: () => void;
   onBack: () => void;
+  isSubmitting?: boolean;
 }
 
 const getImgSrc = (img: any): string =>
@@ -44,6 +45,7 @@ const SplitPaymentForm: React.FC<SplitPaymentFormProps> = ({
   onComplete,
   onCancel,
   onBack,
+  isSubmitting = false,
 }) => {
   const [entries, setEntries] = useState<PaymentEntry[]>([
     createEntry(1),
@@ -277,7 +279,7 @@ const SplitPaymentForm: React.FC<SplitPaymentFormProps> = ({
         <button className="change-method" onClick={onBack} style={{ marginLeft: 8 }}>← Back</button>
         <button
           className={`complete-btn ${allValid ? 'active' : ''}`}
-          disabled={!allValid}
+          disabled={!allValid || isSubmitting}
           onClick={handleComplete}
         >
           Complete Split Payment

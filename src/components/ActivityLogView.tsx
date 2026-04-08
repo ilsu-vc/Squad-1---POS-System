@@ -15,6 +15,9 @@ import {
 } from 'react-icons/fi';
 import './ActivityLogView.css';
 
+import { UserProfile } from '../types/auth';
+import { logUserActivity } from '../utils/activityLogger';
+
 interface ActivityLogRow {
   id: number;
   user_id: string | null;
@@ -26,7 +29,11 @@ interface ActivityLogRow {
   created_at: string;
 }
 
-const ActivityLogView: React.FC = () => {
+interface ActivityLogViewProps {
+  profile: UserProfile | null;
+}
+
+const ActivityLogView: React.FC<ActivityLogViewProps> = ({ profile }) => {
   const [logs, setLogs] = useState<ActivityLogRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -100,6 +107,15 @@ const ActivityLogView: React.FC = () => {
     a.href = url;
     a.download = `activity_log_${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
+
+    // Activity Logging
+    logUserActivity({
+      profile,
+      actionType: 'EXPORT',
+      actionDetails: `Exported Activity Log (CSV) with ${filteredLogs.length} entries`,
+      entityType: 'report',
+      entityId: 'activity-log-csv'
+    });
   };
 
   return (

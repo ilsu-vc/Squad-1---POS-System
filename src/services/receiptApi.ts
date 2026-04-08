@@ -9,7 +9,7 @@ const BASE = '/api/receipts';
 export const receiptApi = {
   async printReceipt(data: {
     receiptNumber?: string;
-    items?: Array<{ name: string; qty: number; price: number }>;
+    items?: Array<{ name: string; quantity: number; price: number }>;
     vatable?: number;
     vatAmount?: number;
     total?: number;

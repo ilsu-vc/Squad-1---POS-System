@@ -17,6 +17,9 @@ import {
 } from 'recharts';
 import './HourlySalesReportView.css';
 
+import { UserProfile } from '../types/auth';
+import { logUserActivity } from '../utils/activityLogger';
+
 interface Transaction {
   id: string;
   created_at: string;
@@ -25,9 +28,10 @@ interface Transaction {
 
 interface Props {
   onSwitchReport?: (report: string) => void;
+  profile: UserProfile | null;
 }
 
-const HourlySalesReportView: React.FC<Props> = ({ onSwitchReport }) => {
+const HourlySalesReportView: React.FC<Props> = ({ onSwitchReport, profile }) => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -114,6 +118,15 @@ const HourlySalesReportView: React.FC<Props> = ({ onSwitchReport }) => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+
+    // Activity Logging
+    logUserActivity({
+      profile,
+      actionType: 'EXPORT',
+      actionDetails: `Exported Hourly Sales Report (CSV) for ${selectedDate}`,
+      entityType: 'report',
+      entityId: 'hourly-sales-csv'
+    });
   };
 
   const handleExportPDF = () => {
@@ -143,6 +156,15 @@ const HourlySalesReportView: React.FC<Props> = ({ onSwitchReport }) => {
     });
 
     doc.save(`Hourly_Sales_${selectedDate}.pdf`);
+
+    // Activity Logging
+    logUserActivity({
+      profile,
+      actionType: 'EXPORT',
+      actionDetails: `Exported Hourly Sales Report (PDF) for ${selectedDate}`,
+      entityType: 'report',
+      entityId: 'hourly-sales-pdf'
+    });
   };
 
   const CustomTooltip = ({ active, payload, label }: any) => {

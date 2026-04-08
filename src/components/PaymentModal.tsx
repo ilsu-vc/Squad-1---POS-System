@@ -29,6 +29,8 @@ interface PaymentModalProps {
     icons: PaymentIcons;
     canApproveDiscount: boolean;
     onOpenGiftReceipt?: () => void;
+    apiChangeAmount?: number;
+    isSubmitting?: boolean;
 }
 
 const PaymentModal: React.FC<PaymentModalProps> = ({
@@ -48,6 +50,8 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
     icons,
     canApproveDiscount,
     onOpenGiftReceipt,
+    apiChangeAmount,
+    isSubmitting = false,
 }) => {
     if (!isOpen) return null;
 
@@ -61,6 +65,11 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                         Receipt Number:{" "}
                         <strong>{dbReceiptNumber ? dbReceiptNumber : "Generating..."}</strong>
                     </p>
+                    {apiChangeAmount !== undefined && apiChangeAmount > 0 && (
+                        <p style={{ fontSize: '1.2rem', margin: '10px 0' }}>
+                            Change Amount: <strong>{formatCurrency(apiChangeAmount)}</strong>
+                        </p>
+                    )}
                     <p>Transaction completed</p>
                     <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginTop: '16px', flexWrap: 'wrap' }}>
                         <button className="close-success-btn" onClick={closePaymentModal}>Back to POS</button>
@@ -103,6 +112,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                         closePaymentModal={closePaymentModal}
                         icons={icons}
                         canApproveDiscount={canApproveDiscount}
+                        isSubmitting={isSubmitting}
                     />
                 </div>
             )}

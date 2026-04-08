@@ -8,7 +8,7 @@ const PERMISSION_MAP: Record<string, UserRole[]> = {
   'reports.view': ['supervisor', 'manager', 'admin'],
   'history.view': ['supervisor', 'manager', 'admin'],
   'roles.manage': ['admin'],
-  'discount.approve': ['supervisor', 'manager', 'admin'],
+  'discount.approve': ['cashier', 'supervisor', 'manager', 'admin'],
 
   'inventory.view': ['supervisor', 'manager', 'admin'],
   'inventory.edit': ['manager', 'admin', 'supervisor'],

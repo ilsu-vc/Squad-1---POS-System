@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { Mail, Lock, HeartPulse, AlertCircle, LogIn, Loader2 } from 'lucide-react';
+import { reportingApi } from '../services/reportingApi';
 import './LoginForm.css';
 
 const LoginForm: React.FC = () => {
@@ -20,11 +21,27 @@ const LoginForm: React.FC = () => {
       email,
       password,
     });
-
     if (error) {
       setLoading(false);
       setError(error.message);
       return;
+    }
+
+    // Log the successful login activity
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (sessionData.session?.user) {
+        await reportingApi.logActivity({
+          userId: sessionData.session.user.id,
+          userEmail: sessionData.session.user.email || '',
+          actionType: 'LOGIN',
+          actionDetails: 'User signed in successfully via login form',
+          entityType: 'user',
+          entityId: sessionData.session.user.id,
+        });
+      }
+    } catch (logErr) {
+      console.warn('Failed to log login activity:', logErr);
     }
 
     window.location.reload();
