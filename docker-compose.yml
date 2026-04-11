@@ -86,8 +86,12 @@ services:
       - "4002:4002"
     environment:
       - PORT=4002
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
     env_file:
       - .env
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
 
   sales-service:
     build:

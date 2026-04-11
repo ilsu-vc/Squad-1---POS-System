@@ -436,26 +436,12 @@ const App: React.FC = () => {
     return () => clearInterval(interval);
   }, [activeShift]);
 
-  const RESERVED_TRANSFER_STATUSES = ['Pending', 'Approved', 'In-Transit'];
-
-  const getReservedTransferQty = (productId: number | string) => {
-    return transferRequests
-      .filter(
-        (req) =>
-          String(req.product_id) === String(productId) &&
-          RESERVED_TRANSFER_STATUSES.includes(req.transfer_status)
-      )
-      .reduce((sum, req) => sum + (Number(req.quantity_transfer) || 0), 0);
-  };
-
   const getCartQtyForProduct = (productId: number | string) => {
-    return cart.find((item) => String(item.id) === String(productId))?.quantity || 0;
+    return cart.find((item: any) => String(item.id) === String(productId))?.quantity || 0;
   };
 
   const getAvailableSellableStock = (product: any) => {
-    const stock = Number(product?.stock) || 0;
-    const reserved = getReservedTransferQty(product?.id);
-    return Math.max(0, stock - reserved);
+    return Number(product?.available_stock) || 0;
   };
 
   const filteredProducts = products.filter(
@@ -513,10 +499,8 @@ const App: React.FC = () => {
   const addToCart = (product: any) => {
     if (!ensureActiveShift()) return;
 
-    const currentStock = Number(product.stock) || 0;
+    const availableSellableStock = Number(product.available_stock) || 0;
     const currentThreshold = Number(product.low_stock_threshold) || 0;
-    const reservedTransferQty = getReservedTransferQty(product.id);
-    const availableSellableStock = Math.max(0, currentStock - reservedTransferQty);
     const currentCartQty = getCartQtyForProduct(product.id);
 
     if (availableSellableStock <= 0) {
@@ -526,7 +510,7 @@ const App: React.FC = () => {
         productName: product.name,
         stock: availableSellableStock,
         threshold: currentThreshold,
-        onHold: reservedTransferQty,
+        onHold: Number(product.reserved_transfer_qty) || 0,
       });
       return;
     }
@@ -535,7 +519,7 @@ const App: React.FC = () => {
       setAppAlert({
         isOpen: true,
         title: 'Stock Limit Reached',
-        message: `You can only add up to ${availableSellableStock} unit(s) of ${product.name} to the cart because ${reservedTransferQty} unit(s) are reserved for branch transfer.`,
+        message: `You can only add up to ${availableSellableStock} unit(s) of ${product.name} to the cart because ${product.reserved_transfer_qty} unit(s) are reserved for branch transfer.`,
       });
       return;
     }
@@ -559,7 +543,7 @@ const App: React.FC = () => {
         productName: product.name,
         stock: availableSellableStock,
         threshold: currentThreshold,
-        onHold: reservedTransferQty,
+        onHold: Number(product.reserved_transfer_qty) || 0,
       });
     }
   };

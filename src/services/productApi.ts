@@ -21,6 +21,12 @@ export const productApi = {
     return res.json();
   },
 
+  async getBranches(): Promise<any[]> {
+    const res = await authFetch(`${BASE}/branches`);
+    const data = await res.json();
+    return data.branches || [];
+  },
+
   async getTransfers(): Promise<{ transfers: any[] }> {
     const res = await authFetch(`${BASE}/transfers`);
     return res.json();

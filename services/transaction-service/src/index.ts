@@ -160,29 +160,34 @@ const RefundSchema = z.object({
   reason: z.string().max(500).optional(),
 });
 
-// ── Helper: fire-and-forget stock decrements via product-service ───────────────
+// ── Helper: synchronous stock decrements via inventory-service ─────────────────
 async function decrementStock(items: any[], authHeader: string | undefined) {
   const inventoryServiceUrl = process.env.INVENTORY_SERVICE_URL || 'http://localhost:4002';
-  Promise.allSettled(
+  // Use await here to ensure the caller waits for all items to be processed
+  await Promise.allSettled(
     items.map(async (item: any) => {
       if (!item.product_id) return;
       try {
-        const response = await fetch(`${inventoryServiceUrl}/products/${item.product_id}/decrement`, {
-          method: 'PATCH',
+        const response = await fetch(`${inventoryServiceUrl}/stock/adjust`, {
+          method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             ...(authHeader ? { Authorization: authHeader } : {}),
           },
-          body: JSON.stringify({ quantity: Number(item.quantity) || 1 }),
+          body: JSON.stringify({ 
+            sku: item.product_id, 
+            amount: -Math.abs(Number(item.quantity) || 1),
+            reason: 'POS Sale' 
+          }),
         });
         if (!response.ok) {
           const errText = await response.text();
-          console.error(`[TransactionService] Stock decrement failed for ${item.product_id}: ${response.status} ${errText}`);
+          console.error(`[TransactionService] Stock adjustment failed for ${item.product_id}: ${response.status} ${errText}`);
         } else {
-          console.log(`[TransactionService] Stock decremented for product ${item.product_id} by ${item.quantity}`);
+          console.log(`[TransactionService] Stock adjusted for product ${item.product_id} by -${item.quantity}`);
         }
       } catch (err) {
-        console.error(`[TransactionService] Error decrementing stock for product ${item.product_id}:`, err);
+        console.error(`[TransactionService] Error adjusting stock for product ${item.product_id}:`, err);
       }
     })
   );
@@ -236,8 +241,8 @@ app.post('/transactions', validate(CreateTransactionSchema), async (req: Request
       await getSupabase(req).from('transactions').update({ notes, tags }).eq('id', transactionId);
     }
 
-    // Step 3: fire-and-forget stock decrements
-    decrementStock(items, req.headers.authorization);
+    // Step 3: synchronous stock decrements (ensure consistency before responding)
+    await decrementStock(items, req.headers.authorization);
 
     // Step 4: emit transaction.completed event to message queue
     publishTransactionCompleted({
@@ -631,7 +636,7 @@ app.post('/transactions/complete', validate(CompleteTransactionSchema), async (r
       await getSupabase(req).from('transactions').update({ notes, tags }).eq('id', transactionId);
     }
 
-    decrementStock(items, req.headers.authorization);
+    await decrementStock(items, req.headers.authorization);
 
     // Emit transaction.completed event to message queue
     publishTransactionCompleted({

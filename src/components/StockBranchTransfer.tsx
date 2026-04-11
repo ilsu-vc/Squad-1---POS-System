@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { supabase } from '../supabaseClient';
+import { productApi } from '../services/productApi';
 import { ArrowRightLeft, PackageCheck, Truck, Building2, ClipboardList, Boxes } from 'lucide-react';
 import './StockBranchTransfer.css';
 
@@ -84,10 +84,8 @@ const StockBranchTransfer: React.FC<StockBranchTransferProps> = ({
     try {
       setLoadingRequests(true);
 
-      const { data, error } = await supabase
-        .from('requesttransfers')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const result: any = await productApi.getTransfers();
+      const { transfers: data, error } = result;
 
       if (error) throw error;
 
@@ -104,10 +102,8 @@ const StockBranchTransfer: React.FC<StockBranchTransferProps> = ({
     try {
       setLoadingBranches(true);
 
-      const { data, error } = await supabase
-        .from('storebranches')
-        .select('id, branch_name')
-        .order('id', { ascending: true });
+      const data = await productApi.getBranches();
+      const error = null;
 
       if (error) throw error;
 
@@ -228,17 +224,16 @@ const StockBranchTransfer: React.FC<StockBranchTransferProps> = ({
       }
 
       if (editingRequestId === null) {
-        const { error } = await supabase.from('requesttransfers').insert([
-          {
-            product_id: chosenProduct.id,
-            product_name: chosenProduct.name,
-            quantity_transfer: qty,
-            transfer_status: 'Pending',
-            requested_by: currentRequesterName,
-            destination_branch_id: chosenBranch.id,
-            destination_branch_name: chosenBranch.branch_name,
-          },
-        ]);
+        const result: any = await productApi.createTransfer({
+          product_id: chosenProduct.id,
+          product_name: chosenProduct.name,
+          quantity_transfer: qty,
+          transfer_status: 'Pending',
+          requested_by: currentRequesterName,
+          destination_branch_id: chosenBranch.id,
+          destination_branch_name: chosenBranch.branch_name,
+        });
+        const { error } = result;
 
         if (error) throw error;
 
@@ -249,15 +244,11 @@ const StockBranchTransfer: React.FC<StockBranchTransferProps> = ({
           return;
         }
 
-        const { error } = await supabase.rpc('update_transfer_request_with_stock', {
-          p_request_id: editingRequestId,
-          p_product_id: Number(chosenProduct.id),
-          p_product_name: chosenProduct.name,
-          p_quantity_transfer: qty,
-          p_destination_branch_id: Number(chosenBranch.id),
-          p_destination_branch_name: chosenBranch.branch_name,
-          p_transfer_status: selectedTransferStatus,
+        const result: any = await productApi.updateTransfer(editingRequestId, {
+          transfer_status: selectedTransferStatus,
+          quantity_transfer: qty,
         });
+        const { error } = result;
 
         if (error) throw error;
 
