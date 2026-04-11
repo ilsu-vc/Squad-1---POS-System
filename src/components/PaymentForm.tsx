@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { discountApi, DiscountValidationResult, DiscountApprovalRequest } from '../services/discountApi';
 
 // Number format utility
 import { formatCurrency } from '../utils/numberformatters';
@@ -48,6 +49,70 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
     const [cardLast4, setCardLast4] = useState('');
     const [mobileProvider, setMobileProvider] = useState('GCash'); // GCash, Maya
     const [isSplitMode, setIsSplitMode] = useState(false);
+
+    // ── POS-S4-008-T1: Discount/Promo code validation state ──
+    const [promoCode, setPromoCode] = useState('');
+    const [promoValidating, setPromoValidating] = useState(false);
+    const [promoResult, setPromoResult] = useState<DiscountValidationResult | null>(null);
+
+    // ── POS-S4-008-T2: Manual discount approval state ──
+    const [approvalStatus, setApprovalStatus] = useState<DiscountApprovalRequest | null>(null);
+    const [approvalPolling, setApprovalPolling] = useState(false);
+
+    // T1: Validate promo/discount code via API
+    const handleValidatePromoCode = useCallback(async () => {
+        if (!promoCode.trim()) return;
+        setPromoValidating(true);
+        setPromoResult(null);
+        const result = await discountApi.validateDiscountCode(promoCode);
+        setPromoResult(result);
+        setPromoValidating(false);
+    }, [promoCode]);
+
+    // T2: Request manual discount approval + poll for result
+    const handleRequestApproval = useCallback(async (type: string) => {
+        setApprovalPolling(true);
+        setApprovalStatus({
+            status: 'pending',
+            discountType: type,
+            discountPercent: 20,
+            requestedBy: 'current-user',
+        });
+
+        const result = await discountApi.requestDiscountApproval({
+            discountType: type,
+            discountPercent: 20,
+            requestedBy: 'current-user',
+            reason: `Manual ${type} discount requested`,
+        });
+
+        if (result.error) {
+            setApprovalStatus({ ...result, status: 'rejected' });
+            setApprovalPolling(false);
+            return;
+        }
+
+        if (result.id && result.status === 'pending') {
+            // Poll for approval
+            const finalResult = await discountApi.pollApprovalStatus(result.id, {
+                intervalMs: 3000,
+                timeoutMs: 120000,
+                onStatusChange: (status) => {
+                    setApprovalStatus((prev) => prev ? { ...prev, status: status as any } : prev);
+                },
+            });
+            setApprovalStatus(finalResult);
+            if (finalResult.status === 'approved') {
+                setDiscountType(type);
+            }
+        } else if (result.status === 'approved') {
+            setDiscountType(type);
+            setApprovalStatus(result);
+        } else {
+            setApprovalStatus(result);
+        }
+        setApprovalPolling(false);
+    }, []);
 
     const toggleTag = (tag: string) => {
         setSelectedTags(prev =>
@@ -309,13 +374,109 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                                     <button
                                         key={type}
                                         className={`discount-btn ${discountType === type ? 'active' : ''}`}
-                                        onClick={() => setDiscountType(type)}
-                                        disabled={!canApproveDiscount && type !== 'none'}
-                                        title={!canApproveDiscount && type !== 'none' ? 'Requires supervisor approval' : undefined}
+                                        onClick={() => {
+                                            if (canApproveDiscount || type === 'none') {
+                                                setDiscountType(type);
+                                            } else {
+                                                handleRequestApproval(type);
+                                            }
+                                        }}
+                                        disabled={approvalPolling && !canApproveDiscount && type !== 'none'}
+                                        title={!canApproveDiscount && type !== 'none' ? 'Requires supervisor approval — will request' : undefined}
                                     >
                                         {type === 'none' ? 'No Discount' : type.toUpperCase()}
                                     </button>
                                 ))}
+                            </div>
+
+                            {/* T2: Approval status indicator */}
+                            {approvalStatus && (
+                                <div style={{
+                                    marginTop: '8px',
+                                    padding: '8px 12px',
+                                    borderRadius: '8px',
+                                    fontSize: '0.82rem',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    background: approvalStatus.status === 'approved' ? '#d4edda'
+                                        : approvalStatus.status === 'rejected' ? '#f8d7da'
+                                        : '#fff3cd',
+                                    color: approvalStatus.status === 'approved' ? '#155724'
+                                        : approvalStatus.status === 'rejected' ? '#721c24'
+                                        : '#856404',
+                                    border: `1px solid ${approvalStatus.status === 'approved' ? '#c3e6cb'
+                                        : approvalStatus.status === 'rejected' ? '#f5c6cb'
+                                        : '#ffc107'}`,
+                                }}>
+                                    {approvalPolling && (
+                                        <div style={{
+                                            width: '14px', height: '14px',
+                                            border: '2px solid currentColor',
+                                            borderTopColor: 'transparent',
+                                            borderRadius: '50%',
+                                            animation: 'spin 0.6s linear infinite',
+                                        }} />
+                                    )}
+                                    <span>
+                                        {approvalStatus.status === 'pending' && 'Waiting for supervisor approval...'}
+                                        {approvalStatus.status === 'approved' && `✓ ${approvalStatus.discountType} discount approved`}
+                                        {approvalStatus.status === 'rejected' && `✗ ${approvalStatus.error || 'Discount request rejected'}`}
+                                    </span>
+                                </div>
+                            )}
+
+                            {/* T1: Promo/Discount code input */}
+                            <div style={{ marginTop: '12px' }}>
+                                <label className="section-label-sm">Promo Code</label>
+                                <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                                    <input
+                                        type="text"
+                                        className="modern-input"
+                                        placeholder="Enter promo code"
+                                        value={promoCode}
+                                        onChange={(e) => { setPromoCode(e.target.value.toUpperCase()); setPromoResult(null); }}
+                                        onKeyDown={(e) => { if (e.key === 'Enter') handleValidatePromoCode(); }}
+                                        style={{ flex: 1 }}
+                                    />
+                                    <button
+                                        className="discount-btn active"
+                                        onClick={handleValidatePromoCode}
+                                        disabled={promoValidating || !promoCode.trim()}
+                                        style={{
+                                            padding: '0 16px',
+                                            opacity: promoValidating || !promoCode.trim() ? 0.6 : 1,
+                                            minWidth: '80px',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                                        }}
+                                    >
+                                        {promoValidating ? (
+                                            <div style={{
+                                                width: '14px', height: '14px',
+                                                border: '2px solid #fff',
+                                                borderTopColor: 'transparent',
+                                                borderRadius: '50%',
+                                                animation: 'spin 0.6s linear infinite',
+                                            }} />
+                                        ) : 'Apply'}
+                                    </button>
+                                </div>
+                                {promoResult && (
+                                    <div style={{
+                                        marginTop: '6px',
+                                        padding: '6px 10px',
+                                        borderRadius: '6px',
+                                        fontSize: '0.8rem',
+                                        background: promoResult.valid ? '#d4edda' : '#f8d7da',
+                                        color: promoResult.valid ? '#155724' : '#721c24',
+                                        border: `1px solid ${promoResult.valid ? '#c3e6cb' : '#f5c6cb'}`,
+                                    }}>
+                                        {promoResult.valid
+                                            ? `✓ ${promoResult.description || `${promoResult.discountPercent}% off applied`}`
+                                            : `✗ ${promoResult.error || 'Invalid code'}`
+                                        }
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

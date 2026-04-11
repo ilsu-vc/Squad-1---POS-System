@@ -64,7 +64,9 @@ import { logUserActivity } from './utils/activityLogger';
 import { productApi } from './services/productApi';
 import { receiptApi } from './services/receiptApi';
 import { salesApi } from './services/salesApi';
+import { shiftApi } from './services/shiftApi';
 import { authFetch } from './utils/authFetch';
+import { startOfflineSync, stopOfflineSync } from './utils/offlineQueue';
 
 interface CartItem extends Product {
   quantity: number;
@@ -411,6 +413,8 @@ const App: React.FC = () => {
     if (profile?.id) {
       loadActiveShift(profile.id);
       loadLatestHandover();
+      // POS-S4-009-T3: Start offline queue sync on login
+      startOfflineSync();
       // ── Sync transactions from DB on every login/restart ──
       salesApi.fetchTransactions().then((result: any) => {
         if (result?.transactions && Array.isArray(result.transactions)) {
@@ -423,6 +427,8 @@ const App: React.FC = () => {
     } else {
       setActiveShift(null);
       setLatestHandover(null);
+      // POS-S4-009-T3: Stop offline queue sync on logout
+      stopOfflineSync();
     }
   }, [profile?.id]);
 

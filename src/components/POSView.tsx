@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import { Product } from '../data/products';
 import searchIcon from '../assets/images/search_icon.png';
 import deleteIcon from '../assets/images/delete_icon.png';
 import cartIcon from '../assets/images/cart.png';
 import StockAlert from './StockAlert';
 import { formatCurrency } from '../utils/numberformatters';
+import { productApi } from '../services/productApi';
 
 interface CartItem extends Product {
   quantity: number;
@@ -72,6 +73,15 @@ const POSView: React.FC<POSViewProps> = ({
   const [showCategoryPage, setShowCategoryPage] = useState(true);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
+  // ── T1: Debounced search state ──
+  const [searchResults, setSearchResults] = useState<any[] | null>(null);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── T2: Stock fetch loading state ──
+  const [stockFetchingId, setStockFetchingId] = useState<number | string | null>(null);
+
   // Helper to format text to Capital Each Word
   const toTitleCase = (str: string) => {
     return str
@@ -110,14 +120,131 @@ const POSView: React.FC<POSViewProps> = ({
     [categories]
   );
 
+  // ── T1: Debounced product search with API integration ──
+  const performSearch = useCallback(async (query: string) => {
+    const trimmed = query.trim();
+    if (!trimmed) {
+      setSearchResults(null);
+      setSearchError(null);
+      setSearchLoading(false);
+      return;
+    }
+
+    setSearchLoading(true);
+    setSearchError(null);
+
+    const result = await productApi.searchProducts(trimmed);
+
+    if (result.error) {
+      setSearchError(result.error);
+      // T4: On API failure, fall back to local filtering (don't clear results)
+      setSearchResults(null);
+    } else {
+      setSearchResults(result.products);
+      setSearchError(null);
+    }
+    setSearchLoading(false);
+  }, []);
+
+  // Debounce search input by 300ms
+  useEffect(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    const trimmed = searchQuery.trim();
+    if (!trimmed) {
+      setSearchResults(null);
+      setSearchError(null);
+      setSearchLoading(false);
+      return;
+    }
+
+    setSearchLoading(true);
+    debounceTimerRef.current = setTimeout(() => {
+      performSearch(searchQuery);
+    }, 300);
+
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [searchQuery, performSearch]);
+
+  // ── T2: Fetch stock level on item selection and then add to cart ──
+  const handleProductClick = useCallback(async (product: any) => {
+    setStockFetchingId(product.id);
+
+    try {
+      const stockData = await productApi.getStockLevel(product.id);
+
+      if (stockData.error) {
+        // T4: Fallback — use whatever stock data is already on the product
+        console.warn(`Stock fetch failed for ${product.name}, using existing data`);
+        addToCart(product);
+      } else {
+        // Only merge fields that the API actually returned (non-null).
+        // NEVER overwrite existing good stock data with null/zero from a bad response.
+        const merged = { ...product };
+        if (stockData.stock !== null && stockData.stock !== undefined) {
+          merged.stock = stockData.stock;
+        }
+        if (stockData.available_stock !== null && stockData.available_stock !== undefined) {
+          merged.available_stock = stockData.available_stock;
+        }
+        if (stockData.reserved_transfer_qty) {
+          merged.reserved_transfer_qty = stockData.reserved_transfer_qty;
+        }
+        if (stockData.low_stock_threshold) {
+          merged.low_stock_threshold = stockData.low_stock_threshold;
+        }
+        addToCart(merged);
+      }
+    } catch {
+      // T4: Graceful fallback — add with existing data
+      addToCart(product);
+    } finally {
+      setStockFetchingId(null);
+    }
+  }, [addToCart]);
+
+  // Determine which products to display:
+  // If search returned API results, show those (filtered by category if active).
+  // If search had an error, fall back to the local filteredProducts.
+  // If no search query, use local filteredProducts.
   const visibleProducts = useMemo(() => {
     if (!activeCategory) return [];
+
+    // If we have API search results, use them (filtered by active category)
+    if (searchResults !== null && searchQuery.trim()) {
+      // Build a lookup from local products so we can restore images
+      const localProductMap = new Map(
+        filteredProducts.map((p) => [String(p.id), p])
+      );
+
+      return searchResults
+        .filter((product) => product.category === activeCategory)
+        .filter((product) =>
+          product.name.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+        .map((product) => {
+          // Merge image from local data since API results don't include it
+          const localProduct = localProductMap.get(String(product.id));
+          return {
+            ...product,
+            image: product.image || localProduct?.image || null,
+          };
+        });
+    }
+
+    // Local fallback (including when API failed)
     return filteredProducts
       .filter((product) => product.category === activeCategory)
       .filter((product) =>
         product.name.toLowerCase().includes(searchQuery.toLowerCase())
       );
-  }, [filteredProducts, activeCategory, searchQuery]);
+  }, [filteredProducts, activeCategory, searchQuery, searchResults]);
 
   return (
     <main className="pos-content">
@@ -210,6 +337,8 @@ const POSView: React.FC<POSViewProps> = ({
                   setShowCategoryPage(true);
                   setActiveCategory('');
                   setSearchQuery('');
+                  setSearchResults(null);
+                  setSearchError(null);
                 }}
                 style={{
                   display: 'flex',
@@ -264,8 +393,56 @@ const POSView: React.FC<POSViewProps> = ({
                     transition: 'all 0.2s ease'
                   }}
                 />
+                {/* T1: Search loading indicator */}
+                {searchLoading && (
+                  <div style={{
+                    position: 'absolute',
+                    right: '14px',
+                    width: '18px',
+                    height: '18px',
+                    border: '2px solid #e2e8f0',
+                    borderTopColor: '#01a2ad',
+                    borderRadius: '50%',
+                    animation: 'spin 0.6s linear infinite',
+                  }} />
+                )}
               </div>
             </div>
+
+            {/* T4: API failure fallback banner */}
+            {searchError && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '10px 16px',
+                marginBottom: '12px',
+                background: '#fef3cd',
+                border: '1px solid #ffc107',
+                borderRadius: '10px',
+                fontSize: '0.85rem',
+                color: '#856404',
+              }}>
+                <span style={{ fontSize: '1.1rem' }}>⚠️</span>
+                <span>Search service unavailable — showing local results instead.</span>
+                <button
+                  onClick={() => { setSearchError(null); performSearch(searchQuery); }}
+                  style={{
+                    marginLeft: 'auto',
+                    background: 'none',
+                    border: '1px solid #856404',
+                    borderRadius: '6px',
+                    padding: '3px 10px',
+                    fontSize: '0.8rem',
+                    color: '#856404',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                  }}
+                >
+                  Retry
+                </button>
+              </div>
+            )}
 
             {!activeCategory ? (
               <div className="empty-cart-state" style={{ textAlign: 'center', padding: '40px 20px', color: '#888' }}>
@@ -284,15 +461,37 @@ const POSView: React.FC<POSViewProps> = ({
                     <div
                       key={product.id}
                       className="product-card"
-                      onClick={() => addToCart(product)}
+                      onClick={() => handleProductClick(product)}
                       style={{ 
-                        cursor: 'pointer', 
+                        cursor: stockFetchingId === product.id ? 'wait' : 'pointer', 
                         userSelect: 'none',
                         transition: 'transform 0.1s active',
+                        opacity: stockFetchingId === product.id ? 0.7 : 1,
                       }}
                     >
                       <div className="img-container">
                         <img src={getImgSrc(product.image)} alt={product.name} />
+                        {/* T2: Stock fetch loading overlay */}
+                        {stockFetchingId === product.id && (
+                          <div style={{
+                            position: 'absolute',
+                            inset: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            background: 'rgba(255,255,255,0.6)',
+                            borderRadius: 'inherit',
+                          }}>
+                            <div style={{
+                              width: '22px',
+                              height: '22px',
+                              border: '2.5px solid #e2e8f0',
+                              borderTopColor: '#01a2ad',
+                              borderRadius: '50%',
+                              animation: 'spin 0.6s linear infinite',
+                            }} />
+                          </div>
+                        )}
                       </div>
                       <h3 className="product-name">{product.name}</h3>
                       <p className="cat-label">{toTitleCase(product.category)}</p>
@@ -484,6 +683,13 @@ const POSView: React.FC<POSViewProps> = ({
         threshold={stockAlert.threshold}
         onHold={stockAlert.onHold}
       />
+
+      {/* T1: Spinner keyframes for search and stock loading indicators */}
+      <style>{`
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </main>
   );
 };
