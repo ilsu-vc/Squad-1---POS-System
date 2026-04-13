@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState, useRef } from 'react';
+import { supabase } from '../supabaseClient';
 import { productApi } from '../services/productApi';
 import { ArrowRightLeft, PackageCheck, Truck, Building2, ClipboardList, Boxes } from 'lucide-react';
 import './StockBranchTransfer.css';
