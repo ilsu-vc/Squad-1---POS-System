@@ -238,7 +238,7 @@ app.get('/products', async (req: Request, res: Response) => {
 
     const { data: transfers, error: tErr } = await supabase
       .from('requesttransfers')
-      .select('id, product_id, quantity_transfer, transfer_status')
+      .select('id, product_id, product_name, quantity_transfer, transfer_status, requested_by, destination_branch_id, destination_branch_name, created_at')
       .order('created_at', { ascending: false });
     
     if (tErr) return res.status(500).json({ error: tErr.message });
@@ -332,7 +332,7 @@ app.get('/transfers', async (req: Request, res: Response) => {
   try {
     const { data, error } = await getSupabase(req)
       .from('requesttransfers')
-      .select('id, product_id, quantity_transfer, transfer_status')
+      .select('id, product_id, product_name, quantity_transfer, transfer_status, requested_by, destination_branch_id, destination_branch_name, created_at')
       .order('created_at', { ascending: false });
     if (error) return res.status(500).json({ error: error.message });
     res.json({ transfers: data || [] });
