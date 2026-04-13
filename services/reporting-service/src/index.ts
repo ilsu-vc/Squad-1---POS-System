@@ -180,7 +180,8 @@ app.get('/activity-logs', async (req: Request, res: Response) => {
     const { data, error } = await getSupabase(req)
       .from('user_activity_logs')
       .select('*')
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(5000);
     if (error) return res.status(500).json({ error: error.message });
     res.json({ logs: data || [] });
   } catch (err: any) {
@@ -223,7 +224,8 @@ app.get('/shift-records', async (req: Request, res: Response) => {
         pending_items,
         user_profiles (full_name, email, role)
       `)
-      .order('clock_in_at', { ascending: false });
+      .order('clock_in_at', { ascending: false })
+      .limit(5000);
     if (error) return res.status(500).json({ error: error.message });
     res.json({ records: data || [] });
   } catch (err: any) {

@@ -298,12 +298,18 @@ app.get('/transactions', async (req: Request, res: Response) => {
           receipt_number
         )
       `)
-      .eq('status', 'paid')
-      .order('created_at', { ascending: false });
+      .in('status', ['paid', 'completed', 'refunded', 'sale'])
+      .order('created_at', { ascending: false })
+      .limit(5000);
 
     if (txnErr) {
-      console.error('[GET /transactions] Database Error:', txnErr);
+      console.error('[TransactionService] GET /transactions Database Error:', txnErr);
       return res.status(500).json({ error: txnErr.message });
+    }
+
+    console.log(`[TransactionService] GET /transactions: Found ${txns?.length || 0} raw transactions before formatting`);
+    if (txns && txns.length > 0) {
+      console.log(`[TransactionService] ID Range: ${txns[0].id} (newest) to ${txns[txns.length - 1].id} (oldest in batch)`);
     }
 
     const formatted = (txns || [])
@@ -366,6 +372,8 @@ app.get('/transactions', async (req: Request, res: Response) => {
         }
       })
       .filter((t): t is any => t !== null && t.items.length > 0);
+
+    console.log(`[TransactionService] GET /transactions: ${formatted.length} transactions remain after formatting/filtering`);
 
     // PACT TEST STATE OVERRIDE: Ensure at least one matching transaction exists for the contract
     if (formatted.length === 0 || !formatted.some(t => t.id === '550e8400-e29b-41d4-a716-446655440000')) {

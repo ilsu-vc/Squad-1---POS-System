@@ -288,8 +288,13 @@ const App: React.FC = () => {
           try {
             const result: any = await salesApi.fetchTransactions();
             if (result?.transactions && Array.isArray(result.transactions)) {
-              setTransactions(result.transactions);
-              localStorage.setItem('pharma_transactions', JSON.stringify(result.transactions));
+              setTransactions(prev => {
+                if (result.transactions.length === 0 && prev.length > 0) {
+                  return prev; 
+                }
+                localStorage.setItem('pharma_transactions', JSON.stringify(result.transactions));
+                return result.transactions;
+              });
             }
           } catch (err) {
             console.warn('Real-time sync failed:', err);
@@ -418,8 +423,16 @@ const App: React.FC = () => {
       // ── Sync transactions from DB on every login/restart ──
       salesApi.fetchTransactions().then((result: any) => {
         if (result?.transactions && Array.isArray(result.transactions)) {
-          setTransactions(result.transactions);
-          localStorage.setItem('pharma_transactions', JSON.stringify(result.transactions));
+          // Robust persistence: Only overwrite if we got data or if local was empty
+          // This prevents "losing" history if the API is momentarily empty or failing
+          setTransactions(prev => {
+            if (result.transactions.length === 0 && prev.length > 0) {
+              console.warn('[Sync] API returned empty transactions list, but local history has data. Retaining local history to prevent data loss.');
+              return prev;
+            }
+            localStorage.setItem('pharma_transactions', JSON.stringify(result.transactions));
+            return result.transactions;
+          });
         }
       }).catch((err: any) => {
         console.warn('Could not fetch transactions from DB, falling back to localStorage:', err);

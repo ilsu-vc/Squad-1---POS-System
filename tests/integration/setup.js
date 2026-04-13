@@ -22,8 +22,20 @@ require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-if (!SUPABASE_URL || !SUPABASE_KEY) {
-  throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY in .env');
+// ── Validation ───────────────────────────────────────────────────────────────
+if (!SUPABASE_URL || SUPABASE_URL === '' || SUPABASE_URL === 'undefined') {
+  throw new Error(
+    '❌ [Test Setup] NEXT_PUBLIC_SUPABASE_URL is missing or invalid. ' + 
+    'Ensure it is set in .env or as a GitHub Secret.'
+  );
+}
+if (!SUPABASE_KEY || SUPABASE_KEY === '' || SUPABASE_KEY === 'undefined') {
+  throw new Error('❌ [Test Setup] NEXT_PUBLIC_SUPABASE_ANON_KEY is missing or invalid.');
+}
+
+// ── Diagnostic Logging (CI Only) ──────────────────────────────────────────────
+if (process.env.GITHUB_ACTIONS) {
+  console.log(`[Diagnostic] Using Supabase URL: ${SUPABASE_URL.substring(0, 12)}...`);
 }
 
 // Service-level Supabase client (anon key, no user JWT)
