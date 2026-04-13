@@ -50,13 +50,6 @@ if (!SUPABASE_KEY || SUPABASE_KEY === '' || SUPABASE_KEY === 'undefined') {
   throw new Error('❌ [Test Setup] NEXT_PUBLIC_SUPABASE_ANON_KEY is missing or invalid.');
 }
 
-// ── Diagnostic Logging (CI Only) ──────────────────────────────────────────────
-if (process.env.GITHUB_ACTIONS) {
-  console.log(`[Diagnostic] Supabase URL length: ${SUPABASE_URL.length}`);
-  console.log(`[Diagnostic] Supabase Key length: ${SUPABASE_KEY.length}`);
-  console.log(`[Diagnostic] URL Starts with: ${SUPABASE_URL.substring(0, 8)}...`);
-}
-
 // Service-level Supabase client (anon key, no user JWT)
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
