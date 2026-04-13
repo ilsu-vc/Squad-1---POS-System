@@ -1,0 +1,223 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "SCRUM 305 — k6 Load Test Dashboard for POS System",
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "title": "🔥 Active Virtual Users",
+      "type": "timeseries",
+      "datasource": "InfluxDB-k6",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "query": "SELECT max(\"value\") FROM \"vus\" WHERE $timeFilter GROUP BY time($__interval) fill(0)",
+          "rawQuery": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "fillOpacity": 20, "lineWidth": 2 }
+        }
+      }
+    },
+    {
+      "title": "📈 Request Rate (req/s)",
+      "type": "timeseries",
+      "datasource": "InfluxDB-k6",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "query": "SELECT count(\"value\") FROM \"http_reqs\" WHERE $timeFilter GROUP BY time($__interval) fill(0)",
+          "rawQuery": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "fillOpacity": 10, "lineWidth": 2 },
+          "unit": "reqps"
+        }
+      }
+    },
+    {
+      "title": "⏱️ Transaction Response Time (p95)",
+      "type": "timeseries",
+      "datasource": "InfluxDB-k6",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "query": "SELECT percentile(\"value\", 95) FROM \"transaction_duration\" WHERE $timeFilter GROUP BY time($__interval) fill(null)",
+          "rawQuery": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "fixedColor": "#FF6347", "mode": "fixed" },
+          "custom": { "fillOpacity": 15, "lineWidth": 2, "thresholdsStyle": { "mode": "line" } },
+          "unit": "ms",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 500 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "title": "⚡ Stock Check Response Time (p95)",
+      "type": "timeseries",
+      "datasource": "InfluxDB-k6",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 8 },
+      "targets": [
+        {
+          "query": "SELECT percentile(\"value\", 95) FROM \"stock_check_duration\" WHERE $timeFilter GROUP BY time($__interval) fill(null)",
+          "rawQuery": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "fixedColor": "#4682B4", "mode": "fixed" },
+          "custom": { "fillOpacity": 15, "lineWidth": 2, "thresholdsStyle": { "mode": "line" } },
+          "unit": "ms",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 150 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "title": "🧾 Receipt Fetch Response Time (p95)",
+      "type": "timeseries",
+      "datasource": "InfluxDB-k6",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 8 },
+      "targets": [
+        {
+          "query": "SELECT percentile(\"value\", 95) FROM \"receipt_duration\" WHERE $timeFilter GROUP BY time($__interval) fill(null)",
+          "rawQuery": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "fixedColor": "#32CD32", "mode": "fixed" },
+          "custom": { "fillOpacity": 15, "lineWidth": 2, "thresholdsStyle": { "mode": "line" } },
+          "unit": "ms",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 500 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "title": "❌ Error Rate (%)",
+      "type": "stat",
+      "datasource": "InfluxDB-k6",
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 16 },
+      "targets": [
+        {
+          "query": "SELECT last(\"value\") * 100 FROM \"error_rate\" WHERE $timeFilter",
+          "rawQuery": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.5 },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "title": "📊 HTTP Request Duration (All Endpoints)",
+      "type": "timeseries",
+      "datasource": "InfluxDB-k6",
+      "gridPos": { "h": 6, "w": 16, "x": 8, "y": 16 },
+      "targets": [
+        {
+          "query": "SELECT mean(\"value\") FROM \"http_req_duration\" WHERE $timeFilter GROUP BY time($__interval), \"endpoint\" fill(null)",
+          "rawQuery": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "fillOpacity": 10, "lineWidth": 2 },
+          "unit": "ms"
+        }
+      }
+    },
+    {
+      "title": "🏷️ Thresholds Summary",
+      "type": "table",
+      "datasource": "InfluxDB-k6",
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 22 },
+      "targets": [
+        {
+          "query": "SELECT last(\"value\") AS \"p95_ms\" FROM \"transaction_duration\" WHERE $timeFilter",
+          "rawQuery": true,
+          "refId": "A"
+        },
+        {
+          "query": "SELECT last(\"value\") AS \"p95_ms\" FROM \"stock_check_duration\" WHERE $timeFilter",
+          "rawQuery": true,
+          "refId": "B"
+        },
+        {
+          "query": "SELECT last(\"value\") AS \"p95_ms\" FROM \"receipt_duration\" WHERE $timeFilter",
+          "rawQuery": true,
+          "refId": "C"
+        }
+      ]
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 30,
+  "style": "dark",
+  "tags": ["k6", "load-test", "pos-system"],
+  "templating": { "list": [] },
+  "time": { "from": "now-15m", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "POS System — k6 Load Test Dashboard",
+  "uid": "pos-k6-load-test",
+  "version": 1
+}

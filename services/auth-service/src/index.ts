@@ -143,7 +143,14 @@ app.post('/shift/clock-in', validate(ClockInSchema), async (req: Request, res: R
       .insert({ user_id: userId, clock_in_at: new Date().toISOString() })
       .select()
       .single();
-    if (error) return res.status(500).json({ error: error.message });
+    
+    if (error) {
+      if (error.message.includes('shift_records_one_open_shift_per_user') || error.code === '23505') {
+        return res.status(400).json({ error: 'User already has an open shift' });
+      }
+      return res.status(500).json({ error: error.message });
+    }
+    
     res.json({ shift: data });
   } catch (err: any) {
     res.status(500).json({ error: 'Internal server error' });

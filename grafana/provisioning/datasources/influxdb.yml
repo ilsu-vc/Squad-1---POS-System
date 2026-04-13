@@ -1,0 +1,16 @@
+# ── Grafana Datasource Provisioning ─────────────────────────────────────────
+# SCRUM 305: Auto-configure InfluxDB as the data source for k6 metrics
+# This file is volume-mounted into Grafana at startup.
+
+apiVersion: 1
+
+datasources:
+  - name: InfluxDB-k6
+    type: influxdb
+    access: proxy
+    url: http://influxdb:8086
+    database: k6
+    isDefault: true
+    editable: true
+    jsonData:
+      httpMode: GET

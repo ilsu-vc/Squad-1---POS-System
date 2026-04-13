@@ -1,0 +1,130 @@
+# ── k6 Nightly Load Test CI Pipeline ───────────────────────────────────────────
+# SCRUM 304: POS-S4-014-T2 — Configure threshold assertions and CI nightly job
+#
+# Runs every night at 2:00 AM UTC against the staging environment.
+# Fails the build if any k6 threshold is breached.
+#
+# Manual trigger is also available via workflow_dispatch.
+
+name: '🏋️ Nightly k6 Load Tests'
+
+on:
+  schedule:
+    # Run at 2:00 AM UTC every day (10:00 AM PHT)
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'Base URL of the staging environment'
+        required: false
+        default: 'http://localhost:8000'
+      vus:
+        description: 'Number of virtual users'
+        required: false
+        default: '30'
+
+env:
+  K6_VERSION: '0.50.0'
+
+jobs:
+  load-test:
+    name: '📊 k6 Load Test — POS Endpoints'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      # Spin up the full staging stack for testing
+      rabbitmq:
+        image: rabbitmq:3-management-alpine
+        ports:
+          - 5672:5672
+        options: >-
+          --health-cmd "rabbitmq-diagnostics check_port_connectivity"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: '📥 Checkout repository'
+        uses: actions/checkout@v4
+
+      - name: '🏗️ Set up Node.js'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: '🐳 Start staging services'
+        run: |
+          docker compose up -d --build \
+            transaction-service \
+            inventory-service \
+            api-gateway \
+            influxdb
+          echo "⏳ Waiting for services to be healthy..."
+          sleep 30
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+
+      - name: '🔍 Verify services are running'
+        run: |
+          echo "Checking API Gateway..."
+          curl -sf http://localhost:8000/health || echo "⚠️ API Gateway not responding"
+          echo "Checking Transaction Service..."
+          curl -sf http://localhost:4007/health || echo "⚠️ Transaction Service not responding"
+          echo "Checking Inventory Service..."
+          curl -sf http://localhost:4002/health || echo "⚠️ Inventory Service not responding"
+
+      - name: '📦 Install k6'
+        run: |
+          curl -sL https://github.com/grafana/k6/releases/download/v${{ env.K6_VERSION }}/k6-v${{ env.K6_VERSION }}-linux-amd64.tar.gz | tar xzf -
+          sudo mv k6-v${{ env.K6_VERSION }}-linux-amd64/k6 /usr/local/bin/
+          k6 version
+
+      - name: '🏋️ Run k6 Load Test'
+        id: k6_test
+        run: |
+          mkdir -p tests/k6/results
+
+          k6 run \
+            --out influxdb=http://localhost:8086/k6 \
+            --tag testrun_id=${{ github.run_id }} \
+            tests/k6/load-test.js
+        env:
+          BASE_URL: ${{ github.event.inputs.base_url || 'http://localhost:8000' }}
+          K6_VUS: ${{ github.event.inputs.vus || '30' }}
+
+      - name: '📤 Upload test results'
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-load-test-results
+          path: tests/k6/results/
+          retention-days: 30
+
+      - name: '🧹 Tear down staging services'
+        if: always()
+        run: docker compose down -v
+
+      - name: '📋 Post summary to PR'
+        if: always()
+        run: |
+          if [ -f tests/k6/results/summary.json ]; then
+            echo "## 📊 k6 Load Test Results" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Metric | Value | Threshold |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|-------|-----------|" >> $GITHUB_STEP_SUMMARY
+
+            TRANSACTION_P95=$(jq -r '.transaction_p95 // "N/A"' tests/k6/results/summary.json)
+            STOCK_P95=$(jq -r '.stock_check_p95 // "N/A"' tests/k6/results/summary.json)
+            RECEIPT_P95=$(jq -r '.receipt_p95 // "N/A"' tests/k6/results/summary.json)
+            ERROR_RATE=$(jq -r '.error_rate // "N/A"' tests/k6/results/summary.json)
+
+            echo "| Transaction p95 | ${TRANSACTION_P95}ms | < 500ms |" >> $GITHUB_STEP_SUMMARY
+            echo "| Stock Check p95 | ${STOCK_P95}ms | < 150ms |" >> $GITHUB_STEP_SUMMARY
+            echo "| Receipt p95 | ${RECEIPT_P95}ms | < 500ms |" >> $GITHUB_STEP_SUMMARY
+            echo "| Error Rate | ${ERROR_RATE} | < 1% |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## ⚠️ k6 Results Not Available" >> $GITHUB_STEP_SUMMARY
+            echo "The test may have failed before generating results." >> $GITHUB_STEP_SUMMARY
+          fi
