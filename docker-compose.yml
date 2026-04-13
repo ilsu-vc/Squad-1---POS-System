@@ -157,3 +157,79 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
+
+  # ── Pact Broker (Contract Testing) ──────────────────────────────────────────
+  # SCRUM 300: Pact Broker for storing and managing consumer-provider contracts
+  # Access the Pact Broker UI at http://localhost:9292
+  # Credentials loaded from environment variables (OWASP compliant)
+  pact-postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_USER=pact
+      - POSTGRES_PASSWORD=${PACT_BROKER_DB_PASSWORD:-pact_pass}
+      - POSTGRES_DB=pact_broker
+    volumes:
+      - pact-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pact -d pact_broker"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  pact-broker:
+    image: pactfoundation/pact-broker:latest
+    ports:
+      - "9292:9292"
+    environment:
+      - PACT_BROKER_DATABASE_URL=postgresql://pact:${PACT_BROKER_DB_PASSWORD:-pact_pass}@pact-postgres:5432/pact_broker
+      - PACT_BROKER_BASIC_AUTH_USERNAME=${PACT_BROKER_USERNAME:-pact_user}
+      - PACT_BROKER_BASIC_AUTH_PASSWORD=${PACT_BROKER_PASSWORD:-pact_pass}
+      - PACT_BROKER_ALLOW_PUBLIC_READ=true
+      - PACT_BROKER_LOG_LEVEL=INFO
+    depends_on:
+      pact-postgres:
+        condition: service_healthy
+
+  # ── InfluxDB (k6 Metrics Storage) ────────────────────────────────────────────
+  # SCRUM 305 & 307: Time-series database for storing k6 load test results
+  influxdb:
+    image: influxdb:1.8-alpine
+    ports:
+      - "8086:8086"
+    environment:
+      - INFLUXDB_DB=k6
+      - INFLUXDB_HTTP_MAX_BODY_SIZE=0
+    volumes:
+      - influxdb-data:/var/lib/influxdb
+    healthcheck:
+      test: ["CMD", "influx", "-execute", "SHOW DATABASES"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Grafana (Load Test Dashboard) ───────────────────────────────────────────
+  # SCRUM 305: Dashboard for visualizing k6 load test results
+  # Access at http://localhost:3001 (admin / admin)
+  grafana:
+    image: grafana/grafana:10.4.0
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+    depends_on:
+      influxdb:
+        condition: service_healthy
+
+volumes:
+  pact-postgres-data:
+  influxdb-data:
+  grafana-data:

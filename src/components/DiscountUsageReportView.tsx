@@ -156,7 +156,7 @@ const DiscountUsageReportView: React.FC<Props> = () => {
                 className={`custom-dropdown-trigger ${isDropdownOpen ? 'active' : ''}`}
                 onClick={() => setIsDropdownOpen((prev) => !prev)}
               >
-                {dateRange === 7 ? 'Last 7 Days' : dateRange === 30 ? 'Last 30 Days' : 'Last 90 Days'}
+                {dateRange === 1 ? 'Daily' : dateRange === 7 ? 'Last 7 Days' : dateRange === 30 ? 'Last 30 Days' : 'Last 90 Days'}
                 <svg
                   className="dropdown-chevron"
                   width="12"
@@ -174,6 +174,15 @@ const DiscountUsageReportView: React.FC<Props> = () => {
 
               {isDropdownOpen && (
                 <div className="custom-dropdown-menu">
+                  <div
+                    className={`dropdown-item ${dateRange === 1 ? 'selected' : ''}`}
+                    onClick={() => {
+                      setDateRange(1);
+                      setIsDropdownOpen(false);
+                    }}
+                  >
+                    Daily
+                  </div>
                   <div
                     className={`dropdown-item ${dateRange === 7 ? 'selected' : ''}`}
                     onClick={() => {

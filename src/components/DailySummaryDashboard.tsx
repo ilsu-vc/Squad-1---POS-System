@@ -132,14 +132,24 @@ const DailySummaryDashboard: React.FC<Props> = ({ transactions: localTransaction
 
         if (salesData && salesData.length > 0) {
           const transactionIds = salesData.map((tx) => tx.id);
-          const { data: itemsData, error: itemsError } = await supabase
-            .from('transaction_items')
-            .select('name, quantity, line_total')
-            .in('transaction_id', transactionIds);
+          
+          let allItems: any[] = [];
+          const CHUNK_SIZE = 100; // Small chunk to avoid URL length limits
 
-          if (itemsError) throw itemsError;
+          for (let i = 0; i < transactionIds.length; i += CHUNK_SIZE) {
+            const chunk = transactionIds.slice(i, i + CHUNK_SIZE);
+            const { data: itemsData, error: itemsError } = await supabase
+              .from('transaction_items')
+              .select('name, quantity, line_total')
+              .in('transaction_id', chunk);
 
-          const groupedProducts = (itemsData || []).reduce((acc: any, item: any) => {
+            if (itemsError) throw itemsError;
+            if (itemsData) {
+              allItems = [...allItems, ...itemsData];
+            }
+          }
+
+          const groupedProducts = allItems.reduce((acc: any, item: any) => {
             const name = item.name;
             if (!acc[name]) acc[name] = { name, qty: 0, revenue: 0 };
             acc[name].qty += Number(item.quantity);

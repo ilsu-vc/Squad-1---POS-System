@@ -8,3 +8,12 @@ out
 .next
 node_modules
 tsconfig.tsbuildinfo
+
+# Pact contract test artifacts
+tests/pact/pacts/
+tests/pact/logs/
+pact/logs/
+pact/pacts/
+
+# k6 load test results
+tests/k6/results/
