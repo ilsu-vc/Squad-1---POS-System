@@ -36,10 +36,10 @@ jobs:
 
       - name: Start Docker Services
         run: |
-          docker-compose -f docker-compose.yml up -d auth-service transaction-service api-gateway pact-postgres
+          docker compose -f docker-compose.yml up -d auth-service transaction-service api-gateway pact-postgres
           # Wait for services to be healthy
           sleep 15
-          docker-compose ps
+          docker compose ps
 
       - name: Run Integration Tests
         # Fails the pipeline if tests fail or if they take longer than 60 seconds (enforced by Jest timeout if configured, or general speed)
@@ -47,8 +47,8 @@ jobs:
 
       - name: Docker Logs on Failure
         if: failure()
-        run: docker-compose logs auth-service transaction-service
+        run: docker compose logs auth-service transaction-service
 
       - name: Teardown Services
         if: always()
-        run: docker-compose down
+        run: docker compose down
