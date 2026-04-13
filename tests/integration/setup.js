@@ -19,8 +19,17 @@ const path = require('path');
 // Load env from the project root
 require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+let SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+let SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+// ── Sanitize Environment Variables ───────────────────────────────────────────
+// Strips leading/trailing whitespace and quotes that might leak from CI/Shells
+if (SUPABASE_URL) {
+  SUPABASE_URL = SUPABASE_URL.trim().replace(/^["'](.+)["']$/, '$1');
+}
+if (SUPABASE_KEY) {
+  SUPABASE_KEY = SUPABASE_KEY.trim().replace(/^["'](.+)["']$/, '$1');
+}
 
 // ── Validation ───────────────────────────────────────────────────────────────
 if (!SUPABASE_URL || SUPABASE_URL === '' || SUPABASE_URL === 'undefined') {
@@ -29,13 +38,23 @@ if (!SUPABASE_URL || SUPABASE_URL === '' || SUPABASE_URL === 'undefined') {
     'Ensure it is set in .env or as a GitHub Secret.'
   );
 }
+
+if (!SUPABASE_URL.startsWith('http://') && !SUPABASE_URL.startsWith('https://')) {
+  throw new Error(
+    `❌ [Test Setup] NEXT_PUBLIC_SUPABASE_URL does not start with http/https. ` +
+    `Value starts with: "${SUPABASE_URL.substring(0, 5)}..."`
+  );
+}
+
 if (!SUPABASE_KEY || SUPABASE_KEY === '' || SUPABASE_KEY === 'undefined') {
   throw new Error('❌ [Test Setup] NEXT_PUBLIC_SUPABASE_ANON_KEY is missing or invalid.');
 }
 
 // ── Diagnostic Logging (CI Only) ──────────────────────────────────────────────
 if (process.env.GITHUB_ACTIONS) {
-  console.log(`[Diagnostic] Using Supabase URL: ${SUPABASE_URL.substring(0, 12)}...`);
+  console.log(`[Diagnostic] Supabase URL length: ${SUPABASE_URL.length}`);
+  console.log(`[Diagnostic] Supabase Key length: ${SUPABASE_KEY.length}`);
+  console.log(`[Diagnostic] URL Starts with: ${SUPABASE_URL.substring(0, 8)}...`);
 }
 
 // Service-level Supabase client (anon key, no user JWT)

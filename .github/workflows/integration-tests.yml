@@ -40,16 +40,24 @@ jobs:
             echo "❌ Error: NEXT_PUBLIC_SUPABASE_URL secret is missing!"
             exit 1
           fi
+          echo "✅ NEXT_PUBLIC_SUPABASE_URL is set (Length: ${#URL})"
+          
           if [ -z "${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" ]; then
             echo "❌ Error: NEXT_PUBLIC_SUPABASE_ANON_KEY secret is missing!"
             exit 1
           fi
+          echo "✅ NEXT_PUBLIC_SUPABASE_ANON_KEY is set (Length: ${#KEY})"
+        env:
+          URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
 
       - name: Create .env file for Docker
         run: |
-          echo "NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}" >> .env
-          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" >> .env
-          echo "PORT=4007" >> .env
+          cat <<EOF > .env
+          NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          PORT=4007
+          EOF
 
       - name: Start Docker Services
         run: |
