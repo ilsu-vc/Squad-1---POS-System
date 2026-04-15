@@ -359,10 +359,16 @@ const App: React.FC = () => {
       }
 
       const profileResult: any = await authFetch(`/api/auth/profile/${session.user.id}`).then((r) => r.json());
-      if (profileResult.error) throw new Error(profileResult.error);
+      if (profileResult.error || profileResult.statusCode >= 400) {
+        throw new Error(profileResult.message || profileResult.error || 'Internal API Error');
+      }
 
       const data = profileResult.profile;
-      if (!data?.is_active) {
+      if (!data) {
+        setAuthError('Profile payload missing.');
+        return;
+      }
+      if (data.is_active === false) {
         setAuthError('This account is inactive.');
         return;
       }
