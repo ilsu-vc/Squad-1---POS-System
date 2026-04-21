@@ -213,21 +213,7 @@ const App: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    const loadInitialData = async () => {
-      await fetchTransferRequests();
-    };
-
-    loadInitialData();
-  }, []);
-
-  useEffect(() => {
-    const loadInitialData = async () => {
-      await refreshInventoryData();
-    };
-
-    loadInitialData();
-  }, []);
+  // Data fetching consolidated into authenticated initialization block below
 
   useEffect(() => {
     const channel = supabase
@@ -424,6 +410,11 @@ const App: React.FC = () => {
     if (profile?.id) {
       loadActiveShift(profile.id);
       loadLatestHandover();
+      
+      // Fetch initial inventory and transfer data only when authenticated
+      refreshInventoryData();
+      fetchTransferRequests();
+
       // POS-S4-009-T3: Start offline queue sync on login
       startOfflineSync();
       // ── Sync transactions from DB on every login/restart ──

@@ -56,6 +56,7 @@ export class ProtectedProxyMiddleware implements NestMiddleware {
   async use(req: Request, res: Response, next: NextFunction) {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      this.logger.warn(`Missing or invalid Authorization header for path: ${req.path}`);
       throw new UnauthorizedException('Missing or invalid Authorization header');
     }
 
@@ -63,10 +64,12 @@ export class ProtectedProxyMiddleware implements NestMiddleware {
     try {
       const { data: { user }, error } = await this.supabase.auth.getUser(token);
       if (error || !user) {
-        throw new UnauthorizedException('Unauthorized: Invalid token');
+        this.logger.error(`Supabase Auth Error for path ${req.path}: ${error?.message || 'No user found'}`);
+        throw new UnauthorizedException(`Unauthorized: ${error?.message || 'Invalid token'}`);
       }
-    } catch (err) {
-      this.logger.error('JWT Verification Error:', err);
+      this.logger.log(`User authenticated: ${user.id} for path: ${req.path}`);
+    } catch (err: any) {
+      this.logger.error(`JWT Verification Exception for path ${req.path}:`, err.message || err);
       throw new UnauthorizedException('Internal server error during authentication');
     }
 

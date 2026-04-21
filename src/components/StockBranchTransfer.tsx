@@ -118,9 +118,11 @@ const StockBranchTransfer: React.FC<StockBranchTransferProps> = ({
   };
 
   useEffect(() => {
-    fetchTransferRequests();
-    fetchBranches();
-  }, []);
+    if (profile) {
+      fetchTransferRequests();
+      fetchBranches();
+    }
+  }, [profile]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

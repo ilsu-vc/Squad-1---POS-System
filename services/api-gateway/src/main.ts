@@ -7,7 +7,8 @@ import { Request, Response, NextFunction } from 'express';
 import * as crypto from 'crypto';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // Disable body parser so the proxy forwards raw payloads correctly
+  const app = await NestFactory.create(AppModule, { bodyParser: false });
 
   // Correlation ID
   app.use((req: Request, res: Response, next: NextFunction) => {
@@ -16,8 +17,20 @@ async function bootstrap() {
     res.setHeader('X-Correlation-ID', correlationId);
     next();
   });
-
-  app.use(helmet());
+  // Apply relaxed CSP for Next.js, Supabase, and Google Fonts
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'", "https:", "http:", "ws:", "wss:"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+        fontSrc: ["'self'", "https://fonts.gstatic.com"],
+        imgSrc: ["'self'", "data:", "https:", "http:"],
+        connectSrc: ["'self'", "https:", "http:", "ws:", "wss:"],
+      },
+    },
+    crossOriginEmbedderPolicy: false,
+  }));
   app.enableCors();
 
   morgan.token('correlation-id', (req: Request) => req.headers['x-correlation-id'] as string);

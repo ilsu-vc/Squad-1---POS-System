@@ -75,6 +75,8 @@ services:
       - "4001:4001"
     environment:
       - PORT=4001
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
     env_file:
       - .env
 
@@ -87,6 +89,8 @@ services:
     environment:
       - PORT=4002
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
     env_file:
       - .env
     depends_on:
@@ -114,6 +118,8 @@ services:
     environment:
       - PORT=4004
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
     env_file:
       - .env
     depends_on:
@@ -128,6 +134,8 @@ services:
       - "4005:4005"
     environment:
       - PORT=4005
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
     env_file:
       - .env
 
@@ -139,6 +147,8 @@ services:
       - "4006:4006"
     environment:
       - PORT=4006
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
     env_file:
       - .env
 
@@ -152,6 +162,8 @@ services:
       - PORT=4007
       - INVENTORY_SERVICE_URL=http://inventory-service:4002
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
     env_file:
       - .env
     depends_on:

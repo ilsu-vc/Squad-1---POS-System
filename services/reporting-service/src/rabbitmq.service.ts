@@ -14,7 +14,10 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
   constructor(private readonly supabaseAdmin: SupabaseServiceAdmin) {}
 
   async onModuleInit() {
-    await this.connect(5);
+    // Non-fatal startup: if RabbitMQ is not ready yet, keep retrying in background
+    this.connect(10).catch((err) => {
+      this.logger.warn(`Initial RabbitMQ connection failed, will retry: ${err?.message}`);
+    });
   }
 
   async onModuleDestroy() {
