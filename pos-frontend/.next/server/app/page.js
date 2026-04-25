@@ -1,0 +1,13 @@
+var R=require("../chunks/ssr/[turbopack]_runtime.js")("server/app/page.js")
+R.c("server/chunks/ssr/[root-of-the-server]__0d2c8fe._.js")
+R.c("server/chunks/ssr/0vmo_next_dist_esm_build_templates_app-page_03aekf4.js")
+R.c("server/chunks/ssr/[root-of-the-server]__001q.cp._.js")
+R.c("server/chunks/ssr/[root-of-the-server]__0g0rtqg._.js")
+R.c("server/chunks/ssr/OneDrive_Desktop_pos-frontend_src_app_layout_tsx_0075052._.js")
+R.c("server/chunks/ssr/0vmo_next_dist_client_components_0ew0t8~._.js")
+R.c("server/chunks/ssr/0vmo_next_dist_client_components_builtin_forbidden_05j.13r.js")
+R.c("server/chunks/ssr/0vmo_next_dist_client_components_builtin_unauthorized_0x93rm~.js")
+R.c("server/chunks/ssr/0vmo_next_dist_client_components_builtin_global-error_0zn476q.js")
+R.c("server/chunks/ssr/OneDrive_Desktop_pos-frontend__next-internal_server_app_page_actions_0awjgm-.js")
+R.m(67487)
+module.exports=R.m(67487).exports

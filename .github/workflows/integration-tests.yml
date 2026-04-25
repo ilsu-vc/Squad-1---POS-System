@@ -32,7 +32,7 @@ jobs:
           cache: "npm"
 
       - name: Install Dependencies
-        run: npm ci
+        run: cd pos-frontend && npm ci
 
       - name: Pre-check Secrets
         run: |
@@ -47,7 +47,7 @@ jobs:
 
       - name: Create .env file for Docker
         run: |
-          cat <<EOF > .env
+          cat <<EOF > pos-backend/.env
           NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           PORT=4007
@@ -55,6 +55,7 @@ jobs:
 
       - name: Start Docker Services
         run: |
+          cd pos-backend
           docker compose -f docker-compose.yml up -d auth-service transaction-service api-gateway pact-postgres
           # Wait for services to be healthy
           sleep 15
@@ -62,12 +63,12 @@ jobs:
 
       - name: Run Integration Tests
         # Fails the pipeline if tests fail or if they take longer than 60 seconds (enforced by Jest timeout if configured, or general speed)
-        run: npm run test:integration
+        run: cd pos-frontend && npm run test:integration
 
       - name: Docker Logs on Failure
         if: failure()
-        run: docker compose logs auth-service transaction-service
+        run: cd pos-backend && docker compose logs auth-service transaction-service
 
       - name: Teardown Services
         if: always()
-        run: docker compose down
+        run: cd pos-backend && docker compose down

@@ -1,1 +1,0 @@
-{"version":3,"file":"shift.module.js","sourceRoot":"","sources":["../../src/shift/shift.module.ts"],"names":[],"mappings":";;;;;;;;;AAAA,2CAAwC;AACxC,yDAAqD;AACrD,0DAAsD;AAO/C,IAAM,WAAW,GAAjB,MAAM,WAAW;CAAG,CAAA;AAAd,kCAAW;sBAAX,WAAW;IALvB,IAAA,eAAM,EAAC;QACN,WAAW,EAAE,CAAC,kCAAe,CAAC;QAC9B,SAAS,EAAE,CAAC,kCAAe,CAAC;QAC5B,OAAO,EAAE,CAAC,kCAAe,CAAC;KAC3B,CAAC;GACW,WAAW,CAAG"}

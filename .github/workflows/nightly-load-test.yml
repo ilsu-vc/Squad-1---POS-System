@@ -55,6 +55,7 @@ jobs:
 
       - name: '🐳 Start staging services'
         run: |
+          cd pos-backend
           docker compose up -d --build \
             transaction-service \
             inventory-service \
@@ -84,6 +85,7 @@ jobs:
       - name: '🏋️ Run k6 Load Test'
         id: k6_test
         run: |
+          cd pos-frontend
           mkdir -p tests/k6/results
 
           k6 run \
@@ -99,16 +101,17 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: k6-load-test-results
-          path: tests/k6/results/
+          path: pos-frontend/tests/k6/results/
           retention-days: 30
 
       - name: '🧹 Tear down staging services'
         if: always()
-        run: docker compose down -v
+        run: cd pos-backend && docker compose down -v
 
       - name: '📋 Post summary to PR'
         if: always()
         run: |
+          cd pos-frontend
           if [ -f tests/k6/results/summary.json ]; then
             echo "## 📊 k6 Load Test Results" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
