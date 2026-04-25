@@ -185,7 +185,7 @@ jobs:
         working-directory: services/transaction-service
         env:
           PROVIDER_BASE_URL: http://localhost:4007
-        run: npm run test:pact:provider
+        run: npm run test:pact:verify
 
       # Build and start Inventory Service
       - name: Install inventory-service dependencies
@@ -210,7 +210,7 @@ jobs:
         working-directory: services/inventory-service
         env:
           PROVIDER_BASE_URL: http://localhost:4002
-        run: npm run test:pact:provider
+        run: npm run test:pact:verify
 
   # ── Step 4: Existing E2E Tests Still Pass ──────────────────────────────────
   e2e-tests:

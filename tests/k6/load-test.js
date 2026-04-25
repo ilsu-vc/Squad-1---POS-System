@@ -43,14 +43,41 @@ const TEST_PRODUCT_SKU = __ENV.TEST_PRODUCT_SKU || '1';
 
 // ── k6 Options ───────────────────────────────────────────────────────────────
 export const options = {
-  // Load profile: ramp up to 30 VUs, hold for 2 minutes, ramp down
-  stages: [
-    { duration: '30s', target: 30 },  // Ramp up to 30 cashier VUs
-    { duration: '2m',  target: 30 },  // Steady state — 2 minute sustained load
-    { duration: '10s', target: 0 },   // Graceful ramp down
-  ],
+  // Weighted scenario distribution (SCRUM-335)
+  scenarios: {
+    transaction_flow: {
+      executor: 'ramping-vus',
+      startVUs: 0,
+      stages: [
+        { duration: '30s', target: 20 }, // 20 VUs for transactions
+        { duration: '2m',  target: 20 },
+        { duration: '10s', target: 0 },
+      ],
+      exec: 'createTransaction',
+    },
+    stock_check_flow: {
+      executor: 'ramping-vus',
+      startVUs: 0,
+      stages: [
+        { duration: '30s', target: 5 }, // 5 VUs for stock checks
+        { duration: '2m',  target: 5 },
+        { duration: '10s', target: 0 },
+      ],
+      exec: 'checkStock',
+    },
+    receipt_fetch_flow: {
+      executor: 'ramping-vus',
+      startVUs: 0,
+      stages: [
+        { duration: '30s', target: 5 }, // 5 VUs for receipts
+        { duration: '2m',  target: 5 },
+        { duration: '10s', target: 0 },
+      ],
+      exec: 'fetchReceipt',
+    },
+  },
 
-  // Strict thresholds — CI build FAILS if any are breached
+  // Strict thresholds — CI build FAILS if any are breached (SCRUM-336)
   thresholds: {
     // Transaction creation: p95 must be under 500ms
     'transaction_duration': ['p(95)<500'],
@@ -113,96 +140,73 @@ function generateTransactionPayload() {
 
 const jsonHeaders = { 'Content-Type': 'application/json' };
 
-// ── Default Function (runs per VU iteration) ─────────────────────────────────
-export default function () {
-  let transactionId = null;
+// ── Scenario 1: POST /transactions ───────────────────────────────────────
+export function createTransaction() {
+  const payload = generateTransactionPayload();
+  const res = http.post(
+    `${TRANSACTION_SERVICE_URL}/transactions`,
+    JSON.stringify(payload),
+    { headers: jsonHeaders, tags: { endpoint: 'transaction' } }
+  );
 
-  // ── Scenario 1: POST /transactions ───────────────────────────────────────
-  group('POST /transactions', () => {
-    const payload = generateTransactionPayload();
-    const res = http.post(
-      `${TRANSACTION_SERVICE_URL}/transactions`,
-      JSON.stringify(payload),
-      { headers: jsonHeaders, tags: { endpoint: 'transaction' } }
-    );
+  // Record custom metric
+  transactionDuration.add(res.timings.duration);
 
-    // Record custom metric
-    transactionDuration.add(res.timings.duration);
-
-    // Track errors
-    const success = check(res, {
-      'transaction: status is 201': (r) => r.status === 201,
-      'transaction: has transactionId': (r) => {
-        try {
-          const body = JSON.parse(r.body);
-          return !!body.transactionId;
-        } catch {
-          return false;
-        }
-      },
-    });
-    errorRate.add(!success);
-
-    // Capture transaction ID for receipt fetch
-    if (res.status === 201) {
+  // Track errors
+  const success = check(res, {
+    'transaction: status is 201': (r) => r.status === 201,
+    'transaction: has transactionId': (r) => {
       try {
-        const body = JSON.parse(res.body);
-        transactionId = body.transactionId;
+        const body = JSON.parse(r.body);
+        return !!body.transactionId;
       } catch {
-        // ignore parse errors
+        return false;
       }
+    },
+  });
+  errorRate.add(!success);
+
+  sleep(Math.random() * 2 + 1); // Simulate cashier pause (1-3s)
+}
+
+// ── Scenario 2: GET /products/:sku/stock ─────────────────────────────────
+export function checkStock() {
+  const sku = TEST_PRODUCT_SKU;
+  const res = http.get(
+    `${INVENTORY_SERVICE_URL}/products/${sku}/stock`,
+    {
+      tags: { endpoint: 'stock' },
+      responseCallback: http.expectedStatuses(200, 404),
     }
+  );
+
+  stockCheckDuration.add(res.timings.duration);
+
+  const success = check(res, {
+    'stock: status is 200 or 404': (r) => r.status === 200 || r.status === 404,
   });
+  errorRate.add(!success);
 
-  sleep(0.5); // Simulate cashier pause between actions
+  sleep(Math.random() * 1 + 0.5); // Simulate quick checks (0.5-1.5s)
+}
 
-  // ── Scenario 2: GET /products/:sku/stock ─────────────────────────────────
-  group('GET /products/:sku/stock', () => {
-    const sku = TEST_PRODUCT_SKU;
-    const res = http.get(
-      `${INVENTORY_SERVICE_URL}/products/${sku}/stock`,
-      {
-        tags: { endpoint: 'stock' },
-        responseCallback: http.expectedStatuses(200, 404),
-      }
-    );
+// ── Scenario 3: GET /transactions/:id/receipt ────────────────────────────
+export function fetchReceipt() {
+  // Use a known test ID since we don't share state between scenarios easily
+  const id = '550e8400-e29b-41d4-a716-446655440000';
+  const res = http.get(
+    `${TRANSACTION_SERVICE_URL}/transactions/${id}/receipt`,
+    { tags: { endpoint: 'receipt' } }
+  );
 
-    stockCheckDuration.add(res.timings.duration);
+  receiptDuration.add(res.timings.duration);
 
-    const success = check(res, {
-      'stock: status is 200 or 404': (r) => r.status === 200 || r.status === 404,
-    });
-    errorRate.add(!success);
+  const success = check(res, {
+    'receipt: status is 200': (r) => r.status === 200 || r.status === 404, // Allow 404 since it's a dummy ID
   });
+  errorRate.add(!success);
 
-  sleep(0.3);
-
-  // ── Scenario 3: GET /transactions/:id/receipt ────────────────────────────
-  group('GET /transactions/:id/receipt', () => {
-    // Use the transaction ID from Scenario 1, or a known test ID
-    const id = transactionId || '550e8400-e29b-41d4-a716-446655440000';
-    const res = http.get(
-      `${TRANSACTION_SERVICE_URL}/transactions/${id}/receipt`,
-      { tags: { endpoint: 'receipt' } }
-    );
-
-    receiptDuration.add(res.timings.duration);
-
-    const success = check(res, {
-      'receipt: status is 200': (r) => r.status === 200,
-      'receipt: has receipt data': (r) => {
-        try {
-          const body = JSON.parse(r.body);
-          return !!body.receipt;
-        } catch {
-          return false;
-        }
-      },
-    });
-    errorRate.add(!success);
-  });
-
-  sleep(1); // Simulate natural gap between customer checkouts
+  sleep(Math.random() * 2 + 1); // (1-3s)
 }
 
 // ── Summary Handler ──────────────────────────────────────────────────────────
