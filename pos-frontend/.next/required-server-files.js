@@ -99,6 +99,7 @@ self.__SERVER_FILES_MANIFEST={
     "compiler": {},
     "expireTime": 31536000,
     "staticPageGenerationTimeout": 60,
+    "output": "standalone",
     "modularizeImports": {
       "@mui/icons-material": {
         "transform": "@mui/icons-material/{{member}}"
@@ -323,8 +324,8 @@ self.__SERVER_FILES_MANIFEST={
     },
     "distDirRoot": ".next"
   },
-  "appDir": "C:\\Users\\ocamp\\OneDrive\\Desktop\\pos-frontend",
-  "relativeAppDir": "OneDrive\\Desktop\\pos-frontend",
+  "appDir": "C:\\Users\\ocamp\\OneDrive\\Desktop\\pos post\\pos-frontend",
+  "relativeAppDir": "OneDrive\\Desktop\\pos post\\pos-frontend",
   "files": [
     ".next\\routes-manifest.json",
     ".next\\server\\pages-manifest.json",

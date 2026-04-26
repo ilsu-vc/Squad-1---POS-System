@@ -25,6 +25,7 @@ const nextConfig = {
         RECEIPT_SERVICE_URL: process.env.RECEIPT_SERVICE_URL || 'http://localhost:4006',
         TRANSACTION_SERVICE_URL: process.env.TRANSACTION_SERVICE_URL || 'http://localhost:4007',
     },
+    output: 'standalone',
 };
 
 module.exports = nextConfig;
