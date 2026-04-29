@@ -109,11 +109,18 @@
 
 .history-toolbar {
   margin-bottom: 20px;
+  display: flex;
+  gap: 16px;
+  align-items: flex-end;
 }
 
 .history-search-container {
   position: relative;
-  width: 97%;
+  flex: 1;
+}
+
+.history-filter-date {
+  flex-shrink: 0;
 }
 
 .search-icon-img {

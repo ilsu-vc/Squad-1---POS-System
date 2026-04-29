@@ -78,6 +78,7 @@ const DailySummaryDashboard: React.FC<Props> = ({ transactions: localTransaction
 
   const [topProducts, setTopProducts] = useState<any[]>([]);
   const [activeStaffCount, setActiveStaffCount] = useState(0);
+  const [dbTransactionIds, setDbTransactionIds] = useState<Set<string>>(new Set());
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -108,6 +109,10 @@ const DailySummaryDashboard: React.FC<Props> = ({ transactions: localTransaction
         const currentSales =
           salesData?.reduce((sum, tx) => sum + Number(tx.total_amount || 0), 0) || 0;
         const currentCount = txCount || 0;
+        
+        const ids = new Set<string>();
+        salesData?.forEach(tx => ids.add(tx.id));
+        setDbTransactionIds(ids);
 
         setTotalSales(currentSales);
         setTransactions(currentCount);
@@ -219,7 +224,11 @@ const DailySummaryDashboard: React.FC<Props> = ({ transactions: localTransaction
     const todayLocal = localTransactions.filter((t) => {
       const tDate = new Date(`${t.date} ${t.time}`);
       if (isNaN(tDate.getTime())) return false;
-      return getManilaDateString(tDate) === today;
+      
+      const isToday = getManilaDateString(tDate) === today;
+      const isAlreadyInDB = dbTransactionIds.has(t.id);
+      
+      return isToday && !isAlreadyInDB;
     });
 
     const localSales = todayLocal.reduce((sum, t) => sum + t.rawAmount, 0);
@@ -240,7 +249,7 @@ const DailySummaryDashboard: React.FC<Props> = ({ transactions: localTransaction
     });
 
     return { localSales, localCount, localProductMap };
-  }, [localTransactions]);
+  }, [localTransactions, dbTransactionIds]);
 
   const displayTotalSales = totalSales + liveTotals.localSales;
   const displayTransactionCount = transactions + liveTotals.localCount;

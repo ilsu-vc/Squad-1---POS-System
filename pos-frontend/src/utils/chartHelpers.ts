@@ -108,19 +108,42 @@ export const getCategoryData = (transactions: Transaction[]): CategoryData[] => 
 
 export const getPaymentMethodStats = (transactions: Transaction[]): PaymentMethodStat[] => {
     if (!Array.isArray(transactions)) return [];
-    
-    const totalCount = transactions.length;
+
+    // Normalize inconsistent method names from local state and DB into canonical names
+    const normalizeMethod = (raw: string): string => {
+        const m = (raw || '').trim().toLowerCase();
+        if (m === 'cash' || m === 'cash payment') return 'Cash';
+        if (m === 'gcash' || m === 'mobile' || m === 'mobile payment') return 'GCash / Mobile';
+        if (m === 'card' || m === 'credit/debit card' || m === 'credit card') return 'Card';
+        if (m === 'split') return 'Split';
+        return raw || 'Other';
+    };
+
+    const methodColors: Record<string, string> = {
+        'Cash': '#1b2a47',
+        'GCash / Mobile': '#314566',
+        'Card': '#4a6288',
+        'Split': '#6b83ab',
+    };
+
+    const fallbackColors = ['#1b2a47', '#314566', '#4a6288', '#6b83ab', '#90a7cb'];
+
+    const counts: Record<string, number> = {};
+    transactions.forEach((t) => {
+        if (!t || t.type === 'refund') return;
+        const method = normalizeMethod(t.method || 'Other');
+        counts[method] = (counts[method] || 0) + 1;
+    });
+
+    const totalCount = Object.values(counts).reduce((s, c) => s + c, 0);
     if (totalCount === 0) return [];
 
-    const methods = ['Mobile Payment', 'Credit/Debit Card', 'Cash Payment'];
-    return methods.map((m, index) => {
-        const count = transactions.filter((t) => t && t.method === m).length;
-        const percentage = Math.round((count / totalCount) * 100);
-        return {
-            name: m,
+    return Object.entries(counts)
+        .map(([name, count], index) => ({
+            name,
             count,
-            percentage,
-            color: getPaymentMethodColor(index),
-        };
-    });
+            percentage: Math.round((count / totalCount) * 100),
+            color: methodColors[name] || fallbackColors[index % fallbackColors.length],
+        }))
+        .sort((a, b) => b.count - a.count);
 };

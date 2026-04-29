@@ -7,6 +7,7 @@ import searchIcon from '../assets/images/search_icon.png';
 
 // Number format utility
 import { formatCurrency } from '../utils/numberformatters';
+import CustomDatePicker from './CustomDatePicker';
 import './HistoryView.css';
 
 interface HistoryViewProps {
@@ -28,15 +29,23 @@ const HistoryView: React.FC<HistoryViewProps> = ({
   setIsReprintModalOpen,
   onPartialRefund,
 }) => {
+  const [dateFilter, setDateFilter] = React.useState('');
+
   const totalRevenue = transactions.reduce((acc, curr) => acc + curr.rawAmount, 0);
   const avgTransaction = transactions.length > 0 ? totalRevenue / transactions.length : 0;
 
   const filtered = transactions.filter(
-    (t) =>
-      t.id.toLowerCase().includes(historySearch.toLowerCase()) ||
-      (t.receiptNumber &&
-        String(t.receiptNumber).toLowerCase().includes(historySearch.toLowerCase())) ||
-      (t.tags && t.tags.some((tag) => tag.toLowerCase().includes(historySearch.toLowerCase())))
+    (t) => {
+      const matchesSearch = 
+        t.id.toLowerCase().includes(historySearch.toLowerCase()) ||
+        (t.receiptNumber &&
+          String(t.receiptNumber).toLowerCase().includes(historySearch.toLowerCase())) ||
+        (t.tags && t.tags.some((tag) => tag.toLowerCase().includes(historySearch.toLowerCase())));
+      
+      const matchesDate = !dateFilter || t.date === new Date(dateFilter).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      
+      return matchesSearch && matchesDate;
+    }
   );
 
   return (
@@ -69,9 +78,17 @@ const HistoryView: React.FC<HistoryViewProps> = ({
               type="text"
               className="history-modern-input"
               /* UPDATED PLACEHOLDER TO MATCH IMAGE */
-              placeholder="Search by staff name or email..."
+              placeholder="Search transactions..."
               value={historySearch}
               onChange={(e) => setHistorySearch(e.target.value)}
+            />
+          </div>
+
+          <div className="history-filter-date">
+            <CustomDatePicker 
+              value={dateFilter} 
+              onChange={setDateFilter}
+              placeholder="All Dates"
             />
           </div>
         </div>

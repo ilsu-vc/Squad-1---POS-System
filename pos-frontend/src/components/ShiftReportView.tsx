@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { reportingApi } from '../services/reportingApi';
+import CustomDatePicker from './CustomDatePicker';
 import './ShiftReportView.css';
 
 interface ShiftUserProfile {
@@ -27,6 +28,7 @@ const ShiftReportView: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'open' | 'closed'>('all');
+  const [dateFilter, setDateFilter] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -80,9 +82,11 @@ const ShiftReportView: React.FC = () => {
         (statusFilter === 'open' && !record.clock_out_at) ||
         (statusFilter === 'closed' && !!record.clock_out_at);
 
-      return matchesSearch && matchesStatus;
+      const matchesDate = !dateFilter || record.clock_in_at.slice(0, 10) === dateFilter;
+
+      return matchesSearch && matchesStatus && matchesDate;
     });
-  }, [records, search, statusFilter]);
+  }, [records, search, statusFilter, dateFilter]);
 
   const stats = useMemo(
     () => ({
@@ -222,6 +226,14 @@ const ShiftReportView: React.FC = () => {
                 ))}
               </div>
             )}
+          </div>
+
+          <div className="shift-filter-date">
+            <CustomDatePicker 
+              value={dateFilter} 
+              onChange={setDateFilter}
+              placeholder="Filter by Date"
+            />
           </div>
 
           <button className="shift-btn-refresh" onClick={loadRecords}>

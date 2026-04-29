@@ -47,23 +47,16 @@ const ProductPerformanceReportView: React.FC<Props> = ({ transactions }) => {
 
       const { data, error } = await supabase
         .from('transaction_items')
-        .select('name, category, quantity, line_total, created_at, unit_price')
+        .select('name, category, quantity, line_total, created_at, unit_price, transaction_id')
         .gte('created_at', startDate);
 
       if (error) throw error;
 
       const dbTxnIds = new Set<string>();
-      try {
-        const localTxnIds = transactions.map((t) => t.id).filter((id) => id.length > 0);
-        if (localTxnIds.length > 0) {
-          const { data: dbTxns } = await supabase
-            .from('transactions')
-            .select('id')
-            .in('id', localTxnIds.slice(0, 100));
-          (dbTxns || []).forEach((r: any) => dbTxnIds.add(r.id));
-        }
-      } catch (err) {
-        console.warn('Silent skip: failed to check dbTxnIds', err);
+      if (data) {
+        data.forEach((item: any) => {
+          if (item.transaction_id) dbTxnIds.add(item.transaction_id);
+        });
       }
 
       const localItems: TransactionItem[] = [];

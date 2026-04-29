@@ -113,7 +113,7 @@ body,
 
 .shift-toolbar {
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     gap: 16px;
     margin-bottom: 24px;
     background: white;
@@ -160,7 +160,11 @@ body,
 .custom-dropdown {
     position: relative;
     flex: 1;
-    min-width: 180px;
+    min-width: 160px;
+}
+
+.shift-filter-date {
+    flex-shrink: 0;
 }
 
 .dropdown-trigger {

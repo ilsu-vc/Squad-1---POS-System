@@ -15,6 +15,7 @@ import {
   Legend,
   ResponsiveContainer
 } from 'recharts';
+import CustomDatePicker from './CustomDatePicker';
 import './HourlySalesReportView.css';
 
 import { UserProfile } from '../types/auth';
@@ -232,15 +233,11 @@ const HourlySalesReportView: React.FC<Props> = ({ onSwitchReport, profile }) => 
           </div>
 
           <div className="hs-filter-body">
-            <div className="hs-date-control">
-              <span className="hs-date-prefix">Select Date</span>
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="hs-date-input"
-              />
-            </div>
+            <CustomDatePicker 
+              value={selectedDate} 
+              onChange={setSelectedDate}
+              label="Select Transaction Date"
+            />
           </div>
         </div>
 

@@ -131,7 +131,9 @@
 
 .hs-filter-card {
   padding: 0;
-  overflow: hidden;
+  overflow: visible;
+  position: relative;
+  z-index: 10;
 }
 
 .hs-filter-top {
@@ -148,49 +150,7 @@
   padding: 16px 18px 18px;
 }
 
-.hs-date-control {
-  width: fit-content;
-  min-width: 260px;
-  display: inline-flex;
-  align-items: center;
-  border: 1px solid var(--hs-border);
-  border-radius: 10px;
-  background: #fbfdff;
-  overflow: hidden;
-  transition:
-    border-color 0.2s ease,
-    box-shadow 0.2s ease,
-    background-color 0.2s ease;
-}
 
-.hs-date-control:focus-within {
-  border-color: var(--hs-teal);
-  background: var(--hs-white);
-  box-shadow: 0 0 0 3px rgba(1, 162, 173, 0.1);
-}
-
-.hs-date-prefix {
-  padding: 0 14px;
-  height: 42px;
-  display: inline-flex;
-  align-items: center;
-  color: var(--hs-soft);
-  font-size: 13px;
-  font-weight: 700;
-  border-right: 1px solid var(--hs-border);
-}
-
-.hs-date-input {
-  height: 42px;
-  padding: 0 14px;
-  border: none;
-  outline: none;
-  background: transparent;
-  color: var(--hs-text);
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-}
 
 .hs-card-head {
   display: flex;

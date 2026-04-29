@@ -13,6 +13,7 @@ import {
   FiChevronDown,
   FiChevronUp,
 } from 'react-icons/fi';
+import CustomDatePicker from './CustomDatePicker';
 import './ActivityLogView.css';
 
 import { UserProfile } from '../types/auth';
@@ -222,11 +223,10 @@ const ActivityLogView: React.FC<ActivityLogViewProps> = ({ profile }) => {
               </AnimatePresence>
             </div>
 
-            <input
-              type="date"
-              className="activity-log-date-picker"
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
+            <CustomDatePicker 
+              value={dateFilter} 
+              onChange={setDateFilter}
+              placeholder="Filter by Date"
             />
 
             <div className="activity-log-button-group">
