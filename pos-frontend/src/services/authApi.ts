@@ -18,6 +18,15 @@ export const authApi = {
     return res.json();
   },
 
+  async loginWithPIN(pin: string, userId?: string) {
+    const res = await authFetch(`${BASE}/login/pin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin, userId }),
+    });
+    return res.json();
+  },
+
   async logout() {
     const res = await authFetch(`${BASE}/logout`, { method: 'POST' });
     return res.json();

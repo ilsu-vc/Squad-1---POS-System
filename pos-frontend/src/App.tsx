@@ -67,6 +67,7 @@ import { salesApi } from './services/salesApi';
 import { shiftApi } from './services/shiftApi';
 import { authFetch } from './utils/authFetch';
 import { startOfflineSync, stopOfflineSync } from './utils/offlineQueue';
+import { useInactivityLogout } from './hooks/useInactivityLogout';
 
 interface CartItem extends Product {
   quantity: number;
@@ -1241,6 +1242,30 @@ const App: React.FC = () => {
     await supabase.auth.signOut();
     window.location.reload();
   };
+
+  // SCRUM-388: 15-minute inactivity auto-logout
+  useInactivityLogout({
+    timeout: 15 * 60 * 1000, // 15 minutes
+    onLogout: async () => {
+      if (profile) {
+        try {
+          await reportingApi.logActivity({
+            userId: profile.id,
+            userEmail: profile.email || '',
+            actionType: 'AUTO_LOGOUT',
+            actionDetails: 'User automatically logged out due to inactivity (15 minutes)',
+            entityType: 'user',
+            entityId: profile.id,
+          });
+        } catch (logErr) {
+          console.warn('Failed to log auto-logout activity:', logErr);
+        }
+      }
+      await supabase.auth.signOut();
+      window.location.reload();
+    },
+    enabled: !!profile, // Only enable when user is logged in
+  });
 
   const renderSidebarLink = (
     tab: string,

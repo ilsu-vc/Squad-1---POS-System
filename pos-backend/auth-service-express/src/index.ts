@@ -59,6 +59,11 @@ const LoginSchema = z.object({
   password: z.string().min(6, 'Password must be at least 6 characters').max(128),
 });
 
+const PINLoginSchema = z.object({
+  pin: z.string().min(4, 'PIN must be at least 4 digits').max(6, 'PIN must be at most 6 digits').regex(/^\d+$/, 'PIN must contain only digits'),
+  userId: z.string().uuid('Invalid userId format').optional(),
+});
+
 const ClockInSchema = z.object({
   userId: z.string().uuid('Invalid userId format'),
 });
@@ -89,6 +94,34 @@ app.post('/login', validate(LoginSchema), async (req: Request, res: Response) =>
   try {
     const { data, error } = await getSupabase(req).auth.signInWithPassword({ email, password });
     if (error) return res.status(401).json({ error: error.message });
+    res.json({ session: data.session, user: data.user });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.post('/login/pin', validate(PINLoginSchema), async (req: Request, res: Response) => {
+  const { pin, userId } = req.body;
+  try {
+    // In a real implementation, you would:
+    // 1. Query the database for a user with this PIN
+    // 2. Verify the PIN hash matches
+    // 3. Check if the account is locked due to failed attempts
+    // 4. Generate a JWT token for the user
+    
+    // For now, this is a placeholder that uses email/password authentication
+    // You should implement proper PIN-based authentication with:
+    // - PIN hashing (bcrypt/argon2)
+    // - Failed attempt tracking in database
+    // - Account lockout mechanism
+    // - JWT token generation
+    
+    const { data, error } = await getSupabase(req).auth.signInWithPassword({
+      email: `cashier${pin}@pos.local`, // Placeholder
+      password: pin,
+    });
+    
+    if (error) return res.status(401).json({ error: 'Invalid PIN' });
     res.json({ session: data.session, user: data.user });
   } catch (err: any) {
     res.status(500).json({ error: 'Internal server error' });
