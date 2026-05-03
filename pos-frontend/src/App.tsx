@@ -66,8 +66,16 @@ import { receiptApi } from './services/receiptApi';
 import { salesApi } from './services/salesApi';
 import { shiftApi } from './services/shiftApi';
 import { authFetch } from './utils/authFetch';
-import { startOfflineSync, stopOfflineSync } from './utils/offlineQueue';
+import {
+  startOfflineSync, stopOfflineSync,
+  enqueueTxn, syncTxnQueue, startTxnSync, stopTxnSync,
+  getQueuedTxns, getTxnQueueLength, getTxnErrorCount,
+  TXN_QUEUE_UPDATED_EVENT, QueuedTransaction,
+} from './utils/offlineQueue';
 import { useInactivityLogout } from './hooks/useInactivityLogout';
+import { useNetworkStatus } from './hooks/useNetworkStatus';
+import OfflineSyncStatusBar from './components/OfflineSyncStatusBar';
+import SyncErrorsModal from './components/SyncErrorsModal';
 
 interface CartItem extends Product {
   quantity: number;
@@ -142,6 +150,24 @@ const App: React.FC = () => {
   const [products, setProducts] = useState<any[]>([]);
   const [transferRequests, setTransferRequests] = useState<any[]>([]);
   const [isCompletingTransaction, setIsCompletingTransaction] = useState(false);
+
+  // ── POS-S6-008-T1: Network status ──
+  const { isOnline, isOffline } = useNetworkStatus();
+
+  // ── POS-S6-008-T3/T4: Offline transaction queue state ──
+  const [pendingTxnCount, setPendingTxnCount] = useState(0);
+  const [errorTxnCount, setErrorTxnCount] = useState(0);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [isSyncErrorsOpen, setIsSyncErrorsOpen] = useState(false);
+  const [erroredTxns, setErroredTxns] = useState<QueuedTransaction[]>([]);
+
+  /** Re-read the txn queue from localStorage and update UI state */
+  const refreshTxnQueueState = () => {
+    const all = getQueuedTxns();
+    setPendingTxnCount(getTxnQueueLength());
+    setErrorTxnCount(getTxnErrorCount());
+    setErroredTxns(all.filter((t) => t.errorFlag));
+  };
 
   const [stockAlert, setStockAlert] = useState<{
     isOpen: boolean;
@@ -418,11 +444,13 @@ const App: React.FC = () => {
 
       // POS-S4-009-T3: Start offline queue sync on login
       startOfflineSync();
+      // POS-S6-008-T3: Start transaction queue sync on login
+      startTxnSync();
+      refreshTxnQueueState();
+
       // ── Sync transactions from DB on every login/restart ──
       salesApi.fetchTransactions().then((result: any) => {
         if (result?.transactions && Array.isArray(result.transactions)) {
-          // Robust persistence: Only overwrite if we got data or if local was empty
-          // This prevents "losing" history if the API is momentarily empty or failing
           setTransactions(prev => {
             if (result.transactions.length === 0 && prev.length > 0) {
               console.warn('[Sync] API returned empty transactions list, but local history has data. Retaining local history to prevent data loss.');
@@ -440,8 +468,55 @@ const App: React.FC = () => {
       setLatestHandover(null);
       // POS-S4-009-T3: Stop offline queue sync on logout
       stopOfflineSync();
+      // POS-S6-008-T3: Stop transaction queue sync on logout
+      stopTxnSync();
     }
   }, [profile?.id]);
+
+  // ── POS-S6-008-T3: Listen for queue updates and auto-sync when back online ──
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleQueueUpdated = () => refreshTxnQueueState();
+    window.addEventListener(TXN_QUEUE_UPDATED_EVENT, handleQueueUpdated);
+
+    // Option A: patch history when a txn syncs and gets a real OR#
+    const handleSyncedPatch = (e: Event) => {
+      const { localId, serverTxnId, receiptNumber } = (e as CustomEvent).detail;
+      setTransactions((prev) => {
+        const updated = prev.map((t) =>
+          t.id === localId
+            ? { ...t, id: serverTxnId, receiptNumber: receiptNumber ?? t.receiptNumber, isOffline: false }
+            : t
+        );
+        localStorage.setItem('pharma_transactions', JSON.stringify(updated));
+        return updated;
+      });
+      // Stock was decremented server-side on sync; refresh local product stock display.
+      refreshInventoryData();
+    };
+    window.addEventListener('txnSyncedPatch', handleSyncedPatch);
+
+    return () => {
+      window.removeEventListener(TXN_QUEUE_UPDATED_EVENT, handleQueueUpdated);
+      window.removeEventListener('txnSyncedPatch', handleSyncedPatch);
+    };
+  }, []);
+
+  // Auto-trigger sync when coming back online
+  useEffect(() => {
+    if (isOnline && pendingTxnCount > 0) {
+      setIsSyncing(true);
+      syncTxnQueue().finally(() => {
+        setIsSyncing(false);
+        refreshTxnQueueState();
+        // Offline transactions have now been posted to the server, which
+        // decrements inventory. Refresh product stock counts so the POS
+        // grid reflects the real remaining quantities immediately.
+        refreshInventoryData();
+      });
+    }
+  }, [isOnline]);
 
   useEffect(() => {
     if (!activeShift) return;
@@ -886,6 +961,16 @@ const App: React.FC = () => {
       return;
     }
     if (!ensureActiveShift()) return;
+
+    // POS-S6-008-T3: Offline mode — skip /initiate, generate a local placeholder ID
+    if (isOffline) {
+      const localId = `LOCAL-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+      setDbTransactionId(localId);
+      setDbReceiptNumber(null);
+      setIsPaymentModalOpen(true);
+      return;
+    }
+
     try {
       const result: any = await authFetch('/api/transactions/transactions/initiate', { method: 'POST' }).then((r) => r.json());
       if (result.error) throw new Error(result.error);
@@ -893,12 +978,12 @@ const App: React.FC = () => {
       setDbReceiptNumber(null);
       setIsPaymentModalOpen(true);
     } catch (err: any) {
-      console.error(err);
-      setAppAlert({
-        isOpen: true,
-        title: 'Error',
-        message: err.message || 'Failed to create transaction.'
-      });
+      // Network may have just dropped — fall back to local ID
+      console.warn('[POS] initiate failed, going offline mode:', err.message);
+      const localId = `LOCAL-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+      setDbTransactionId(localId);
+      setDbReceiptNumber(null);
+      setIsPaymentModalOpen(true);
     }
   };
 
@@ -946,19 +1031,104 @@ const App: React.FC = () => {
     const effectivePaymentMethod = isSplit ? 'Split' : paymentMethod ?? 'cash';
 
     setIsCompletingTransaction(true);
+
+    const itemsPayload = cart.map((item) => ({
+      product_id: item.id,
+      name: item.name,
+      category: item.category ?? null,
+      unit_price: Number(item.price),
+      quantity: Number(item.quantity),
+    }));
+    const itemsCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+    const amountPaidFromSplit = isSplit ? splitPayments!.reduce((s: number, e: any) => s + (parseFloat(e.amount) || 0), 0) : undefined;
+    const finalAmountPaid = isSplit ? amountPaidFromSplit : Number(details.tendered ?? finalTotal ?? total ?? 0);
+    const isLocalTxn = dbTransactionId?.startsWith('LOCAL-');
+
+    // ── POS-S6-008-T3/T5: Offline path ──────────────────────────────────────
+    if (isOffline || isLocalTxn) {
+      try {
+        const localId = dbTransactionId!;
+        const pendingReceiptNo = `PENDING-${localId.slice(-6)}`;
+
+        enqueueTxn({
+          localId,
+          vat: Number(tax ?? 0),
+          subtotal: Number(subtotal ?? 0),
+          totalAmount: Number(finalTotal ?? total ?? 0),
+          amountPaid: finalAmountPaid,
+          paymentMethod: effectivePaymentMethod,
+          itemsCount,
+          items: itemsPayload,
+          discountType: normalizedDiscountType,
+          discountAmount: Number(discountAmount ?? 0),
+          notes,
+          tags,
+        });
+        refreshTxnQueueState();
+
+        const now = new Date();
+        const h = now.getHours();
+        const formattedHour = h >= 12 ? (h === 12 ? '12PM' : `${h - 12}PM`) : h === 0 ? '12AM' : `${h}AM`;
+        const methodLabelOffline = isSplit
+          ? splitPayments!.map((e: any) => `${e.method.charAt(0).toUpperCase() + e.method.slice(1)} ₱${parseFloat(e.amount).toFixed(2)}`).join(' + ')
+          : ({ cash: 'Cash Payment', card: 'Credit/Debit Card', mobile: 'Mobile Payment', Split: 'Split Payment' } as any)[effectivePaymentMethod] ?? effectivePaymentMethod;
+
+        const offlineTxn: any = {
+          id: localId,
+          receiptNumber: pendingReceiptNo,
+          date: now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+          hour: formattedHour,
+          amount: `₱${Number(finalTotal).toFixed(2)}`,
+          rawAmount: Number(finalTotal),
+          method: methodLabelOffline ?? 'Unknown',
+          itemsCount,
+          items: cart.map((item) => ({ name: item.name, qty: item.quantity, price: item.price, category: item.category })),
+          subtotal,
+          tax,
+          customerName,
+          discountType: normalizedDiscountType,
+          discountAmount,
+          notes,
+          tags,
+          isOffline: true,
+        };
+
+        const updated = [offlineTxn, ...transactions];
+        setTransactions(updated);
+        localStorage.setItem('pharma_transactions', JSON.stringify(updated));
+
+        await receiptApi.printReceipt({
+          receiptNumber: pendingReceiptNo,
+          items: offlineTxn.items.map((i: any) => ({ name: i.name, quantity: i.qty, price: Number(i.price) })),
+          vatable: subtotal,
+          vatAmount: tax,
+          total: Number(finalTotal),
+          splitPayments: isSplit ? splitPayments! : undefined,
+        });
+
+        setDbReceiptNumber(pendingReceiptNo);
+        setApiChangeAmount(Math.max(0, (finalAmountPaid ?? 0) - Number(finalTotal)));
+        setPaymentStatus('success');
+        setLastCompletedTransaction({
+          id: localId,
+          receiptNumber: pendingReceiptNo,
+          items: offlineTxn.items.map((i: any) => ({ name: i.name, qty: i.qty })),
+          date: offlineTxn.date,
+          time: offlineTxn.time,
+        });
+        // Clear the cart now — all item data is already captured in offlineTxn
+        // and lastCompletedTransaction, so the cashier can immediately start
+        // the next transaction once they close this success screen.
+        setCart([]);
+      } finally {
+        setIsCompletingTransaction(false);
+      }
+      return;
+    }
+
+    // ── Online path (unchanged) ──────────────────────────────────────────────
     try {
-      const itemsPayload = cart.map((item) => ({
-        product_id: item.id,
-        name: item.name,
-        category: item.category ?? null,
-        unit_price: Number(item.price),
-        quantity: Number(item.quantity),
-      }));
-      const itemsCount = cart.reduce((sum, item) => sum + item.quantity, 0);
-
-      const amountPaidFromSplit = isSplit ? splitPayments!.reduce((s: number, e: any) => s + (parseFloat(e.amount) || 0), 0) : undefined;
-      const finalAmountPaid = isSplit ? amountPaidFromSplit : Number(details.tendered ?? finalTotal ?? total ?? 0);
-
       const saleResult: any = await authFetch('/api/transactions/transactions/complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -983,7 +1153,6 @@ const App: React.FC = () => {
       setDbReceiptNumber(receiptNo);
       setApiChangeAmount(saleResult.changeAmount ?? 0);
 
-      // Fetch the actual receipt data immediately to fulfill requirement
       try {
         const receiptData = await authFetch(`/api/transactions/transactions/${dbTransactionId}/receipt`).then((r) => r.json());
         console.log('Fetched receipt data:', receiptData);
@@ -994,16 +1163,9 @@ const App: React.FC = () => {
       const now = new Date();
       const h = now.getHours();
       const formattedHour = h >= 12 ? (h === 12 ? '12PM' : `${h - 12}PM`) : h === 0 ? '12AM' : `${h}AM`;
-      const methodMap: Record<string, string> = {
-        cash: 'Cash Payment',
-        card: 'Credit/Debit Card',
-        mobile: 'Mobile Payment',
-        Split: 'Split Payment',
-      };
+      const methodMap: Record<string, string> = { cash: 'Cash Payment', card: 'Credit/Debit Card', mobile: 'Mobile Payment', Split: 'Split Payment' };
       const methodLabel = isSplit
-        ? splitPayments!
-            .map((e: any) => `${e.method.charAt(0).toUpperCase() + e.method.slice(1)} ₱${parseFloat(e.amount).toFixed(2)}`)
-            .join(' + ')
+        ? splitPayments!.map((e: any) => `${e.method.charAt(0).toUpperCase() + e.method.slice(1)} ₱${parseFloat(e.amount).toFixed(2)}`).join(' + ')
         : methodMap[paymentMethod!] ?? paymentMethod;
 
       const newTransaction: Transaction = {
@@ -1012,23 +1174,13 @@ const App: React.FC = () => {
         date: now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
         time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
         hour: formattedHour,
-        amount: `₱${finalTotal.toFixed(2)}`,
-        rawAmount: finalTotal,
+        amount: `₱${Number(finalTotal).toFixed(2)}`,
+        rawAmount: Number(finalTotal),
         method: methodLabel ?? 'Unknown',
         itemsCount,
-        items: cart.map((item) => ({
-          name: item.name,
-          qty: item.quantity,
-          price: item.price,
-          category: item.category,
-        })),
-        subtotal,
-        tax,
-        customerName,
-        discountType: normalizedDiscountType,
-        discountAmount,
-        notes,
-        tags,
+        items: cart.map((item) => ({ name: item.name, qty: item.quantity, price: item.price, category: item.category })),
+        subtotal, tax, customerName,
+        discountType: normalizedDiscountType, discountAmount, notes, tags,
       };
 
       const updated = [newTransaction, ...transactions];
@@ -1036,56 +1188,28 @@ const App: React.FC = () => {
       localStorage.setItem('pharma_transactions', JSON.stringify(updated));
       setPaymentStatus('success');
       setLastCompletedTransaction({
-        id: dbTransactionId,
-        receiptNumber: receiptNo,
+        id: dbTransactionId, receiptNumber: receiptNo,
         items: newTransaction.items.map((i) => ({ name: i.name, qty: i.qty })),
-        date: newTransaction.date,
-        time: newTransaction.time,
+        date: newTransaction.date, time: newTransaction.time,
       });
 
       const activityMethodLabel = isSplit
         ? splitPayments!.map((e: any) => `${e.method} ₱${parseFloat(e.amount).toFixed(2)}`).join(' + ')
         : effectivePaymentMethod;
-
-      await logUserActivity({
-        profile,
-        actionType: 'SALE',
-        actionDetails: `Completed sale worth ₱${finalTotal.toFixed(2)} with ${activityMethodLabel} payment`,
-        entityType: 'transaction',
-        entityId: dbTransactionId,
-      });
-
+      await logUserActivity({ profile, actionType: 'SALE', actionDetails: `Completed sale worth ₱${Number(finalTotal).toFixed(2)} with ${activityMethodLabel} payment`, entityType: 'transaction', entityId: dbTransactionId });
       if (discountType !== 'none' && Number(discountAmount) > 0) {
-        await logUserActivity({
-          profile,
-          actionType: 'DISCOUNT_APPLIED',
-          actionDetails: `Applied ${normalizedDiscountType} discount worth ₱${Number(discountAmount).toFixed(2)} on sale ${dbTransactionId}`,
-          entityType: 'transaction',
-          entityId: dbTransactionId,
-        });
+        await logUserActivity({ profile, actionType: 'DISCOUNT_APPLIED', actionDetails: `Applied ${normalizedDiscountType} discount worth ₱${Number(discountAmount).toFixed(2)} on sale ${dbTransactionId}`, entityType: 'transaction', entityId: dbTransactionId });
       }
-
       await receiptApi.printReceipt({
         receiptNumber: newTransaction.receiptNumber ?? undefined,
-        items: newTransaction.items.map(i => ({
-          name: i.name,
-          quantity: i.qty,
-          price: Number(i.price)
-        })),
-        vatable: newTransaction.subtotal,
-        vatAmount: newTransaction.tax,
-        total: newTransaction.rawAmount,
+        items: newTransaction.items.map(i => ({ name: i.name, quantity: i.qty, price: Number(i.price) })),
+        vatable: newTransaction.subtotal, vatAmount: newTransaction.tax, total: newTransaction.rawAmount,
         splitPayments: isSplit ? splitPayments! : undefined,
       });
-
       await refreshInventoryData();
     } catch (err: any) {
       console.error(err);
-      setAppAlert({
-        isOpen: true,
-        title: 'Error',
-        message: err.message || 'Failed to complete payment / generate receipt.'
-      });
+      setAppAlert({ isOpen: true, title: 'Error', message: err.message || 'Failed to complete payment / generate receipt.' });
     } finally {
       setIsCompletingTransaction(false);
     }
@@ -1096,6 +1220,17 @@ const App: React.FC = () => {
       setIsPaymentModalOpen(false);
       return;
     }
+
+    // Offline path: LOCAL- IDs are never persisted on the server — just
+    // reset local state. No API call needed (and it would fail anyway).
+    if (dbTransactionId.startsWith('LOCAL-')) {
+      setPaymentStatus('idle');
+      setDbReceiptNumber(null);
+      setDbTransactionId(null);
+      setIsPaymentModalOpen(false);
+      return;
+    }
+
     try {
       const result: any = await authFetch('/api/transactions/transactions/cancel', {
         method: 'POST',
@@ -1388,6 +1523,23 @@ const App: React.FC = () => {
       </aside>
 
       <div className="app-main">
+        {/* POS-S6-008-T4: Offline / sync status banner */}
+        <OfflineSyncStatusBar
+          isOnline={isOnline}
+          pendingCount={pendingTxnCount}
+          errorCount={errorTxnCount}
+          isSyncing={isSyncing}
+          onViewErrors={() => setIsSyncErrorsOpen(true)}
+        />
+
+        {/* POS-S6-008-T4: Manager Sync Errors modal */}
+        <SyncErrorsModal
+          isOpen={isSyncErrorsOpen}
+          onClose={() => setIsSyncErrorsOpen(false)}
+          erroredTxns={erroredTxns}
+          onQueueChanged={refreshTxnQueueState}
+        />
+
         <header className="topbar">
           <div className="topbar-left">
             <button

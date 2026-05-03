@@ -108,11 +108,11 @@ const POSView: React.FC<POSViewProps> = ({
 
   const closeConfirm = () => setConfirmOpen(false);
 
-  const getImgSrc = (img: any): string | null => {
-    if (!img) return null;
+  const getImgSrc = (img: any): string | undefined => {
+    if (!img) return undefined;
     if (typeof img === 'string' && img.trim() !== '') return img;
     if (img?.src) return img.src;
-    return null;
+    return undefined;
   };
 
   const categoryButtons = useMemo(
