@@ -1,0 +1,257 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_running"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - INVENTORY_SERVICE_URL=http://inventory-service:4002
+      - AUTH_SERVICE_URL=http://auth-service:4001
+      - TRANSACTION_SERVICE_URL=http://transaction-service:4007
+      - REPORTING_SERVICE_URL=http://reporting-service:4004
+      - ROLE_SERVICE_URL=http://role-service:4005
+      - RECEIPT_SERVICE_URL=http://receipt-service:4006
+      - FRONTEND_URL=http://frontend:3000
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+    env_file:
+      - .env
+    depends_on:
+      - auth-service
+      - inventory-service
+      - sales-service
+      - reporting-service
+      - role-service
+      - receipt-service
+      - transaction-service
+      - frontend
+
+  frontend:
+    build:
+      context: ../pos-frontend
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - AUTH_SERVICE_URL=http://auth-service:4001
+      - INVENTORY_SERVICE_URL=http://inventory-service:4002
+      - SALES_SERVICE_URL=http://sales-service:4003
+      - REPORTING_SERVICE_URL=http://reporting-service:4004
+      - ROLE_SERVICE_URL=http://role-service:4005
+      - RECEIPT_SERVICE_URL=http://receipt-service:4006
+      - TRANSACTION_SERVICE_URL=http://transaction-service:4007
+    env_file:
+      - .env
+    depends_on:
+      - auth-service
+      - inventory-service
+      - sales-service
+      - reporting-service
+      - role-service
+      - receipt-service
+      - transaction-service
+
+  auth-service:
+    build:
+      context: ./auth-service
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "4001:4001"
+    environment:
+      - PORT=4001
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+    env_file:
+      - .env
+
+  inventory-service:
+    build:
+      context: ./inventory-service
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "4002:4002"
+    environment:
+      - PORT=4002
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+    env_file:
+      - .env
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  sales-service:
+    build:
+      context: ./sales-service
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "4003:4003"
+    environment:
+      - PORT=4003
+      - INVENTORY_SERVICE_URL=http://inventory-service:4002
+    env_file:
+      - .env
+
+  reporting-service:
+    build:
+      context: ./reporting-service
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "4004:4004"
+    environment:
+      - PORT=4004
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+    env_file:
+      - .env
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  role-service:
+    build:
+      context: ./role-service
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "4005:4005"
+    environment:
+      - PORT=4005
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+    env_file:
+      - .env
+
+  receipt-service:
+    build:
+      context: ./receipt-service
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "4006:4006"
+    environment:
+      - PORT=4006
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+    env_file:
+      - .env
+
+  transaction-service:
+    build:
+      context: ./transaction-service
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "4007:4007"
+    environment:
+      - PORT=4007
+      - INVENTORY_SERVICE_URL=http://inventory-service:4002
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+    env_file:
+      - .env
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  # ── Pact Broker (Contract Testing) ──────────────────────────────────────────
+  # SCRUM 300: Pact Broker for storing and managing consumer-provider contracts
+  # Access the Pact Broker UI at http://localhost:9292
+  # Credentials loaded from environment variables (OWASP compliant)
+  pact-postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_USER=pact
+      - POSTGRES_PASSWORD=${PACT_BROKER_DB_PASSWORD:-pact_pass}
+      - POSTGRES_DB=pact_broker
+    volumes:
+      - pact-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pact -d pact_broker"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  pact-broker:
+    image: pactfoundation/pact-broker:latest
+    ports:
+      - "9292:9292"
+    environment:
+      - PACT_BROKER_DATABASE_URL=postgresql://pact:${PACT_BROKER_DB_PASSWORD:-pact_pass}@pact-postgres:5432/pact_broker
+      - PACT_BROKER_BASIC_AUTH_USERNAME=${PACT_BROKER_USERNAME:-pact_user}
+      - PACT_BROKER_BASIC_AUTH_PASSWORD=${PACT_BROKER_PASSWORD:-pact_pass}
+      - PACT_BROKER_ALLOW_PUBLIC_READ=true
+      - PACT_BROKER_LOG_LEVEL=INFO
+    depends_on:
+      pact-postgres:
+        condition: service_healthy
+
+  # ── InfluxDB (k6 Metrics Storage) ────────────────────────────────────────────
+  # SCRUM 305 & 307: Time-series database for storing k6 load test results
+  influxdb:
+    image: influxdb:1.8-alpine
+    ports:
+      - "8086:8086"
+    environment:
+      - INFLUXDB_DB=k6
+      - INFLUXDB_HTTP_MAX_BODY_SIZE=0
+    volumes:
+      - influxdb-data:/var/lib/influxdb
+    healthcheck:
+      test: ["CMD", "influx", "-execute", "SHOW DATABASES"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Grafana (Load Test Dashboard) ───────────────────────────────────────────
+  # SCRUM 305: Dashboard for visualizing k6 load test results
+  # Access at http://localhost:3001 (admin / admin)
+  grafana:
+    image: grafana/grafana:10.4.0
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+    depends_on:
+      influxdb:
+        condition: service_healthy
+
+volumes:
+  pact-postgres-data:
+  influxdb-data:
+  grafana-data:

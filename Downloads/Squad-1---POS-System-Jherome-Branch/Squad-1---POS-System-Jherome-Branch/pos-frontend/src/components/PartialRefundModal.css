@@ -1,0 +1,253 @@
+/* ── Partial Refund Modal ── */
+
+.refund-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 16px;
+}
+
+.refund-modal {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+    width: 100%;
+    max-width: 560px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Header */
+.refund-modal-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid #e5e7eb;
+    flex-shrink: 0;
+}
+
+.refund-modal-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0 0 4px;
+}
+
+.refund-modal-subtitle {
+    font-size: 0.85rem;
+    color: #64748b;
+    margin: 0;
+}
+
+.refund-close-btn {
+    background: none;
+    border: none;
+    font-size: 1.25rem;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 0 4px;
+    line-height: 1;
+    transition: color 0.15s;
+}
+.refund-close-btn:hover { color: #ef4444; }
+
+/* Scrollable body */
+.refund-modal-body {
+    padding: 16px 24px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* Section label */
+.refund-section-label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 0 0 10px;
+}
+
+/* Item rows */
+.refund-items-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.refund-item-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 12px 14px;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.refund-item-row.selected {
+    background: #f8fafc;
+    border-color: #01a2ad;
+}
+
+.refund-item-row.disabled-row {
+    opacity: 0.45;
+}
+
+.refund-item-checkbox {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    cursor: pointer;
+    accent-color: #01a2ad;
+}
+
+.refund-item-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.refund-item-name {
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: #1e293b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.refund-item-price {
+    font-size: 0.8rem;
+    color: #64748b;
+    margin-top: 2px;
+}
+
+/* Qty control */
+.refund-qty-control {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.refund-qty-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: 1px solid #cbd5e1;
+    background: #fff;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #475569;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+}
+.refund-qty-btn:hover:not(:disabled) { background: #f1f5f9; }
+.refund-qty-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.refund-qty-input {
+    width: 42px;
+    text-align: center;
+    font-size: 0.9rem;
+    font-weight: 600;
+    padding: 4px 2px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    outline: none;
+}
+.refund-qty-input:focus { border-color: #2563eb; }
+
+.refund-item-subtotal {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #1e293b;
+    min-width: 64px;
+    text-align: right;
+    flex-shrink: 0;
+}
+
+/* Summary */
+.refund-summary {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.refund-summary-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.88rem;
+    color: #475569;
+}
+
+.refund-summary-row.total {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #dc2626;
+    padding-top: 8px;
+    border-top: 1px solid #e2e8f0;
+    margin-top: 4px;
+}
+
+/* Footer actions */
+.refund-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 16px 24px;
+    border-top: 1px solid #e5e7eb;
+    flex-shrink: 0;
+}
+
+.refund-cancel-btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    background: #fff;
+    color: #374151;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.refund-cancel-btn:hover { background: #f9fafb; }
+
+.refund-process-btn {
+    padding: 10px 22px;
+    border-radius: 8px;
+    border: none;
+    background: #01a2ad;
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.refund-process-btn:hover:not(:disabled) { background: #0496a1; }
+.refund-process-btn:disabled {
+    background: #fca5a5;
+    cursor: not-allowed;
+}
+
+.refund-no-items {
+    text-align: center;
+    color: #94a3b8;
+    font-size: 0.9rem;
+    padding: 12px 0;
+}
