@@ -6,3 +6,7 @@ coverage
 *.log
 .DS_Store
 .next
+
+# Android
+local.properties
+pos-android/local.properties
