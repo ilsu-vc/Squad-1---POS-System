@@ -2,19 +2,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../supabaseClient';
 import './InventoryEditing.css';
 
-interface InventoryEditingProps {
-  isOpen: boolean;
-  onClose: () => void;
-  product: any;
-  onUpdated?: () => Promise<void> | void;
-}
-
 const InventoryEditing = ({
   isOpen,
   onClose,
   product,
   onUpdated,
-}: InventoryEditingProps) => {
+}) => {
   const [adjustmentType, setAdjustmentType] = useState('add');
   const [stockAmount, setStockAmount] = useState('');
   const [threshold, setThreshold] = useState('');
@@ -103,7 +96,7 @@ const InventoryEditing = ({
       }
 
       onClose()
-    } catch (err: any) {
+    } catch (err) {
       setError(err.message || 'Failed to update inventory.');
     } finally {
       setSaving(false);

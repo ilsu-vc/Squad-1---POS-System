@@ -1,5 +1,12 @@
 'use client';
 
+if (typeof window !== 'undefined') {
+  window.onerror = function(message, source, lineno, colno, error) {
+    alert('App Crashed: ' + message + '\nAt: ' + source + ':' + lineno);
+    return false;
+  };
+}
+
 import { useEffect, useMemo, useState, useRef } from 'react';
 import './App.css';
 import { supabase } from './supabaseClient';
@@ -63,19 +70,12 @@ import { requirePermission } from './utils/permissionMiddleware';
 import { logUserActivity } from './utils/activityLogger';
 import { productApi } from './services/productApi';
 import { receiptApi } from './services/receiptApi';
+import { discountApi, DiscountValidationResult } from './services/discountApi';
 import { salesApi } from './services/salesApi';
 import { shiftApi } from './services/shiftApi';
 import { authFetch } from './utils/authFetch';
-import {
-  startOfflineSync, stopOfflineSync,
-  enqueueTxn, syncTxnQueue, startTxnSync, stopTxnSync,
-  getQueuedTxns, getTxnQueueLength, getTxnErrorCount,
-  TXN_QUEUE_UPDATED_EVENT, QueuedTransaction,
-} from './utils/offlineQueue';
+import { startOfflineSync, stopOfflineSync, enqueueAction } from './utils/offlineQueue';
 import { useInactivityLogout } from './hooks/useInactivityLogout';
-import { useNetworkStatus } from './hooks/useNetworkStatus';
-import OfflineSyncStatusBar from './components/OfflineSyncStatusBar';
-import SyncErrorsModal from './components/SyncErrorsModal';
 
 interface CartItem extends Product {
   quantity: number;
@@ -102,6 +102,10 @@ const App: React.FC = () => {
   const [dbTransactionId, setDbTransactionId] = useState<string | null>(null);
   const [dbReceiptNumber, setDbReceiptNumber] = useState<string | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [discountCode, setDiscountCode] = useState('');
+  const [discountResult, setDiscountResult] = useState<DiscountValidationResult | null>(null);
+  const [isDiscountValidating, setIsDiscountValidating] = useState(false);
+  const [discountError, setDiscountError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [historySearch, setHistorySearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
@@ -151,24 +155,6 @@ const App: React.FC = () => {
   const [transferRequests, setTransferRequests] = useState<any[]>([]);
   const [isCompletingTransaction, setIsCompletingTransaction] = useState(false);
 
-  // ── POS-S6-008-T1: Network status ──
-  const { isOnline, isOffline } = useNetworkStatus();
-
-  // ── POS-S6-008-T3/T4: Offline transaction queue state ──
-  const [pendingTxnCount, setPendingTxnCount] = useState(0);
-  const [errorTxnCount, setErrorTxnCount] = useState(0);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [isSyncErrorsOpen, setIsSyncErrorsOpen] = useState(false);
-  const [erroredTxns, setErroredTxns] = useState<QueuedTransaction[]>([]);
-
-  /** Re-read the txn queue from localStorage and update UI state */
-  const refreshTxnQueueState = () => {
-    const all = getQueuedTxns();
-    setPendingTxnCount(getTxnQueueLength());
-    setErrorTxnCount(getTxnErrorCount());
-    setErroredTxns(all.filter((t) => t.errorFlag));
-  };
-
   const [stockAlert, setStockAlert] = useState<{
     isOpen: boolean;
     type: 'no-stock' | 'low-stock';
@@ -199,6 +185,11 @@ const App: React.FC = () => {
     'First Aid': firstAidImg.src,
     'Health & Wellness': healthWellnessImg.src,
     'Baby Care': babyCareImg.src,
+    'Medicine': medicineImg.src,
+    'Vitamins': vitaminsImg.src,
+    'Supplements': vitaminsImg.src,
+    'Hygiene': personalCareImg.src,
+    'Emergency': firstAidImg.src,
   };
 
   const refreshInventoryData = async () => {
@@ -213,10 +204,18 @@ const App: React.FC = () => {
       const productRows = result.products || [];
       const transferRows = result.transfers || [];
 
-      const productsWithImages = productRows.map((product: any) => ({
-        ...product,
-        image: categoryImageMap[product.category] || medicineImg.src,
-      }));
+      const productsWithImages = productRows.map((product: any) => {
+        // Robust mapping: try exact match, then case-insensitive match
+        const cat = product.category || 'Medicine';
+        const img = categoryImageMap[cat] || 
+                    categoryImageMap[Object.keys(categoryImageMap).find(k => k.toLowerCase() === cat.toLowerCase()) || ''] || 
+                    medicineImg.src;
+        
+        return {
+          ...product,
+          image: img,
+        };
+      });
 
       setProducts(productsWithImages);
       setTransferRequests(transferRows);
@@ -358,19 +357,29 @@ const App: React.FC = () => {
   }, [isUserMenuOpen]);
 
   const loadSession = async () => {
+    console.info('[Session] Starting session load...');
+    const timeoutId = setTimeout(() => {
+      console.warn('[Session] Session load timed out after 10s.');
+      setAuthError('Connection timed out. Please check your network.');
+      setAuthLoading(false);
+    }, 10000);
+
     try {
       setAuthLoading(true);
       setAuthError('');
 
+      console.info('[Session] Checking Supabase session...');
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
       if (sessionError) throw sessionError;
 
       const session = sessionData.session;
       if (!session?.user) {
+        console.info('[Session] No active session found.');
         setAuthError('Auth session missing!');
         return;
       }
 
+      console.info(`[Session] Session found for user ${session.user.id}. Fetching profile...`);
       const profileResult: any = await authFetch(`/api/auth/profile/${session.user.id}`).then((r) => r.json());
       if (profileResult.error || profileResult.statusCode >= 400) {
         throw new Error(profileResult.message || profileResult.error || 'Internal API Error');
@@ -378,19 +387,23 @@ const App: React.FC = () => {
 
       const data = profileResult.profile;
       if (!data) {
+        console.warn('[Session] Profile payload missing from API response.');
         setAuthError('Profile payload missing.');
         return;
       }
       if (data.is_active === false) {
+        console.warn('[Session] User account is inactive.');
         setAuthError('This account is inactive.');
         return;
       }
 
+      console.info('[Session] Profile loaded successfully.');
       setProfile(data as UserProfile);
     } catch (err: any) {
-      console.error(err);
+      console.error('[Session] Critical error during load:', err);
       setAuthError(err.message || 'Failed to load user profile.');
     } finally {
+      clearTimeout(timeoutId);
       setAuthLoading(false);
     }
   };
@@ -444,13 +457,11 @@ const App: React.FC = () => {
 
       // POS-S4-009-T3: Start offline queue sync on login
       startOfflineSync();
-      // POS-S6-008-T3: Start transaction queue sync on login
-      startTxnSync();
-      refreshTxnQueueState();
-
       // ── Sync transactions from DB on every login/restart ──
       salesApi.fetchTransactions().then((result: any) => {
         if (result?.transactions && Array.isArray(result.transactions)) {
+          // Robust persistence: Only overwrite if we got data or if local was empty
+          // This prevents "losing" history if the API is momentarily empty or failing
           setTransactions(prev => {
             if (result.transactions.length === 0 && prev.length > 0) {
               console.warn('[Sync] API returned empty transactions list, but local history has data. Retaining local history to prevent data loss.');
@@ -468,55 +479,8 @@ const App: React.FC = () => {
       setLatestHandover(null);
       // POS-S4-009-T3: Stop offline queue sync on logout
       stopOfflineSync();
-      // POS-S6-008-T3: Stop transaction queue sync on logout
-      stopTxnSync();
     }
   }, [profile?.id]);
-
-  // ── POS-S6-008-T3: Listen for queue updates and auto-sync when back online ──
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const handleQueueUpdated = () => refreshTxnQueueState();
-    window.addEventListener(TXN_QUEUE_UPDATED_EVENT, handleQueueUpdated);
-
-    // Option A: patch history when a txn syncs and gets a real OR#
-    const handleSyncedPatch = (e: Event) => {
-      const { localId, serverTxnId, receiptNumber } = (e as CustomEvent).detail;
-      setTransactions((prev) => {
-        const updated = prev.map((t) =>
-          t.id === localId
-            ? { ...t, id: serverTxnId, receiptNumber: receiptNumber ?? t.receiptNumber, isOffline: false }
-            : t
-        );
-        localStorage.setItem('pharma_transactions', JSON.stringify(updated));
-        return updated;
-      });
-      // Stock was decremented server-side on sync; refresh local product stock display.
-      refreshInventoryData();
-    };
-    window.addEventListener('txnSyncedPatch', handleSyncedPatch);
-
-    return () => {
-      window.removeEventListener(TXN_QUEUE_UPDATED_EVENT, handleQueueUpdated);
-      window.removeEventListener('txnSyncedPatch', handleSyncedPatch);
-    };
-  }, []);
-
-  // Auto-trigger sync when coming back online
-  useEffect(() => {
-    if (isOnline && pendingTxnCount > 0) {
-      setIsSyncing(true);
-      syncTxnQueue().finally(() => {
-        setIsSyncing(false);
-        refreshTxnQueueState();
-        // Offline transactions have now been posted to the server, which
-        // decrements inventory. Refresh product stock counts so the POS
-        // grid reflects the real remaining quantities immediately.
-        refreshInventoryData();
-      });
-    }
-  }, [isOnline]);
 
   useEffect(() => {
     if (!activeShift) return;
@@ -545,7 +509,11 @@ const App: React.FC = () => {
   const subtotal = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
   const tax = Math.round(subtotal * 0.12 * 100) / 100;
   const total = Math.round((subtotal + tax) * 100) / 100;
-  const changeAmount = cashReceived ? Math.max(0, parseFloat(cashReceived) - total) : 0;
+  const discountAmount = discountResult?.valid && discountResult.discountPercent
+    ? Math.round((subtotal * (discountResult.discountPercent / 100)) * 100) / 100
+    : 0;
+  const finalTotal = Math.max(0, Math.round((subtotal + tax - discountAmount) * 100) / 100);
+  const changeAmount = cashReceived ? Math.max(0, parseFloat(cashReceived) - finalTotal) : 0;
 
   const { heldTransactions, holdCart, removeHold, resumeHold } = useTransactionHold();
 
@@ -961,29 +929,31 @@ const App: React.FC = () => {
       return;
     }
     if (!ensureActiveShift()) return;
-
-    // POS-S6-008-T3: Offline mode — skip /initiate, generate a local placeholder ID
-    if (isOffline) {
-      const localId = `LOCAL-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
-      setDbTransactionId(localId);
-      setDbReceiptNumber(null);
-      setIsPaymentModalOpen(true);
-      return;
-    }
-
     try {
-      const result: any = await authFetch('/api/transactions/transactions/initiate', { method: 'POST' }).then((r) => r.json());
+      const res = await authFetch('/api/transactions/transactions/initiate', { method: 'POST' });
+      const result = await res.json();
+      
       if (result.error) throw new Error(result.error);
       setDbTransactionId(result.transactionId);
       setDbReceiptNumber(null);
       setIsPaymentModalOpen(true);
     } catch (err: any) {
-      // Network may have just dropped — fall back to local ID
-      console.warn('[POS] initiate failed, going offline mode:', err.message);
-      const localId = `LOCAL-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
-      setDbTransactionId(localId);
-      setDbReceiptNumber(null);
-      setIsPaymentModalOpen(true);
+      console.warn('[Offline] Failed to initiate transaction, checking connectivity...', err);
+      
+      // POS-S4-009-T3: Fallback to local transaction ID if offline
+      if (!navigator.onLine || err.message === 'Failed to fetch' || err.name === 'TypeError') {
+        const localId = `LOCAL-TXN-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+        console.info(`[Offline] Using local transaction ID: ${localId}`);
+        setDbTransactionId(localId);
+        setDbReceiptNumber(null);
+        setIsPaymentModalOpen(true);
+      } else {
+        setAppAlert({
+          isOpen: true,
+          title: 'Error',
+          message: err.message || 'Failed to create transaction.'
+        });
+      }
     }
   };
 
@@ -1031,141 +1001,99 @@ const App: React.FC = () => {
     const effectivePaymentMethod = isSplit ? 'Split' : paymentMethod ?? 'cash';
 
     setIsCompletingTransaction(true);
-
-    const itemsPayload = cart.map((item) => ({
-      product_id: item.id,
-      name: item.name,
-      category: item.category ?? null,
-      unit_price: Number(item.price),
-      quantity: Number(item.quantity),
-    }));
-    const itemsCount = cart.reduce((sum, item) => sum + item.quantity, 0);
-    const amountPaidFromSplit = isSplit ? splitPayments!.reduce((s: number, e: any) => s + (parseFloat(e.amount) || 0), 0) : undefined;
-    const finalAmountPaid = isSplit ? amountPaidFromSplit : Number(details.tendered ?? finalTotal ?? total ?? 0);
-    const isLocalTxn = dbTransactionId?.startsWith('LOCAL-');
-
-    // ── POS-S6-008-T3/T5: Offline path ──────────────────────────────────────
-    if (isOffline || isLocalTxn) {
-      try {
-        const localId = dbTransactionId!;
-        const pendingReceiptNo = `PENDING-${localId.slice(-6)}`;
-
-        enqueueTxn({
-          localId,
-          vat: Number(tax ?? 0),
-          subtotal: Number(subtotal ?? 0),
-          totalAmount: Number(finalTotal ?? total ?? 0),
-          amountPaid: finalAmountPaid,
-          paymentMethod: effectivePaymentMethod,
-          itemsCount,
-          items: itemsPayload,
-          discountType: normalizedDiscountType,
-          discountAmount: Number(discountAmount ?? 0),
-          notes,
-          tags,
-        });
-        refreshTxnQueueState();
-
-        const now = new Date();
-        const h = now.getHours();
-        const formattedHour = h >= 12 ? (h === 12 ? '12PM' : `${h - 12}PM`) : h === 0 ? '12AM' : `${h}AM`;
-        const methodLabelOffline = isSplit
-          ? splitPayments!.map((e: any) => `${e.method.charAt(0).toUpperCase() + e.method.slice(1)} ₱${parseFloat(e.amount).toFixed(2)}`).join(' + ')
-          : ({ cash: 'Cash Payment', card: 'Credit/Debit Card', mobile: 'Mobile Payment', Split: 'Split Payment' } as any)[effectivePaymentMethod] ?? effectivePaymentMethod;
-
-        const offlineTxn: any = {
-          id: localId,
-          receiptNumber: pendingReceiptNo,
-          date: now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-          time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-          hour: formattedHour,
-          amount: `₱${Number(finalTotal).toFixed(2)}`,
-          rawAmount: Number(finalTotal),
-          method: methodLabelOffline ?? 'Unknown',
-          itemsCount,
-          items: cart.map((item) => ({ name: item.name, qty: item.quantity, price: item.price, category: item.category })),
-          subtotal,
-          tax,
-          customerName,
-          discountType: normalizedDiscountType,
-          discountAmount,
-          notes,
-          tags,
-          isOffline: true,
-        };
-
-        const updated = [offlineTxn, ...transactions];
-        setTransactions(updated);
-        localStorage.setItem('pharma_transactions', JSON.stringify(updated));
-
-        await receiptApi.printReceipt({
-          receiptNumber: pendingReceiptNo,
-          items: offlineTxn.items.map((i: any) => ({ name: i.name, quantity: i.qty, price: Number(i.price) })),
-          vatable: subtotal,
-          vatAmount: tax,
-          total: Number(finalTotal),
-          splitPayments: isSplit ? splitPayments! : undefined,
-        });
-
-        setDbReceiptNumber(pendingReceiptNo);
-        setApiChangeAmount(Math.max(0, (finalAmountPaid ?? 0) - Number(finalTotal)));
-        setPaymentStatus('success');
-        setLastCompletedTransaction({
-          id: localId,
-          receiptNumber: pendingReceiptNo,
-          items: offlineTxn.items.map((i: any) => ({ name: i.name, qty: i.qty })),
-          date: offlineTxn.date,
-          time: offlineTxn.time,
-        });
-        // Clear the cart now — all item data is already captured in offlineTxn
-        // and lastCompletedTransaction, so the cashier can immediately start
-        // the next transaction once they close this success screen.
-        setCart([]);
-      } finally {
-        setIsCompletingTransaction(false);
-      }
-      return;
-    }
-
-    // ── Online path (unchanged) ──────────────────────────────────────────────
     try {
-      const saleResult: any = await authFetch('/api/transactions/transactions/complete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          transactionId: dbTransactionId,
-          vat: Number(tax ?? 0),
-          subtotal: Number(subtotal ?? 0),
-          totalAmount: Number(finalTotal ?? total ?? 0),
-          amountPaid: finalAmountPaid,
-          paymentMethod: effectivePaymentMethod,
-          itemsCount,
-          items: itemsPayload,
-          discountType: normalizedDiscountType,
-          discountAmount: Number(discountAmount ?? 0),
-          notes,
-          tags,
-        }),
-      }).then((r) => r.json());
+      const itemsPayload = cart.map((item) => ({
+        product_id: item.id,
+        name: item.name,
+        category: item.category ?? null,
+        unit_price: Number(item.price),
+        quantity: Number(item.quantity),
+      }));
+      const itemsCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
-      if (saleResult.error) throw new Error(saleResult.error);
+      const amountPaidFromSplit = isSplit ? splitPayments!.reduce((s: number, e: any) => s + (parseFloat(e.amount) || 0), 0) : undefined;
+      const finalAmountPaid = isSplit ? amountPaidFromSplit : Number(details.tendered ?? finalTotal ?? total ?? 0);
+
+      const salePayload = {
+        transactionId: dbTransactionId,
+        vat: Number(tax ?? 0),
+        subtotal: Number(subtotal ?? 0),
+        totalAmount: Number(finalTotal ?? total ?? 0),
+        amountPaid: finalAmountPaid,
+        paymentMethod: effectivePaymentMethod,
+        itemsCount,
+        items: itemsPayload,
+        discountType: normalizedDiscountType,
+        discountAmount: Number(discountAmount ?? 0),
+        notes,
+        tags,
+      };
+
+      let saleResult: any;
+      let isOfflineSale = false;
+
+      try {
+        const res = await authFetch('/api/transactions/transactions/complete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(salePayload),
+        });
+        saleResult = await res.json();
+        
+        if (saleResult.error) throw new Error(saleResult.error);
+      } catch (err: any) {
+        // POS-S4-009-T3: Handle offline sale by queuing
+        console.warn('[Offline] Sale API failed, checking connectivity...', err);
+        
+        // If it's a network error or the server is unavailable, queue it
+        if (!navigator.onLine || err.message === 'Failed to fetch' || err.name === 'TypeError') {
+          console.info('[Offline] Network issues detected. Queuing sale for later sync.');
+          enqueueAction({
+            type: 'sale',
+            url: '/api/transactions/transactions/complete',
+            method: 'POST',
+            body: salePayload,
+          });
+          
+          isOfflineSale = true;
+          // Generate a mock receipt number for offline mode
+          saleResult = {
+            receiptNumber: `LOCAL-${dbTransactionId?.split('-').pop() || Date.now().toString().slice(-6)}`,
+            changeAmount: finalAmountPaid - finalTotal,
+          };
+        } else {
+          // Re-throw if it's a real API error (like 400 Bad Request)
+          throw err;
+        }
+      }
+
       const receiptNo = saleResult.receiptNumber ?? null;
       setDbReceiptNumber(receiptNo);
       setApiChangeAmount(saleResult.changeAmount ?? 0);
 
-      try {
-        const receiptData = await authFetch(`/api/transactions/transactions/${dbTransactionId}/receipt`).then((r) => r.json());
-        console.log('Fetched receipt data:', receiptData);
-      } catch (receiptErr) {
-        console.warn('Failed to fetch receipt details:', receiptErr);
+      // Fetch the actual receipt data immediately (Skip if offline)
+      if (!isOfflineSale) {
+        try {
+          const receiptData = await authFetch(`/api/transactions/transactions/${dbTransactionId}/receipt`).then((r) => r.json());
+          console.log('Fetched receipt data:', receiptData);
+        } catch (receiptErr) {
+          console.warn('Failed to fetch receipt details:', receiptErr);
+        }
       }
 
       const now = new Date();
       const h = now.getHours();
       const formattedHour = h >= 12 ? (h === 12 ? '12PM' : `${h - 12}PM`) : h === 0 ? '12AM' : `${h}AM`;
-      const methodMap: Record<string, string> = { cash: 'Cash Payment', card: 'Credit/Debit Card', mobile: 'Mobile Payment', Split: 'Split Payment' };
+      const methodMap: Record<string, string> = {
+        cash: 'Cash Payment',
+        card: 'Credit/Debit Card',
+        mobile: 'Mobile Payment',
+        Split: 'Split Payment',
+      };
       const methodLabel = isSplit
-        ? splitPayments!.map((e: any) => `${e.method.charAt(0).toUpperCase() + e.method.slice(1)} ₱${parseFloat(e.amount).toFixed(2)}`).join(' + ')
+        ? splitPayments!
+            .map((e: any) => `${e.method.charAt(0).toUpperCase() + e.method.slice(1)} ₱${parseFloat(e.amount).toFixed(2)}`)
+            .join(' + ')
         : methodMap[paymentMethod!] ?? paymentMethod;
 
       const newTransaction: Transaction = {
@@ -1174,13 +1102,23 @@ const App: React.FC = () => {
         date: now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
         time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
         hour: formattedHour,
-        amount: `₱${Number(finalTotal).toFixed(2)}`,
-        rawAmount: Number(finalTotal),
+        amount: `₱${finalTotal.toFixed(2)}`,
+        rawAmount: finalTotal,
         method: methodLabel ?? 'Unknown',
         itemsCount,
-        items: cart.map((item) => ({ name: item.name, qty: item.quantity, price: item.price, category: item.category })),
-        subtotal, tax, customerName,
-        discountType: normalizedDiscountType, discountAmount, notes, tags,
+        items: cart.map((item) => ({
+          name: item.name,
+          qty: item.quantity,
+          price: item.price,
+          category: item.category,
+        })),
+        subtotal,
+        tax,
+        customerName,
+        discountType: normalizedDiscountType,
+        discountAmount,
+        notes,
+        tags,
       };
 
       const updated = [newTransaction, ...transactions];
@@ -1188,28 +1126,77 @@ const App: React.FC = () => {
       localStorage.setItem('pharma_transactions', JSON.stringify(updated));
       setPaymentStatus('success');
       setLastCompletedTransaction({
-        id: dbTransactionId, receiptNumber: receiptNo,
+        id: dbTransactionId,
+        receiptNumber: receiptNo,
         items: newTransaction.items.map((i) => ({ name: i.name, qty: i.qty })),
-        date: newTransaction.date, time: newTransaction.time,
+        date: newTransaction.date,
+        time: newTransaction.time,
       });
 
       const activityMethodLabel = isSplit
         ? splitPayments!.map((e: any) => `${e.method} ₱${parseFloat(e.amount).toFixed(2)}`).join(' + ')
         : effectivePaymentMethod;
-      await logUserActivity({ profile, actionType: 'SALE', actionDetails: `Completed sale worth ₱${Number(finalTotal).toFixed(2)} with ${activityMethodLabel} payment`, entityType: 'transaction', entityId: dbTransactionId });
-      if (discountType !== 'none' && Number(discountAmount) > 0) {
-        await logUserActivity({ profile, actionType: 'DISCOUNT_APPLIED', actionDetails: `Applied ${normalizedDiscountType} discount worth ₱${Number(discountAmount).toFixed(2)} on sale ${dbTransactionId}`, entityType: 'transaction', entityId: dbTransactionId });
+
+      // Log activity (Only if online, otherwise queueing activity might be complex, 
+      // for now we prioritize the SALE itself)
+      if (!isOfflineSale) {
+        await logUserActivity({
+          profile,
+          actionType: 'SALE',
+          actionDetails: `Completed sale worth ₱${finalTotal.toFixed(2)} with ${activityMethodLabel} payment`,
+          entityType: 'transaction',
+          entityId: dbTransactionId,
+        });
+
+        if (discountType !== 'none' && Number(discountAmount) > 0) {
+          await logUserActivity({
+            profile,
+            actionType: 'DISCOUNT_APPLIED',
+            actionDetails: `Applied ${normalizedDiscountType} discount worth ₱${Number(discountAmount).toFixed(2)} on sale ${dbTransactionId}`,
+            entityType: 'transaction',
+            entityId: dbTransactionId,
+          });
+        }
       }
-      await receiptApi.printReceipt({
-        receiptNumber: newTransaction.receiptNumber ?? undefined,
-        items: newTransaction.items.map(i => ({ name: i.name, quantity: i.qty, price: Number(i.price) })),
-        vatable: newTransaction.subtotal, vatAmount: newTransaction.tax, total: newTransaction.rawAmount,
-        splitPayments: isSplit ? splitPayments! : undefined,
-      });
-      await refreshInventoryData();
+
+      // Print receipt (Handle printer failure gracefully if offline)
+      try {
+        await receiptApi.printReceipt({
+          receiptNumber: newTransaction.receiptNumber ?? undefined,
+          items: newTransaction.items.map(i => ({
+            name: i.name,
+            quantity: i.qty,
+            price: Number(i.price)
+          })),
+          vatable: newTransaction.subtotal,
+          vatAmount: newTransaction.tax,
+          total: newTransaction.rawAmount,
+          splitPayments: isSplit ? splitPayments! : undefined,
+        });
+      } catch (printErr) {
+        console.warn('[Offline] Printer unavailable, skipping print.', printErr);
+      }
+
+      if (!isOfflineSale) {
+        try {
+          await refreshInventoryData();
+        } catch (invErr) {
+          console.warn('Failed to refresh inventory data:', invErr);
+        }
+      } else {
+        setAppAlert({
+          isOpen: true,
+          title: 'Offline Mode Active',
+          message: 'Sale saved locally and will sync when internet is restored. Receipt marked as LOCAL.',
+        });
+      }
     } catch (err: any) {
       console.error(err);
-      setAppAlert({ isOpen: true, title: 'Error', message: err.message || 'Failed to complete payment / generate receipt.' });
+      setAppAlert({
+        isOpen: true,
+        title: 'Error',
+        message: err.message || 'Failed to complete payment / generate receipt.'
+      });
     } finally {
       setIsCompletingTransaction(false);
     }
@@ -1220,35 +1207,40 @@ const App: React.FC = () => {
       setIsPaymentModalOpen(false);
       return;
     }
-
-    // Offline path: LOCAL- IDs are never persisted on the server — just
-    // reset local state. No API call needed (and it would fail anyway).
-    if (dbTransactionId.startsWith('LOCAL-')) {
-      setPaymentStatus('idle');
-      setDbReceiptNumber(null);
-      setDbTransactionId(null);
-      setIsPaymentModalOpen(false);
-      return;
-    }
-
     try {
-      const result: any = await authFetch('/api/transactions/transactions/cancel', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ transactionId: dbTransactionId }),
-      }).then((r) => r.json());
-      if (result.error) throw new Error(result.error);
+      // If it's a local transaction, we don't need to notify the server
+      if (dbTransactionId.startsWith('LOCAL-TXN-')) {
+        console.info('[Offline] Cancelling local transaction.');
+      } else {
+        const res = await authFetch('/api/transactions/transactions/cancel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ transactionId: dbTransactionId }),
+        });
+        const result = await res.json();
+        if (result.error) throw new Error(result.error);
+      }
+      
       setPaymentStatus('idle');
       setDbReceiptNumber(null);
       setDbTransactionId(null);
       setIsPaymentModalOpen(false);
     } catch (err: any) {
-      console.error(err);
-      setAppAlert({
-        isOpen: true,
-        title: 'Error',
-        message: err.message || 'Failed to cancel transaction.'
-      });
+      console.warn('[Offline] Failed to cancel transaction on server, checking connectivity...', err);
+      
+      if (!navigator.onLine || err.message === 'Failed to fetch' || err.name === 'TypeError') {
+        // Just clear locally if offline
+        setPaymentStatus('idle');
+        setDbReceiptNumber(null);
+        setDbTransactionId(null);
+        setIsPaymentModalOpen(false);
+      } else {
+        setAppAlert({
+          isOpen: true,
+          title: 'Error',
+          message: err.message || 'Failed to cancel transaction.'
+        });
+      }
     }
   };
 
@@ -1523,23 +1515,6 @@ const App: React.FC = () => {
       </aside>
 
       <div className="app-main">
-        {/* POS-S6-008-T4: Offline / sync status banner */}
-        <OfflineSyncStatusBar
-          isOnline={isOnline}
-          pendingCount={pendingTxnCount}
-          errorCount={errorTxnCount}
-          isSyncing={isSyncing}
-          onViewErrors={() => setIsSyncErrorsOpen(true)}
-        />
-
-        {/* POS-S6-008-T4: Manager Sync Errors modal */}
-        <SyncErrorsModal
-          isOpen={isSyncErrorsOpen}
-          onClose={() => setIsSyncErrorsOpen(false)}
-          erroredTxns={erroredTxns}
-          onQueueChanged={refreshTxnQueueState}
-        />
-
         <header className="topbar">
           <div className="topbar-left">
             <button
@@ -1712,6 +1687,25 @@ const App: React.FC = () => {
               subtotal={subtotal}
               tax={tax}
               total={total}
+              finalTotal={finalTotal}
+              discountCode={discountCode}
+              setDiscountCode={setDiscountCode}
+              discountResult={discountResult}
+              discountError={discountError}
+              isDiscountValidating={isDiscountValidating}
+              validateDiscountCode={async () => {
+                setDiscountError(null);
+                setIsDiscountValidating(true);
+                const result = await discountApi.validateDiscountCode(discountCode);
+                setDiscountResult(result);
+                setIsDiscountValidating(false);
+                if (!result.valid) setDiscountError(result.error || 'Invalid discount code.');
+              }}
+              resetDiscount={() => {
+                setDiscountCode('');
+                setDiscountResult(null);
+                setDiscountError(null);
+              }}
               handleProceedToPayment={handleProceedToPayment}
               onHoldCart={handleHoldCart}
               onViewHeld={() => setIsHeldModalOpen(true)}
@@ -1723,7 +1717,7 @@ const App: React.FC = () => {
 
           <PaymentModal
             isOpen={isPaymentModalOpen}
-            total={total}
+            total={finalTotal}
             paymentMethod={paymentMethod}
             setPaymentMethod={setPaymentMethod}
             cashReceived={cashReceived}
@@ -1740,6 +1734,8 @@ const App: React.FC = () => {
             apiChangeAmount={apiChangeAmount}
             isSubmitting={isCompletingTransaction}
             onOpenGiftReceipt={() => {setIsGiftReceiptOpen(true)}}
+            discountAmount={discountAmount}
+            discountType={discountResult?.discountType ?? 'none'}
           />
 
           <ReprintModal

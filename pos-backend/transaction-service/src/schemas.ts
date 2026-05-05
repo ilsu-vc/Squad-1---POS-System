@@ -22,7 +22,7 @@ export const CreateTransactionSchema = z.object({
 });
 
 export const CompleteTransactionSchema = z.object({
-  transactionId: z.string().uuid('Invalid transactionId'),
+  transactionId: z.string().min(1, 'Invalid transactionId'),
   vat: z.number().min(0).max(1_000_000).optional(),
   subtotal: z.number().min(0).max(10_000_000).optional(),
   totalAmount: z.number().min(0).max(10_000_000),
@@ -37,7 +37,7 @@ export const CompleteTransactionSchema = z.object({
 });
 
 export const CancelTransactionSchema = z.object({
-  transactionId: z.string().uuid('Invalid transactionId'),
+  transactionId: z.string().min(1, 'Invalid transactionId'),
 });
 
 export const UpdateNotesSchema = z.object({

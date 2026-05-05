@@ -298,10 +298,20 @@ export class TransactionController {
   async completeTransaction(@Body() body: any) {
     const { transactionId, vat, subtotal, totalAmount, amountPaid, paymentMethod, itemsCount, items, discountType, discountAmount, notes, tags } = body;
     const client = this.supabase.getClient();
+
+    // POS-S4-009-T3: Handle offline local IDs by creating a new transaction record
+    let effectiveTxId = transactionId;
+    if (transactionId && (transactionId.startsWith('LOCAL-TXN-') || transactionId.startsWith('oq_'))) {
+      const { data: newTx, error: createErr } = await client.from('transactions').insert({ status: 'pending' }).select('id').single();
+      if (createErr) throw new InternalServerErrorException(`Failed to create replacement for offline transaction: ${createErr.message}`);
+      effectiveTxId = newTx.id;
+      console.log(`[Offline Sync] Replaced local ID ${transactionId} with database ID ${effectiveTxId}`);
+    }
+
     const { data: receiptRows, error: rpcErr } = await client.rpc(
       'confirm_payment_and_issue_receipt',
       {
-        p_transaction_id: transactionId, p_vat: Number(vat ?? 0), p_subtotal: Number(subtotal ?? 0),
+        p_transaction_id: effectiveTxId, p_vat: Number(vat ?? 0), p_subtotal: Number(subtotal ?? 0),
         p_total_amount: Number(totalAmount ?? 0), p_payment_method: paymentMethod, p_items_count: itemsCount,
         p_items: items, p_discount_type: discountType || 'None', p_discount_amount: Number(discountAmount ?? 0),
       }
@@ -312,16 +322,16 @@ export class TransactionController {
     const receiptNumber = receipt?.o_receipt_number ?? null;
 
     if (notes !== undefined || tags !== undefined) {
-      await client.from('transactions').update({ notes, tags }).eq('id', transactionId);
+      await client.from('transactions').update({ notes, tags }).eq('id', effectiveTxId);
     }
     
     await this.txService.decrementStock(items);
     this.rabbitmq.publishTransactionCompleted({
-      transactionId, receiptNumber, totalAmount, paymentMethod, itemsCount, items, completedAt: new Date().toISOString(),
+      transactionId: effectiveTxId, receiptNumber, totalAmount, paymentMethod, itemsCount, items, completedAt: new Date().toISOString(),
     });
 
     const changeAmount = amountPaid !== undefined ? Math.max(0, amountPaid - Number(totalAmount ?? 0)) : 0;
-    return { receiptNumber, transactionId, changeAmount };
+    return { receiptNumber, transactionId: effectiveTxId, changeAmount };
   }
 
   @Post('cancel')

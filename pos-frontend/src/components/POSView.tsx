@@ -6,8 +6,10 @@ import searchIcon from '../assets/images/search_icon.png';
 import deleteIcon from '../assets/images/delete_icon.png';
 import cartIcon from '../assets/images/cart.png';
 import StockAlert from './StockAlert';
+import ScannedItemRow from './ScannedItemRow';
 import { formatCurrency } from '../utils/numberformatters';
 import { productApi } from '../services/productApi';
+import { DiscountValidationResult } from '../services/discountApi';
 
 interface CartItem extends Product {
   quantity: number;
@@ -30,6 +32,14 @@ interface POSViewProps {
   subtotal: number;
   tax: number;
   total: number;
+  finalTotal: number;
+  discountCode: string;
+  setDiscountCode: (value: string) => void;
+  discountResult: DiscountValidationResult | null;
+  discountError: string | null;
+  isDiscountValidating: boolean;
+  validateDiscountCode: () => Promise<void>;
+  resetDiscount: () => void;
   handleProceedToPayment: () => void;
   onHoldCart: () => void;
   onViewHeld: () => void;
@@ -59,6 +69,14 @@ const POSView: React.FC<POSViewProps> = ({
   subtotal,
   tax,
   total,
+  finalTotal,
+  discountCode,
+  setDiscountCode,
+  discountResult,
+  discountError,
+  isDiscountValidating,
+  validateDiscountCode,
+  resetDiscount,
   handleProceedToPayment,
   onHoldCart,
   onViewHeld,
@@ -72,6 +90,8 @@ const POSView: React.FC<POSViewProps> = ({
   const [onConfirm, setOnConfirm] = useState<() => void>(() => () => {});
   const [showCategoryPage, setShowCategoryPage] = useState(true);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [scanInput, setScanInput] = useState('');
+  const [scanMessage, setScanMessage] = useState<string | null>(null);
 
   // ── T1: Debounced search state ──
   const [searchResults, setSearchResults] = useState<any[] | null>(null);
@@ -108,11 +128,11 @@ const POSView: React.FC<POSViewProps> = ({
 
   const closeConfirm = () => setConfirmOpen(false);
 
-  const getImgSrc = (img: any): string | undefined => {
-    if (!img) return undefined;
+  const getImgSrc = (img: any): string | null => {
+    if (!img) return null;
     if (typeof img === 'string' && img.trim() !== '') return img;
     if (img?.src) return img.src;
-    return undefined;
+    return null;
   };
 
   const categoryButtons = useMemo(
@@ -208,6 +228,27 @@ const POSView: React.FC<POSViewProps> = ({
       setStockFetchingId(null);
     }
   }, [addToCart]);
+
+  const handleScanSubmit = () => {
+    const trimmed = scanInput.trim();
+    if (!trimmed) {
+      setScanMessage('Enter a product code or name to scan.');
+      return;
+    }
+
+    const scannedProduct = filteredProducts.find(
+      (product) => product.barcode === trimmed || product.name.toLowerCase() === trimmed.toLowerCase() || String(product.id) === trimmed
+    );
+
+    if (scannedProduct) {
+      addToCart(scannedProduct);
+      setScanMessage(`Added ${scannedProduct.name} to cart.`);
+      setScanInput('');
+      return;
+    }
+
+    setScanMessage('No matching item for the scanned code.');
+  };
 
   // Determine which products to display:
   // If search returned API results, show those (filtered by category if active).
@@ -393,7 +434,6 @@ const POSView: React.FC<POSViewProps> = ({
                     transition: 'all 0.2s ease'
                   }}
                 />
-                {/* T1: Search loading indicator */}
                 {searchLoading && (
                   <div style={{
                     position: 'absolute',
@@ -407,6 +447,32 @@ const POSView: React.FC<POSViewProps> = ({
                   }} />
                 )}
               </div>
+            </div>
+
+            <div className="scan-panel">
+              <div className="scan-panel-header">
+                <h3>Scan / Add Item</h3>
+                <p>Use barcode entry or item code for fast checkout.</p>
+              </div>
+              <div className="scan-panel-controls">
+                <input
+                  type="text"
+                  value={scanInput}
+                  onChange={(e) => setScanInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleScanSubmit();
+                    }
+                  }}
+                  placeholder="Scan barcode, enter item name or ID"
+                />
+                <button type="button" className="scan-btn" onClick={handleScanSubmit}>
+                  Add Item
+                </button>
+              </div>
+              {scanMessage && (
+                <p className="scan-message">{scanMessage}</p>
+              )}
             </div>
 
             {/* T4: API failure fallback banner */}
@@ -552,86 +618,67 @@ const POSView: React.FC<POSViewProps> = ({
             </div>
           ) : (
             cart.map((item) => (
-              <div 
-                key={item.id} 
-                className="cart-item" 
-                style={{ 
-                  display: 'flex', 
-                  flexDirection: 'column', 
-                  padding: '20px 16px',
-                  borderBottom: '1px solid #f1f5f9',
-                  gap: '2px'
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <h4 className="cart-item-name" style={{ margin: 0, fontSize: '0.95rem', fontWeight: '600', color: '#1b2a47' }}>
-                    {item.name}
-                  </h4>
-                  <button 
-                    className="delete-item-btn" 
-                    style={{ 
-                      background: 'transparent', 
-                      border: 'none', 
-                      cursor: 'pointer', 
-                      padding: '6px',
-                      borderRadius: '8px',
-                      transition: 'background 0.2s ease',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#fee2e2'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                    onClick={() => openConfirm({
-                      title: 'Remove Item',
-                      message: `Remove "${item.name}"?`,
-                      confirmAction: () => setCart(cart.filter((i) => i.id !== item.id)),
-                    })}
-                  >
-                    <img src={getImgSrc(deleteIcon)} alt="Delete" style={{ width: '18px', height: '18px' }} />
-                  </button>
-                </div>
-
-                <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: '-2px 0 2px 0' }}>{toTitleCase(item.category)}</p>
-
-                <p style={{ fontSize: '0.85rem', color: '#1b2a47', fontWeight: '500', marginBottom: '10px' }}>
-                  {formatCurrency(item.price)}
-                </p>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div className="qty-controls" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <button 
-                       onClick={() => updateQty(item.id, -1)}
-                       style={{ width: '30px', height: '30px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer' }}
-                    >-</button>
-                    <span style={{ fontWeight: '600', fontSize: '0.95rem' }}>{item.quantity}</span>
-                    <button 
-                       onClick={() => updateQty(item.id, 1)}
-                       style={{ width: '30px', height: '30px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer' }}
-                    >+</button>
-                  </div>
-                  <p className="item-total" style={{ margin: 0, fontSize: '1.05rem', fontWeight: '700', color: '#1b2a47' }}>
-                    {formatCurrency(item.price * item.quantity)}
-                  </p>
-                </div>
-              </div>
+              <ScannedItemRow
+                key={item.id}
+                item={item}
+                updateQty={updateQty}
+                removeItem={(id) => setCart(cart.filter((i) => i.id !== id))}
+              />
             ))
+          )}
+        </div>
+
+        <div className="discount-card">
+          <div className="discount-header">
+            <h3>Discount / Compliance</h3>
+            <p>Apply promotion or compliance discounts before payment.</p>
+          </div>
+          <div className="discount-input-row">
+            <input
+              type="text"
+              value={discountCode}
+              onChange={(e) => setDiscountCode(e.target.value)}
+              placeholder="Enter discount code"
+              className="discount-input"
+            />
+            <button
+              type="button"
+              className="discount-action-btn"
+              onClick={validateDiscountCode}
+              disabled={isDiscountValidating || !discountCode.trim()}
+            >
+              {isDiscountValidating ? 'Validating...' : 'Apply'}
+            </button>
+          </div>
+          {discountError && <p className="discount-error">{discountError}</p>}
+          {discountResult?.valid && (
+            <div className="discount-summary">
+              <span>{discountResult.discountType || 'Discount'}</span>
+              <strong>{discountResult.discountPercent ? `${discountResult.discountPercent}% off` : 'Discount applied'}</strong>
+              <button type="button" className="discount-clear" onClick={resetDiscount}>Clear</button>
+            </div>
           )}
         </div>
 
         <div className="billing-summary">
           <div className="bill-row">
-            <span>Subtotal:</span>
+            <span>VATable Amount:</span>
             <span>{formatCurrency(subtotal)}</span>
           </div>
           <div className="bill-row">
-            <span>Tax (12%):</span>
+            <span>VAT (12%):</span>
             <span>{formatCurrency(tax)}</span>
           </div>
-          <hr style={{ border: 'none', borderTop: '1px solid #e2e8f0', margin: '12px 0' }} />
+          {discountResult?.valid && discountResult.discountPercent ? (
+            <div className="bill-row discount-row">
+              <span>Discount:</span>
+              <span>-{formatCurrency(Math.round((subtotal * (discountResult.discountPercent / 100)) * 100) / 100)}</span>
+            </div>
+          ) : null}
+          <hr />
           <div className="bill-row total">
-            <span>Total:</span>
-            <span style={{ color: '#1b2a47' }}>{formatCurrency(total)}</span>
+            <span>Payable Total:</span>
+            <span>{formatCurrency(finalTotal)}</span>
           </div>
           <button
             className="pay-btn"
@@ -641,20 +688,15 @@ const POSView: React.FC<POSViewProps> = ({
               background: '#01a2ad',
               opacity: cart.length === 0 ? 0.5 : 1,
               cursor: cart.length === 0 ? 'not-allowed' : 'pointer',
-              marginBottom: '8px'
+              marginBottom: '10px'
             }}
           >
             Proceed to Payment
           </button>
           <button
-            className="pay-btn"
+            className="pay-btn secondary"
             onClick={onHoldCart}
             disabled={cart.length === 0}
-            style={{
-              background: '#1b2a47',
-              opacity: cart.length === 0 ? 0.5 : 1,
-              cursor: cart.length === 0 ? 'not-allowed' : 'pointer',
-            }}
           >
             Hold Order
           </button>

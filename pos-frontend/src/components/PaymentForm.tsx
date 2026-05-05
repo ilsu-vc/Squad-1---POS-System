@@ -5,7 +5,9 @@ import { discountApi, DiscountValidationResult, DiscountApprovalRequest } from '
 
 // Number format utility
 import { formatCurrency } from '../utils/numberformatters';
+import { printReceipt } from '../utils/printUtils';
 import SplitPaymentForm, { PaymentEntry } from './SplitPaymentForm';
+import GCashQRPanel from './GCashQRPanel';
 
 interface PaymentIcons {
     cash_icon: any;
@@ -26,6 +28,8 @@ interface PaymentFormProps {
     icons: PaymentIcons;
     canApproveDiscount?: boolean;
     isSubmitting?: boolean;
+    preAppliedDiscountAmount?: number;
+    preAppliedDiscountType?: string;
 }
 
 const PaymentForm: React.FC<PaymentFormProps> = ({
@@ -39,10 +43,12 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
     icons: { cash_icon, card_icon, mobile_icon },
     canApproveDiscount = false,
     isSubmitting = false,
+    preAppliedDiscountAmount = 0,
+    preAppliedDiscountType = 'none',
 }) => {
     // --- Essential States ---
     const [customerName, setCustomerName] = useState('');
-    const [discountType, setDiscountType] = useState('none'); // 'none', 'senior', 'pwd'
+    const [discountType, setDiscountType] = useState(preAppliedDiscountType || 'none'); // 'none', 'senior', 'pwd'
     const [notes, setNotes] = useState('');
     const [selectedTags, setSelectedTags] = useState<string[]>([]);
     const [refNo, setRefNo] = useState('');
@@ -122,13 +128,20 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
 
     // --- Derived Calculations ---
     const [finalTotal, setFinalTotal] = useState(initialTotal);
-    const [discountAmount, setDiscountAmount] = useState(0);
+    const [discountAmount, setDiscountAmount] = useState(preAppliedDiscountAmount || 0);
 
     const getImgSrc = (img: any): string => {
         return typeof img === 'string' ? img : img?.src ?? '';
     };
 
     useEffect(() => {
+        if (preAppliedDiscountAmount && preAppliedDiscountAmount > 0) {
+            setDiscountType(preAppliedDiscountType || discountType);
+            setDiscountAmount(preAppliedDiscountAmount);
+            setFinalTotal(Number(initialTotal.toFixed(2)));
+            return;
+        }
+
         if (discountType === 'none') {
             setFinalTotal(Number(initialTotal.toFixed(2)));
             setDiscountAmount(0);
@@ -140,7 +153,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
             setDiscountAmount(Number(discount.toFixed(2)));
             setFinalTotal(Number(discountedTotal.toFixed(2)));
         }
-    }, [discountType, initialTotal]);
+    }, [discountType, initialTotal, preAppliedDiscountAmount, preAppliedDiscountType]);
 
     // Recalculate change based on discounted total
     const currentCashReceived = parseFloat(cashReceived) || 0;
@@ -533,12 +546,20 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                                         ))}
                                     </div>
                                 </div>
+                                <div style={{ marginTop: '20px' }}>
+                                    <GCashQRPanel
+                                        provider={mobileProvider as 'GCash' | 'Maya'}
+                                        amount={finalTotal}
+                                        referenceNumber={refNo || undefined}
+                                        showDetails={true}
+                                    />
+                                </div>
                                 <div className="input-group" style={{ marginTop: '15px' }}>
                                     <label className="modern-label">Reference Number</label>
                                     <input
                                         type="text"
                                         className="modern-input-lg"
-                                        placeholder="Ref #"
+                                        placeholder="Ref # (from mobile wallet app)"
                                         value={refNo}
                                         onChange={(e) => setRefNo(e.target.value)}
                                     />

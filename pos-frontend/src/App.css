@@ -143,7 +143,8 @@ footer {
 /* Content Layout */
 .pos-content {
   display: grid;
-  grid-template-columns: 1fr 380px;
+  grid-template-columns: 1.4fr 0.95fr;
+  gap: 20px;
   height: calc(100vh - 80px);
   overflow: hidden;
 }
@@ -472,9 +473,194 @@ footer {
 }
 .inventory-section {
   background-color: #f9fbfc !important;
-  padding: 20px;
+  padding: 24px;
   flex: 1;
   overflow-y: auto;  /* Enable scrolling when content exceeds the container height */
+}
+
+.scan-panel {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 18px;
+  margin-bottom: 20px;
+}
+
+.scan-panel-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #1b2a47;
+}
+
+.scan-panel-header p {
+  margin: 6px 0 0;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.scan-panel-controls {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.scan-panel-controls input,
+.discount-input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #d9e2ec;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  outline: none;
+}
+
+.scan-panel-controls input:focus,
+.discount-input:focus {
+  border-color: #01a2ad;
+  box-shadow: 0 0 0 3px rgba(1, 162, 173, 0.12);
+}
+
+.scan-btn,
+.discount-action-btn {
+  padding: 12px 18px;
+  background: #01a2ad;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.scan-btn:hover,
+.discount-action-btn:hover {
+  background: #03969e;
+}
+
+.scan-message,
+.discount-error {
+  margin-top: 10px;
+  font-size: 0.9rem;
+  color: #475569;
+}
+
+.discount-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 18px;
+  margin-bottom: 18px;
+}
+
+.discount-header h3,
+.discount-header p {
+  margin: 0;
+}
+
+.discount-header p {
+  color: #64748b;
+  margin-top: 8px;
+  font-size: 0.92rem;
+}
+
+.discount-input-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.discount-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12px;
+  padding: 12px 14px;
+  background: #effdfa;
+  border: 1px solid #d1f4ef;
+  border-radius: 12px;
+}
+
+.discount-clear {
+  border: none;
+  background: transparent;
+  color: #1b2a47;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.discount-row span {
+  color: #1b2a47;
+  font-weight: 700;
+}
+
+.scanned-item-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #ffffff;
+  align-items: center;
+}
+
+.scanned-item-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.scanned-item-name {
+  font-size: 0.98rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.scanned-item-detail {
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.scanned-item-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.qty-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f8fafc;
+  padding: 6px 10px;
+  border-radius: 12px;
+  border: 1px solid #d9e2ec;
+}
+
+.qty-control button {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #cbd5e1;
+  background: white;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.scanned-item-total {
+  font-weight: 700;
+  color: #1b2a47;
+  min-width: 86px;
+  text-align: right;
+}
+
+.remove-line-item {
+  border: none;
+  background: transparent;
+  color: #ef4444;
+  font-size: 1.25rem;
+  cursor: pointer;
 }
 .inventory-section::-webkit-scrollbar {
   width: 8px; /* Adjust scrollbar width */
