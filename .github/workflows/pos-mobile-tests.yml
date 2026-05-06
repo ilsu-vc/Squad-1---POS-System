@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - pos-mobile
+      - develop
+      - test
   pull_request:
     branches:
       - develop
