@@ -12,16 +12,16 @@ export const CreateTransferSchema = z.object({
   product_id: z.union([z.string(), z.number()]),
   product_name: z.string().optional(),
   quantity_transfer: z.number().int().min(1, 'Quantity must be at least 1'),
-  transfer_status: z.enum(['Pending', 'Approved', 'In-Transit', 'Completed', 'Rejected']).optional(),
+  transfer_status: z.enum(['Pending', 'Approved', 'In-Transit', 'Received', 'Cancelled']).optional(),
   requested_by: z.string().optional(),
   destination_branch_id: z.union([z.string(), z.number()]).optional(),
   destination_branch_name: z.string().optional(),
 });
 
 export const UpdateTransferSchema = z.object({
-  transfer_status: z.enum(['Pending', 'Approved', 'In-Transit', 'Completed', 'Rejected']).optional(),
+  transfer_status: z.enum(['Pending', 'Approved', 'In-Transit', 'Received', 'Cancelled']).optional(),
   quantity_transfer: z.number().int().min(1).optional(),
-});
+}).passthrough();
 
 export const DecrementStockSchema = z.object({
   quantity: z.number().int().min(1, 'Quantity must be at least 1'),

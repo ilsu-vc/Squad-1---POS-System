@@ -30,8 +30,6 @@ services:
       - ROLE_SERVICE_URL=http://role-service:4005
       - RECEIPT_SERVICE_URL=http://receipt-service:4006
       - FRONTEND_URL=http://frontend:3000
-      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
-      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
     env_file:
       - .env
     depends_on:
@@ -79,10 +77,8 @@ services:
       - "4001:4001"
     environment:
       - PORT=4001
-      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
-      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
     env_file:
-      - .env
+      - ./auth-service/.env
 
   inventory-service:
     build:
@@ -94,10 +90,8 @@ services:
     environment:
       - PORT=4002
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
-      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
-      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
     env_file:
-      - .env
+      - ./inventory-service/.env
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -125,10 +119,8 @@ services:
     environment:
       - PORT=4004
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
-      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
-      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
     env_file:
-      - .env
+      - ./reporting-service/.env
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -142,10 +134,8 @@ services:
       - "4005:4005"
     environment:
       - PORT=4005
-      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
-      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
     env_file:
-      - .env
+      - ./role-service/.env
 
   receipt-service:
     build:
@@ -156,10 +146,8 @@ services:
       - "4006:4006"
     environment:
       - PORT=4006
-      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
-      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
     env_file:
-      - .env
+      - ./receipt-service/.env
 
   transaction-service:
     build:
@@ -172,10 +160,8 @@ services:
       - PORT=4007
       - INVENTORY_SERVICE_URL=http://inventory-service:4002
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
-      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
-      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
     env_file:
-      - .env
+      - ./transaction-service/.env
     depends_on:
       rabbitmq:
         condition: service_healthy

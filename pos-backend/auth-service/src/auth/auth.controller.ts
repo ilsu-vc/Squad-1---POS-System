@@ -44,7 +44,10 @@ export class AuthController {
       .select('id, email, full_name, role, role_id, is_active')
       .eq('id', userId)
       .single();
-    if (error) throw new NotFoundException(error.message);
+    if (error) {
+      console.error(`🛡️ AUTH PROFILE ERROR for UserID [${userId}]:`, error);
+      throw new NotFoundException(error.message);
+    }
     return { profile: data };
   }
 

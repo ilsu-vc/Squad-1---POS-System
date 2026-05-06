@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { supabase } from '../supabaseClient';
+import { productApi } from '../services/productApi';
 import './InventoryEditing.css';
 
 const InventoryEditing = ({
@@ -82,15 +82,12 @@ const InventoryEditing = ({
     try {
       setSaving(true);
 
-      const { error: updateError } = await supabase
-        .from('products')
-        .update({
-          stock: updatedStockPreview,
-          low_stock_threshold: parsedThreshold,
-        })
-        .eq('id', product.id);
+      const result = await productApi.updateProduct(product.id, {
+        stock: updatedStockPreview,
+        low_stock_threshold: parsedThreshold,
+      });
 
-      if (updateError) throw updateError;
+      if (result.error) throw new Error(result.error);
       if (typeof onUpdated === 'function') {
         await onUpdated();
       }

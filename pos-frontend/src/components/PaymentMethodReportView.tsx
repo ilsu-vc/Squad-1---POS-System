@@ -1,16 +1,16 @@
 'use client';
 
 import React, { useEffect, useState, useMemo, useRef } from 'react';
-import { supabase } from '../supabaseClient';
+import { salesApi } from '../services/salesApi';
 import { formatCurrency } from '../utils/numberformatters';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import './PaymentMethodReportView.css';
 
 interface Transaction {
   id: string;
-  payment_method: string;
-  total_amount: number;
-  created_at: string;
+  method: string;
+  rawAmount: number;
+  createdAt: string;
 }
 
 interface PaymentStats {
@@ -50,13 +50,8 @@ const PaymentMethodReportView: React.FC<Props> = () => {
       targetDate.setDate(targetDate.getDate() - dateRange * 2);
       const startDate = targetDate.toISOString();
 
-      const { data, error } = await supabase
-        .from('transactions')
-        .select('id, payment_method, total_amount, created_at')
-        .gte('created_at', startDate);
-
-      if (error) throw error;
-      setTransactions(data || []);
+      const result = await salesApi.fetchTransactions(startDate);
+      setTransactions(result.transactions || []);
     } catch (err) {
       console.error('Error fetching payment stats:', err);
     } finally {
@@ -88,8 +83,8 @@ const PaymentMethodReportView: React.FC<Props> = () => {
     let totalCurrentRevenue = 0;
 
     transactions.forEach((t) => {
-      const method = t.payment_method
-        ? t.payment_method.charAt(0).toUpperCase() + t.payment_method.slice(1).toLowerCase()
+      const method = t.method
+        ? t.method.charAt(0).toUpperCase() + t.method.slice(1).toLowerCase()
         : 'Other';
 
       if (!statsMap.has(method)) {
@@ -104,14 +99,14 @@ const PaymentMethodReportView: React.FC<Props> = () => {
       }
 
       const stat = statsMap.get(method)!;
-      const tDate = new Date(t.created_at);
+      const tDate = new Date(t.createdAt);
 
       if (tDate >= cutoffDate) {
         stat.count += 1;
-        stat.totalAmount += Number(t.total_amount);
-        totalCurrentRevenue += Number(t.total_amount);
+        stat.totalAmount += Number(t.rawAmount);
+        totalCurrentRevenue += Number(t.rawAmount);
       } else {
-        stat.prevAmount += Number(t.total_amount);
+        stat.prevAmount += Number(t.rawAmount);
       }
     });
 

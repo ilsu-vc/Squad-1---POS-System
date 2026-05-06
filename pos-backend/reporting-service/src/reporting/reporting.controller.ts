@@ -52,8 +52,7 @@ export class ReportingController {
         handover_notes,
         cash_discrepancies,
         issues,
-        pending_items,
-        user_profiles (full_name, email, role)
+        pending_items
       `)
       .order('clock_in_at', { ascending: false })
       .limit(5000);

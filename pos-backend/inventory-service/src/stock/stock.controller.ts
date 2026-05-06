@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UsePipes, BadRequestException, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { Controller, Post, Body, UsePipes, BadRequestException, InternalServerErrorException, NotFoundException, Logger } from '@nestjs/common';
 import { SupabaseService } from '../supabase.service';
 import { RabbitMQService } from '../rabbitmq.service';
 import { ZodValidationPipe } from '../zod-validation.pipe';
@@ -6,6 +6,8 @@ import { StockAdjustSchema, StockTransferSchema } from '../schemas';
 
 @Controller('stock')
 export class StockController {
+  private readonly logger = new Logger(StockController.name);
+
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly rabbitmqService: RabbitMQService,
@@ -36,6 +38,8 @@ export class StockController {
       .single();
 
     if (updateErr) throw new InternalServerErrorException(updateErr.message);
+
+    this.logger.log(`Stock adjusted for product ${sku} (${product.name}): ${currentStock} -> ${data.stock}`);
 
     const threshold = Number(product.low_stock_threshold);
     if (threshold > 0 && data.stock <= threshold) {

@@ -12,7 +12,7 @@ export class ShiftController {
   @UsePipes(new ZodValidationPipe(ClockInSchema))
   async clockIn(@Body() body: any) {
     const { userId } = body;
-    const client = this.supabaseService.getClient();
+    const client = this.supabaseService.getAuditClient();
 
     // Check if the user already has an active shift
     const { data: activeShift, error: checkError } = await client
@@ -49,7 +49,7 @@ export class ShiftController {
   @UsePipes(new ZodValidationPipe(ClockOutSchema))
   async clockOut(@Body() body: any) {
     const { shiftId, userId, clockOutAt, totalHours, handoverNotes, cashDiscrepancies, issues, pendingItems } = body;
-    const client = this.supabaseService.getClient();
+    const client = this.supabaseService.getAuditClient();
     const { error } = await client
       .from('shift_records')
       .update({
@@ -72,7 +72,7 @@ export class ShiftController {
     if (!/^[0-9a-f-]{36}$/i.test(userId)) {
       throw new BadRequestException({ error: 'Validation failed' });
     }
-    const client = this.supabaseService.getClient();
+    const client = this.supabaseService.getAuditClient();
     const { data, error } = await client
       .from('shift_records')
       .select('id, user_id, clock_in_at, clock_out_at, total_hours, created_at, handover_notes, cash_discrepancies, issues, pending_items')
@@ -88,7 +88,7 @@ export class ShiftController {
 
   @Get('latest-handover')
   async getLatestHandover() {
-    const client = this.supabaseService.getClient();
+    const client = this.supabaseService.getAuditClient();
     const { data, error } = await client
       .from('shift_records')
       .select('id, user_id, clock_in_at, clock_out_at, total_hours, created_at, handover_notes, cash_discrepancies, issues, pending_items')

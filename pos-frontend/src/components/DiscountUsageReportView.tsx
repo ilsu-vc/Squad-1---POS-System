@@ -1,18 +1,18 @@
 'use client';
 
 import React, { useEffect, useState, useMemo, useRef } from 'react';
-import { supabase } from '../supabaseClient';
+import { salesApi } from '../services/salesApi';
 import { formatCurrency } from '../utils/numberformatters';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import './DiscountUsageReportView.css';
 
 interface Transaction {
   id: string;
-  total_amount: number;
-  discount_amount: number;
-  discount_type: string;
-  created_at: string;
-  cashier_name: string;
+  rawAmount: number;
+  discountAmount: number;
+  discountType: string;
+  createdAt: string;
+  cashierName?: string;
 }
 
 interface Props {
@@ -37,14 +37,10 @@ const DiscountUsageReportView: React.FC<Props> = () => {
       targetDate.setDate(targetDate.getDate() - dateRange);
       const startDate = targetDate.toISOString();
 
-      const { data, error } = await supabase
-        .from('transactions')
-        .select('id, total_amount, discount_amount, discount_type, created_at, cashier_name')
-        .gte('created_at', startDate)
-        .gt('discount_amount', 0);
-
-      if (error) throw error;
-      setTransactions(data || []);
+      const result = await salesApi.fetchTransactions(startDate);
+      // Filter only transactions with discounts locally to be safe, or assume backend handles it
+      const discounted = (result.transactions || []).filter((t: any) => t.discountAmount > 0);
+      setTransactions(discounted);
     } catch (err) {
       console.error('Error fetching discount data:', err);
     } finally {
@@ -74,10 +70,10 @@ const DiscountUsageReportView: React.FC<Props> = () => {
     const staffMap = new Map<string, { count: number; value: number }>();
 
     transactions.forEach((t) => {
-      const discount = Number(t.discount_amount);
+      const discount = Number(t.discountAmount);
       totalDiscount += discount;
 
-      const type = t.discount_type || 'Unspecified';
+      const type = t.discountType || 'Unspecified';
       if (!typeMap.has(type)) {
         typeMap.set(type, { count: 0, value: 0 });
       }
@@ -85,7 +81,7 @@ const DiscountUsageReportView: React.FC<Props> = () => {
       typeStat.count += 1;
       typeStat.value += discount;
 
-      const cashier = t.cashier_name || 'Unknown Staff';
+      const cashier = t.cashierName || 'Unknown Staff';
       if (!staffMap.has(cashier)) {
         staffMap.set(cashier, { count: 0, value: 0 });
       }

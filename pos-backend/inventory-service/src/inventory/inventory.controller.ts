@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Patch, Body, UsePipes, BadRequestException, InternalServerErrorException, NotFoundException, Put, Res } from '@nestjs/common';
+import { Controller, Get, Param, Patch, Body, UsePipes, BadRequestException, InternalServerErrorException, NotFoundException, Put, Res, Logger } from '@nestjs/common';
 import type { Response } from 'express';
 import { SupabaseService } from '../supabase.service';
 import { RabbitMQService } from '../rabbitmq.service';
@@ -7,6 +7,8 @@ import { DecrementStockSchema, UpdateProductSchema, RESERVED_STATUSES } from '..
 
 @Controller()
 export class InventoryController {
+  private readonly logger = new Logger(InventoryController.name);
+
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly rabbitmqService: RabbitMQService,
@@ -49,14 +51,20 @@ export class InventoryController {
       .select('id, name, price, stock, category, low_stock_threshold')
       .order('id', { ascending: true });
     
-    if (pErr) throw new InternalServerErrorException(pErr.message);
+    if (pErr) {
+      console.error('DATABASE ERROR (Products):', pErr);
+      throw new InternalServerErrorException(pErr.message);
+    }
 
     const { data: transfers, error: tErr } = await client
       .from('requesttransfers')
       .select('id, product_id, product_name, quantity_transfer, transfer_status, requested_by, destination_branch_id, destination_branch_name, created_at')
       .order('created_at', { ascending: false });
     
-    if (tErr) throw new InternalServerErrorException(tErr.message);
+    if (tErr) {
+      console.error('DATABASE ERROR (Transfers):', tErr);
+      throw new InternalServerErrorException(tErr.message);
+    }
 
     const rows = transfers || [];
     const enriched = (products || []).map((product: any) => {
@@ -66,6 +74,10 @@ export class InventoryController {
       const available_stock = Math.max(0, (Number(product.stock) || 0) - reserved_transfer_qty);
       return { ...product, reserved_transfer_qty, available_stock };
     });
+
+    if (enriched.length > 0) {
+      this.logger.log(`📦 Sending ${enriched.length} products. Sample: ${enriched[0].name} has stock ${enriched[0].stock}`);
+    }
 
     return res.status(200).json({ products: enriched, transfers: rows });
   }

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Body, Param, UsePipes, InternalServerErrorException, BadRequestException, NotFoundException, Res } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Query, Param, UsePipes, InternalServerErrorException, BadRequestException, NotFoundException, Res, Logger } from '@nestjs/common';
 import type { Response } from 'express';
 import { SupabaseService } from '../supabase.service';
 import { RabbitMQService } from '../rabbitmq.service';
@@ -11,6 +11,8 @@ import {
 
 @Controller('transactions')
 export class TransactionController {
+  private readonly logger = new Logger(TransactionController.name);
+
   constructor(
     private readonly supabase: SupabaseService,
     private readonly rabbitmq: RabbitMQService,
@@ -80,7 +82,11 @@ export class TransactionController {
   }
 
   @Get()
-  async getTransactions(@Res() res: Response) {
+  async getTransactions(
+    @Res() res: Response, 
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string
+  ) {
     // PACT TEST BYPASS
     if (process.env.PACT_TEST_MODE === 'true') {
       return res.status(200).json({
@@ -91,12 +97,13 @@ export class TransactionController {
           amount: '₱250.00', rawAmount: 250.00, method: 'cash', itemsCount: 2,
           items: [{ name: 'Test Product', qty: 1, price: 100.00 }],
           subtotal: 223.21, tax: 26.79, discountType: 'None', discountAmount: 0, type: 'sale',
+          createdAt: '2026-04-10T10:30:00Z'
         }],
       });
     }
 
     const client = this.supabase.getClient();
-    const { data: txns, error: txnErr } = await client
+    let query = client
       .from('transactions')
       .select(`
         id, tx_no, status, total_amount, vat, subtotal, payment_method, items_count, 
@@ -108,7 +115,13 @@ export class TransactionController {
       .order('created_at', { ascending: false })
       .limit(5000);
 
+    if (startDate) query = query.gte('created_at', startDate);
+    if (endDate) query = query.lte('created_at', endDate);
+
+    const { data: txns, error: txnErr } = await query;
+
     if (txnErr) throw new InternalServerErrorException(txnErr.message);
+    this.logger.log(`📊 Found ${txns?.length || 0} transactions for range: ${startDate} to ${endDate}`);
 
     const formatted = (txns || []).map((t: any) => {
       try {
@@ -136,6 +149,7 @@ export class TransactionController {
           hour, amount: `₱${rawAmount.toFixed(2)}`, rawAmount,
           method: t.payment_method ?? 'Unknown',
           itemsCount: Number(t.items_count ?? 0),
+          createdAt: t.created_at,
           items: (t.transaction_items || []).map((item: any) => ({
             name: item.name, qty: Number(item.quantity), price: Number(item.unit_price), category: item.category ?? undefined,
           })),
@@ -162,7 +176,31 @@ export class TransactionController {
     return res.status(200).json({ transactions: formatted });
   }
 
+  @Get('items')
+  async getTransactionItems(
+    @Res() res: Response,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string
+  ) {
+    const client = this.supabase.getClient();
+    
+    let query = client
+      .from('transaction_items')
+      .select('name, category, quantity, unit_price, line_total, created_at, transaction_id')
+      .order('created_at', { ascending: false })
+      .limit(10000);
+
+    if (startDate) query = query.gte('created_at', startDate);
+    if (endDate) query = query.lte('created_at', endDate);
+
+    const { data, error } = await query;
+    if (error) throw new InternalServerErrorException(error.message);
+
+    return res.status(200).json({ items: data || [] });
+  }
+
   @Get(':id/receipt')
+
   async getReceipt(@Param('id') id: string, @Res() res: Response) {
     // PACT TEST BYPASS — invalid ID format
     if (id === 'not-a-uuid' || !/^[0-9a-f-]{36}$/i.test(id)) {

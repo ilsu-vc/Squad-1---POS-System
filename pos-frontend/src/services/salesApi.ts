@@ -51,8 +51,24 @@ export const salesApi = {
     });
     return res.json();
   },
-  async fetchTransactions(): Promise<{ transactions: any[] }> {
-    const res = await authFetch(`${BASE}/transactions`);
+  async fetchTransactions(startDate?: string, endDate?: string): Promise<{ transactions: any[] }> {
+    let url = `${BASE}/transactions`;
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    if (params.toString()) url += `?${params.toString()}`;
+
+    const res = await authFetch(url);
+    return res.json();
+  },
+  async fetchTransactionItems(startDate?: string, endDate?: string): Promise<{ items: any[] }> {
+    let url = `${BASE}/transactions/items`;
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    if (params.toString()) url += `?${params.toString()}`;
+
+    const res = await authFetch(url);
     return res.json();
   },
 };

@@ -14,13 +14,12 @@ export class SupabaseService {
       throw new Error('Missing required env vars');
     }
 
-    const authHeader = this.request?.headers?.authorization;
-    this.client = createClient(supabaseUrl, supabaseKey, {
-      global: {
-        headers: authHeader ? { Authorization: authHeader } : {},
-      },
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || supabaseKey;
+    
+    this.client = createClient(supabaseUrl, serviceRoleKey, {
       auth: {
         persistSession: false,
+        autoRefreshToken: false,
       }
     });
   }

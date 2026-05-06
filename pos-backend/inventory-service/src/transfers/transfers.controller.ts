@@ -20,8 +20,7 @@ export class TransfersController {
   }
 
   @Post()
-  @UsePipes(new ZodValidationPipe(CreateTransferSchema))
-  async createTransfer(@Body() body: any) {
+  async createTransfer(@Body(new ZodValidationPipe(CreateTransferSchema)) body: any) {
     const client = this.supabaseService.getClient();
     const { data, error } = await client
       .from('requesttransfers')
@@ -34,12 +33,17 @@ export class TransfersController {
   }
 
   @Put(':id')
-  @UsePipes(new ZodValidationPipe(UpdateTransferSchema))
-  async updateTransfer(@Param('id') id: string, @Body() body: any) {
+  async updateTransfer(@Param('id') id: string, @Body(new ZodValidationPipe(UpdateTransferSchema)) body: any) {
+    const { transfer_status, quantity_transfer } = body;
     const client = this.supabaseService.getClient();
+    
+    const updateData: any = {};
+    if (transfer_status) updateData.transfer_status = transfer_status;
+    if (quantity_transfer) updateData.quantity_transfer = quantity_transfer;
+
     const { data, error } = await client
       .from('requesttransfers')
-      .update(body)
+      .update(updateData)
       .eq('id', id)
       .select()
       .single();

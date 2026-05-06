@@ -8,7 +8,7 @@ const SERVICE_URL = process.env.RECEIPT_SERVICE_URL || 'http://localhost:4006';
 
 async function proxyRequest(req: NextRequest, path: string) {
   try {
-    const url = `${SERVICE_URL}/${path}`;
+    const url = `${SERVICE_URL}/${path}${req.nextUrl.search}`;
     const init: RequestInit = {
       method: req.method,
       headers: { 

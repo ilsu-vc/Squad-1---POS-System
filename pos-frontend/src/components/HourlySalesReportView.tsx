@@ -3,7 +3,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import React, { useEffect, useState, useMemo } from 'react';
-import { supabase } from '../supabaseClient';
 import {
   ComposedChart,
   Line,
@@ -18,13 +17,14 @@ import {
 import CustomDatePicker from './CustomDatePicker';
 import './HourlySalesReportView.css';
 
+import { salesApi } from '../services/salesApi';
 import { UserProfile } from '../types/auth';
 import { logUserActivity } from '../utils/activityLogger';
 
 interface Transaction {
   id: string;
-  created_at: string;
-  total_amount: number;
+  createdAt: string;
+  rawAmount: number;
 }
 
 interface Props {
@@ -40,17 +40,13 @@ const HourlySalesReportView: React.FC<Props> = ({ onSwitchReport, profile }) => 
   const fetchSalesData = async () => {
     try {
       setLoading(true);
-      const startOfDay = `${selectedDate}T00:00:00Z`;
-      const endOfDay = `${selectedDate}T23:59:59Z`;
-
-      const { data, error } = await supabase
-        .from('transactions')
-        .select('id, created_at, total_amount')
-        .gte('created_at', startOfDay)
-        .lte('created_at', endOfDay);
-
-      if (error) throw error;
-      setTransactions(data || []);
+      const startOfDay = `${selectedDate}T00:00:00.000Z`;
+      console.log('📊 Fetching Hourly Sales for:', startOfDay);
+      
+      const result = await salesApi.fetchTransactions(startOfDay);
+      console.log('✅ Received Transactions:', result.transactions?.length || 0);
+      
+      setTransactions(result.transactions || []);
     } catch (err) {
       console.error('Error fetching sales:', err);
     } finally {
@@ -63,8 +59,8 @@ const HourlySalesReportView: React.FC<Props> = ({ onSwitchReport, profile }) => 
   }, [selectedDate]);
 
   const chartData = useMemo(() => {
-    const startHour = 8;
-    const endHour = 20;
+    const startHour = 0;
+    const endHour = 23;
 
     const hours = Array.from({ length: endHour - startHour + 1 }, (_, i) => {
       const currentHour = startHour + i;
@@ -79,15 +75,19 @@ const HourlySalesReportView: React.FC<Props> = ({ onSwitchReport, profile }) => 
     });
 
     transactions.forEach((t) => {
-      if (!t.created_at) return;
-      const date = new Date(t.created_at);
-      if (isNaN(date.getTime())) return;
+      if (!t.createdAt) return;
+      const date = new Date(t.createdAt);
+      if (isNaN(date.getTime())) {
+        console.warn('⚠️ Invalid Date in Transaction:', t.createdAt);
+        return;
+      }
 
       const hourIndex = date.getHours();
+      console.log(`📍 Mapping transaction from ${t.createdAt} to hour: ${hourIndex}`);
 
       const targetBucket = hours.find((h) => h.hourNumber === hourIndex);
       if (targetBucket) {
-        const amount = t.total_amount || (t as any).amount || 0;
+        const amount = t.rawAmount || 0;
         targetBucket.netSales += amount;
         targetBucket.transactionCount += 1;
       }
