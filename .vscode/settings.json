@@ -1,0 +1,7 @@
+{
+  "jest.jestCommandLine": "npm run test:pos-mobile --",
+  "jest.rootPath": ".",
+  "jest.testExplorer": {
+    "enabled": true
+  }
+}
