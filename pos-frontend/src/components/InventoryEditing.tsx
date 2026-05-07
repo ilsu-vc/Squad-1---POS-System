@@ -83,8 +83,8 @@ const InventoryEditing = ({
       setSaving(true);
 
       const result = await productApi.updateProduct(product.id, {
-        stock: updatedStockPreview,
-        low_stock_threshold: parsedThreshold,
+        stock: Math.round(updatedStockPreview),
+        low_stock_threshold: Math.round(parsedThreshold),
       });
 
       if (result.error) throw new Error(result.error);

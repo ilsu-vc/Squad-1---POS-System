@@ -2,10 +2,10 @@ import { z } from 'zod';
 
 export const UpdateProductSchema = z.object({
   name: z.string().min(1).max(200).optional(),
-  price: z.number().min(0).max(1_000_000).optional(),
-  stock: z.number().int().min(0).optional(),
+  price: z.coerce.number().min(0).max(1_000_000).optional(),
+  stock: z.coerce.number().int().min(0).optional(),
   category: z.string().max(100).optional(),
-  low_stock_threshold: z.number().int().min(0).optional(),
+  low_stock_threshold: z.coerce.number().int().min(0).optional(),
 });
 
 export const CreateTransferSchema = z.object({
