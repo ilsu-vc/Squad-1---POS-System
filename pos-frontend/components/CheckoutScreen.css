@@ -1,0 +1,71 @@
+/* CheckoutScreen.css */
+
+/* Color Palette from leader's design */
+:root {
+  --brown: #896A58;
+  --black: #2A2420;
+  --grey: #ACAB9E;
+  --light-grey: #D9D8D5;
+  --green: #567257;
+}
+
+/* Main container for the checkout screen */
+.checkout-container {
+  padding: 20px;
+  background-color: var(--light-grey);
+  max-width: 400px;
+  margin: 0 auto;
+  border-radius: 8px;
+}
+
+/* Header */
+.checkout-container h1 {
+  color: var(--black);
+  text-align: center;
+}
+
+/* Item list */
+.checkout-item {
+  margin-bottom: 10px;
+  font-size: 16px;
+}
+
+.checkout-item span {
+  color: var(--black);
+}
+
+/* Subtotal */
+.checkout-container h3 {
+  color: var(--black);
+}
+
+/* Complete Sale Button */
+.complete-sale-button {
+  background-color: var(--black);
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  margin-top: 20px;
+  border-radius: 5px;
+  font-size: 16px;
+}
+
+/* Success message */
+.success-message {
+  margin-top: 20px;
+  padding: 10px;
+  background-color: var(--green);
+  color: white;
+  text-align: center;
+  border-radius: 5px;
+}
+
+.success-message h4 {
+  margin: 0;
+}
+
+.success-message p {
+  font-weight: bold;
+}

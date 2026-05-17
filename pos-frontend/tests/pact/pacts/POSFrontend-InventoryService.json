@@ -1,0 +1,337 @@
+{
+  "consumer": {
+    "name": "POSFrontend"
+  },
+  "interactions": [
+    {
+      "description": "a health check request",
+      "providerStates": [
+        {
+          "name": "the inventory service is available"
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "path": "/health"
+      },
+      "response": {
+        "body": {
+          "port": 4002,
+          "service": "product-service",
+          "status": "ok"
+        },
+        "headers": {
+          "Content-Type": "application/json; charset=utf-8"
+        },
+        "matchingRules": {
+          "body": {
+            "$.port": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            }
+          },
+          "header": {},
+          "status": {}
+        },
+        "status": 200
+      }
+    },
+    {
+      "description": "a request for stock of a non-existent product",
+      "providerStates": [
+        {
+          "name": "the inventory service is available"
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "path": "/products/NONEXISTENT/stock"
+      },
+      "response": {
+        "body": {
+          "message": "Product not found"
+        },
+        "headers": {
+          "Content-Type": "application/json; charset=utf-8"
+        },
+        "status": 404
+      }
+    },
+    {
+      "description": "a request for stock of a specific product",
+      "providerStates": [
+        {
+          "name": "a product with SKU exists",
+          "params": {
+            "sku": "SKU123"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "path": "/products/SKU123/stock"
+      },
+      "response": {
+        "body": {
+          "sku": "SKU123",
+          "stock": 50
+        },
+        "headers": {
+          "Content-Type": "application/json; charset=utf-8"
+        },
+        "matchingRules": {
+          "body": {
+            "$.sku": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.stock": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            }
+          },
+          "header": {},
+          "status": {}
+        },
+        "status": 200
+      }
+    },
+    {
+      "description": "a request to decrement product stock",
+      "providerStates": [
+        {
+          "name": "a product with stock exists",
+          "params": {
+            "productId": "1"
+          }
+        }
+      ],
+      "request": {
+        "body": {
+          "quantity": 2
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "PATCH",
+        "path": "/products/1/decrement"
+      },
+      "response": {
+        "body": {
+          "newStock": 48,
+          "success": true
+        },
+        "headers": {
+          "Content-Type": "application/json; charset=utf-8"
+        },
+        "matchingRules": {
+          "body": {
+            "$.newStock": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            }
+          },
+          "header": {},
+          "status": {}
+        },
+        "status": 200
+      }
+    },
+    {
+      "description": "a request to decrement stock with invalid quantity",
+      "providerStates": [
+        {
+          "name": "a product with stock exists",
+          "params": {
+            "productId": "1"
+          }
+        }
+      ],
+      "request": {
+        "body": {
+          "quantity": 0
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "PATCH",
+        "path": "/products/1/decrement"
+      },
+      "response": {
+        "body": {
+          "details": {},
+          "error": "Validation failed"
+        },
+        "headers": {
+          "Content-Type": "application/json; charset=utf-8"
+        },
+        "matchingRules": {
+          "body": {
+            "$.details": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            }
+          },
+          "header": {},
+          "status": {}
+        },
+        "status": 400
+      }
+    },
+    {
+      "description": "a request to get all products with stock data",
+      "providerStates": [
+        {
+          "name": "products exist in the inventory"
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "path": "/products"
+      },
+      "response": {
+        "body": {
+          "products": [
+            {
+              "available_stock": 50,
+              "category": "Beverages",
+              "id": 1,
+              "low_stock_threshold": 10,
+              "name": "Sample Product",
+              "price": 99.99,
+              "reserved_transfer_qty": 0,
+              "stock": 50
+            }
+          ],
+          "transfers": []
+        },
+        "headers": {
+          "Content-Type": "application/json; charset=utf-8"
+        },
+        "matchingRules": {
+          "body": {
+            "$.products": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type",
+                  "min": 1
+                }
+              ]
+            },
+            "$.products[*].available_stock": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.products[*].category": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.products[*].id": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.products[*].low_stock_threshold": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.products[*].name": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.products[*].price": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.products[*].reserved_transfer_qty": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.products[*].stock": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.transfers": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            }
+          },
+          "header": {},
+          "status": {}
+        },
+        "status": 200
+      }
+    }
+  ],
+  "metadata": {
+    "pact-js": {
+      "version": "13.2.0"
+    },
+    "pactRust": {
+      "ffi": "0.4.22",
+      "models": "1.2.3"
+    },
+    "pactSpecification": {
+      "version": "3.0.0"
+    }
+  },
+  "provider": {
+    "name": "InventoryService"
+  }
+}
