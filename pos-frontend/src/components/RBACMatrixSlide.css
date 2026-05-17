@@ -1,0 +1,265 @@
+/* RBAC Matrix Slide Styles */
+
+.rbac-matrix-slide {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 40px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #333;
+    overflow-y: auto;
+}
+
+.slide-header {
+    text-align: center;
+    color: white;
+    margin-bottom: 40px;
+    padding-bottom: 20px;
+}
+
+.slide-header h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin: 0;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.slide-subtitle {
+    font-size: 1.2rem;
+    margin-top: 8px;
+    opacity: 0.95;
+    font-weight: 300;
+}
+
+.matrix-container {
+    flex: 1;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    padding: 30px;
+    overflow-x: auto;
+}
+
+.rbac-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+}
+
+.rbac-table thead {
+    background-color: #667eea;
+    color: white;
+    font-weight: 600;
+}
+
+.rbac-table th {
+    padding: 16px;
+    text-align: left;
+    border-bottom: 2px solid #667eea;
+}
+
+.permission-column {
+    width: 40%;
+    min-width: 200px;
+}
+
+.role-column {
+    width: 15%;
+    min-width: 100px;
+    text-align: center;
+}
+
+.category-row {
+    background-color: #f5f7fa;
+    border-top: 2px solid #e0e7ff;
+    border-bottom: 1px solid #e0e7ff;
+}
+
+.category-header {
+    font-weight: 700;
+    color: #667eea;
+    padding: 12px 16px !important;
+    font-size: 0.95rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.permission-row {
+    border-bottom: 1px solid #e8ecf1;
+    transition: background-color 0.2s ease;
+}
+
+.permission-row:hover {
+    background-color: #f9fafb;
+}
+
+.permission-row:nth-child(odd) {
+    background-color: #fafbfc;
+}
+
+.permission-name {
+    padding: 14px 16px;
+    font-weight: 500;
+    color: #2d3748;
+}
+
+.role-cell {
+    padding: 14px 16px;
+    text-align: center;
+    color: #667eea;
+    font-weight: 600;
+}
+
+.checkmark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background-color: #d4edda;
+    color: #155724;
+    border-radius: 50%;
+    font-weight: 700;
+    font-size: 1rem;
+    box-shadow: 0 2px 4px rgba(21, 87, 36, 0.1);
+}
+
+.slide-footer {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    text-align: center;
+}
+
+.role-description {
+    font-size: 0.9rem;
+    line-height: 1.6;
+    margin: 0;
+    opacity: 0.95;
+}
+
+.role-description strong {
+    font-weight: 600;
+    color: #ffffff;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .rbac-matrix-slide {
+        padding: 20px;
+    }
+
+    .slide-header h1 {
+        font-size: 2rem;
+    }
+
+    .slide-subtitle {
+        font-size: 1rem;
+    }
+
+    .matrix-container {
+        padding: 20px;
+    }
+
+    .permission-column {
+        width: 35%;
+    }
+
+    .role-column {
+        width: 16.25%;
+    }
+
+    .rbac-table th,
+    .permission-name,
+    .role-cell {
+        padding: 12px 10px;
+        font-size: 0.85rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .rbac-matrix-slide {
+        padding: 15px;
+        height: auto;
+        min-height: 100vh;
+    }
+
+    .slide-header h1 {
+        font-size: 1.5rem;
+    }
+
+    .slide-subtitle {
+        font-size: 0.9rem;
+    }
+
+    .matrix-container {
+        padding: 15px;
+    }
+
+    .rbac-table {
+        font-size: 0.8rem;
+    }
+
+    .rbac-table th,
+    .permission-name,
+    .role-cell {
+        padding: 10px 8px;
+    }
+
+    .permission-column {
+        width: 50%;
+        min-width: 150px;
+    }
+
+    .role-column {
+        width: 12.5%;
+        min-width: 50px;
+    }
+
+    .checkmark {
+        width: 24px;
+        height: 24px;
+        font-size: 0.9rem;
+    }
+
+    .role-description {
+        font-size: 0.8rem;
+    }
+}
+
+/* Printing Styles */
+@media print {
+    .rbac-matrix-slide {
+        background: white;
+        padding: 20px;
+        height: auto;
+    }
+
+    .slide-header {
+        color: #333;
+    }
+
+    .slide-header h1,
+    .slide-subtitle {
+        text-shadow: none;
+    }
+
+    .matrix-container {
+        box-shadow: none;
+        border: 1px solid #ccc;
+    }
+
+    .rbac-table thead {
+        background-color: #667eea;
+        color: white;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .checkmark {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+}

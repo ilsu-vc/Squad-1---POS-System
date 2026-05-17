@@ -1,0 +1,15 @@
+# ── Grafana Dashboard Provisioning ──────────────────────────────────────────
+# SCRUM 305: Auto-load the k6 dashboard JSON at Grafana startup.
+
+apiVersion: 1
+
+providers:
+  - name: 'k6-dashboards'
+    orgId: 1
+    folder: 'k6 Load Tests'
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false

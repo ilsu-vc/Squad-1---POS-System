@@ -1,0 +1,159 @@
+/* ── Hidden from screen ── */
+#gift-receipt-portal {
+    display: none;
+}
+
+/* ── Only show during print ── */
+@media print {
+    /* Most aggressive: Hide EVERYTHING by default */
+    html, body, #root, #root * {
+        visibility: hidden !important;
+        height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* Force show ONLY the portal and its nested content */
+    #gift-receipt-portal, #gift-receipt-portal * {
+        visibility: visible !important;
+        display: block !important;
+        height: auto !important;
+    }
+
+    #gift-receipt-portal {
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        background: white !important;
+        z-index: 9999999 !important;
+    }
+
+    .gift-receipt-content {
+        width: 80mm;
+        margin: 0 auto;
+        padding: 20px;
+        color: black !important;
+    }
+}
+
+/* ── Typography (used in print) ── */
+.gift-store-name {
+    text-align: center;
+    font-size: 15px;
+    font-weight: bold;
+    margin: 0 0 4px;
+    letter-spacing: 0.5px;
+}
+
+.gift-store-sub {
+    text-align: center;
+    font-size: 11px;
+    color: #444;
+    margin: 2px 0;
+}
+
+.gift-title {
+    text-align: center;
+    font-size: 17px;
+    font-weight: bold;
+    margin: 8px 0 4px;
+    letter-spacing: 1px;
+}
+
+.gift-subtitle {
+    text-align: center;
+    font-size: 11px;
+    color: #555;
+    margin: 0 0 4px;
+    font-style: italic;
+}
+
+.gift-divider {
+    border: none;
+    border-top: 1px solid #000;
+    margin: 10px 0;
+}
+
+.gift-divider.dashed {
+    border-top-style: dashed;
+    border-color: #666;
+}
+
+.gift-meta-section {
+    margin: 8px 0;
+}
+
+.gift-meta {
+    margin: 3px 0;
+    font-size: 12px;
+}
+
+.gift-items-section {
+    margin: 8px 0;
+}
+
+.gift-items-heading {
+    font-weight: bold;
+    font-size: 11px;
+    margin: 0 0 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.gift-item-row {
+    display: flex !important;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+.gift-item-name {
+    font-size: 12px;
+    flex: 1;
+}
+
+.gift-item-qty {
+    font-size: 11px;
+    color: #333;
+    margin-left: 12px;
+}
+
+.gift-policy-section {
+    margin: 8px 0;
+}
+
+.gift-policy-title {
+    font-weight: bold;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 0 0 6px;
+}
+
+.gift-policy-text {
+    font-size: 11px;
+    color: #333;
+    margin: 0 0 8px;
+    line-height: 1.5;
+}
+
+.gift-disclaimer {
+    font-size: 11px;
+    font-weight: bold;
+    border: 1px dashed #000;
+    padding: 4px 6px;
+    border-radius: 2px;
+    line-height: 1.4;
+}
+
+.gift-footer {
+    text-align: center;
+    font-size: 11px;
+    margin: 4px 0;
+}
+
+.gift-footer.small {
+    font-size: 10px;
+    color: #666;
+}

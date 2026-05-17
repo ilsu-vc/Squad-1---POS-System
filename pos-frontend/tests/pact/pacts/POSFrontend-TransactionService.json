@@ -1,0 +1,615 @@
+{
+  "consumer": {
+    "name": "POSFrontend"
+  },
+  "interactions": [
+    {
+      "description": "a request for receipt with invalid ID format",
+      "providerStates": [
+        {
+          "name": "the transaction service is available"
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "path": "/transactions/not-a-uuid/receipt"
+      },
+      "response": {
+        "body": {
+          "error": "Invalid transaction ID format"
+        },
+        "headers": {
+          "Content-Type": "application/json; charset=utf-8"
+        },
+        "status": 400
+      }
+    },
+    {
+      "description": "a request to create a new transaction",
+      "providerStates": [
+        {
+          "name": "the transaction service is available"
+        }
+      ],
+      "request": {
+        "body": {
+          "items": [
+            {
+              "category": "Beverages",
+              "name": "Test Product A",
+              "product_id": "1",
+              "quantity": 1,
+              "unit_price": 100
+            },
+            {
+              "category": "Snacks",
+              "name": "Test Product B",
+              "product_id": "2",
+              "quantity": 1,
+              "unit_price": 150
+            }
+          ],
+          "itemsCount": 2,
+          "paymentMethod": "cash",
+          "subtotal": 223.21,
+          "totalAmount": 250,
+          "vat": 26.79
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/transactions"
+      },
+      "response": {
+        "body": {
+          "receiptNumber": "REC-000001",
+          "transactionId": "550e8400-e29b-41d4-a716-446655440000"
+        },
+        "headers": {
+          "Content-Type": "application/json; charset=utf-8"
+        },
+        "matchingRules": {
+          "body": {
+            "$.receiptNumber": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.transactionId": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            }
+          },
+          "header": {},
+          "status": {}
+        },
+        "status": 201
+      }
+    },
+    {
+      "description": "a request to create a transaction with discount",
+      "providerStates": [
+        {
+          "name": "the transaction service is available"
+        }
+      ],
+      "request": {
+        "body": {
+          "discountAmount": 50,
+          "discountType": "Senior",
+          "items": [
+            {
+              "category": "Beverages",
+              "name": "Test Product A",
+              "product_id": "1",
+              "quantity": 1,
+              "unit_price": 100
+            },
+            {
+              "category": "Snacks",
+              "name": "Test Product B",
+              "product_id": "2",
+              "quantity": 1,
+              "unit_price": 150
+            }
+          ],
+          "itemsCount": 2,
+          "paymentMethod": "cash",
+          "subtotal": 223.21,
+          "totalAmount": 200,
+          "vat": 26.79
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/transactions"
+      },
+      "response": {
+        "body": {
+          "receiptNumber": "REC-000002",
+          "transactionId": "550e8400-e29b-41d4-a716-446655440000"
+        },
+        "headers": {
+          "Content-Type": "application/json; charset=utf-8"
+        },
+        "matchingRules": {
+          "body": {
+            "$.receiptNumber": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.transactionId": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            }
+          },
+          "header": {},
+          "status": {}
+        },
+        "status": 201
+      }
+    },
+    {
+      "description": "a request to create transaction with empty body",
+      "providerStates": [
+        {
+          "name": "the transaction service is available"
+        }
+      ],
+      "request": {
+        "body": {
+          "paymentMethod": "cash"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/transactions"
+      },
+      "response": {
+        "body": {
+          "details": {},
+          "error": "Validation failed"
+        },
+        "headers": {
+          "Content-Type": "application/json; charset=utf-8"
+        },
+        "matchingRules": {
+          "body": {
+            "$.details": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            }
+          },
+          "header": {},
+          "status": {}
+        },
+        "status": 400
+      }
+    },
+    {
+      "description": "a request to fetch receipt for a transaction",
+      "providerStates": [
+        {
+          "name": "a completed transaction exists",
+          "params": {
+            "transactionId": "550e8400-e29b-41d4-a716-446655440000"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "path": "/transactions/550e8400-e29b-41d4-a716-446655440000/receipt"
+      },
+      "response": {
+        "body": {
+          "receipt": {
+            "id": 1,
+            "receipt_number": "REC-000001",
+            "transaction_id": "550e8400-e29b-41d4-a716-446655440000"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json; charset=utf-8"
+        },
+        "matchingRules": {
+          "body": {
+            "$.receipt": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.receipt.id": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.receipt.receipt_number": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.receipt.transaction_id": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            }
+          },
+          "header": {},
+          "status": {}
+        },
+        "status": 200
+      }
+    },
+    {
+      "description": "a request to hold a transaction",
+      "providerStates": [
+        {
+          "name": "the transaction service is available"
+        }
+      ],
+      "request": {
+        "body": {
+          "items": [
+            {
+              "name": "Test Product",
+              "product_id": "1",
+              "quantity": 1,
+              "unit_price": 250
+            }
+          ],
+          "label": "Table 5",
+          "total": 250
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/transactions/hold"
+      },
+      "response": {
+        "body": {
+          "holdId": 123,
+          "message": "Transaction held successfully"
+        },
+        "headers": {
+          "Content-Type": "application/json; charset=utf-8"
+        },
+        "matchingRules": {
+          "body": {
+            "$.holdId": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.message": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            }
+          },
+          "header": {},
+          "status": {}
+        },
+        "status": 201
+      }
+    },
+    {
+      "description": "a request to list all transactions",
+      "providerStates": [
+        {
+          "name": "completed transactions exist"
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "path": "/transactions"
+      },
+      "response": {
+        "body": {
+          "transactions": [
+            {
+              "amount": "₱250.00",
+              "date": "Apr 10, 2026",
+              "discountAmount": 0,
+              "discountType": "None",
+              "hour": "10AM",
+              "id": "550e8400-e29b-41d4-a716-446655440000",
+              "items": [
+                {
+                  "name": "Test Product",
+                  "price": 100,
+                  "qty": 1
+                }
+              ],
+              "itemsCount": 2,
+              "method": "cash",
+              "rawAmount": 250,
+              "receiptNumber": "REC-000001",
+              "subtotal": 223.21,
+              "tax": 26.79,
+              "time": "10:30:00 AM",
+              "type": "sale"
+            }
+          ]
+        },
+        "headers": {
+          "Content-Type": "application/json; charset=utf-8"
+        },
+        "matchingRules": {
+          "body": {
+            "$.transactions": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type",
+                  "min": 1
+                }
+              ]
+            },
+            "$.transactions[*].amount": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.transactions[*].date": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.transactions[*].discountAmount": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.transactions[*].discountType": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.transactions[*].hour": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.transactions[*].id": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.transactions[*].items": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type",
+                  "min": 1
+                }
+              ]
+            },
+            "$.transactions[*].itemsCount": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.transactions[*].items[*].name": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.transactions[*].items[*].price": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.transactions[*].items[*].qty": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.transactions[*].method": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.transactions[*].rawAmount": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.transactions[*].receiptNumber": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.transactions[*].subtotal": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.transactions[*].tax": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.transactions[*].time": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            }
+          },
+          "header": {},
+          "status": {}
+        },
+        "status": 200
+      }
+    },
+    {
+      "description": "a request to refund a transaction",
+      "providerStates": [
+        {
+          "name": "a completed transaction exists",
+          "params": {
+            "transactionId": "550e8400-e29b-41d4-a716-446655440000"
+          }
+        }
+      ],
+      "request": {
+        "body": {
+          "items": [
+            {
+              "name": "Test Product",
+              "product_id": "1",
+              "quantity": 1,
+              "unit_price": 100
+            }
+          ],
+          "originalTransactionId": "550e8400-e29b-41d4-a716-446655440000",
+          "reason": "Defective item",
+          "refundSubtotal": 88,
+          "refundTax": 12,
+          "refundTotal": 100
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/transactions/refund"
+      },
+      "response": {
+        "body": {
+          "message": "Refund processed successfully",
+          "originalTransactionId": "550e8400-e29b-41d4-a716-446655440000",
+          "refundTransactionId": "660e8400-e29b-41d4-a716-446655441111"
+        },
+        "headers": {
+          "Content-Type": "application/json; charset=utf-8"
+        },
+        "matchingRules": {
+          "body": {
+            "$.message": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.refundTransactionId": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            }
+          },
+          "header": {},
+          "status": {}
+        },
+        "status": 200
+      }
+    }
+  ],
+  "metadata": {
+    "pact-js": {
+      "version": "13.2.0"
+    },
+    "pactRust": {
+      "ffi": "0.4.22",
+      "models": "1.2.3"
+    },
+    "pactSpecification": {
+      "version": "3.0.0"
+    }
+  },
+  "provider": {
+    "name": "TransactionService"
+  }
+}
