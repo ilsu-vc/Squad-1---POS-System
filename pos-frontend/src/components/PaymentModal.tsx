@@ -139,7 +139,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                             style={{ background: '#01a2ad', color: 'white', border: 'none' }}
                             onClick={onOpenGiftReceipt}
                         >
-                        Print Gift Receipt
+                            Print Gift Receipt
                         </button>
                     </div>
                 </div>

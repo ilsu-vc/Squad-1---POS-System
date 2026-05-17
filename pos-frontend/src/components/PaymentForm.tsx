@@ -54,7 +54,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
     const [refNo, setRefNo] = useState('');
     const [cardLast4, setCardLast4] = useState('');
     const [mobileProvider, setMobileProvider] = useState('GCash'); // GCash, Maya
-    const [isSplitMode, setIsSplitMode] = useState(false);    
+    const [isSplitMode, setIsSplitMode] = useState(false);
     // ── OR (Official Receipt) Fields ---
     const [orFields, setOrFields] = useState({
         name: '',
@@ -206,21 +206,37 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
         return breakdown;
     };
 
-    const onComplete = () => {
-        const details = {
-            customerName,
-            discountType,
-            discountAmount,
-            finalTotal,
-            refNo,
-            cardLast4,
-            mobileProvider,
-            tendered: cashReceived,
-            notes,
-            tags: selectedTags,
-            orFields: selectedTags.includes('Request for Official Receipt (OR)') ? orFields : undefined,
-        };
-        handleCompletePayment(details);
+    const onComplete = async () => {
+        try {
+            // ✅ Only send if OR is requested
+            if (selectedTags.includes('Request for Official Receipt (OR)')) {
+                await fetch('http://localhost:4002/receipt/info', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(orFields),
+                });
+            }
+
+            const details = {
+                customerName,
+                discountType,
+                discountAmount,
+                finalTotal,
+                refNo,
+                cardLast4,
+                mobileProvider,
+                tendered: cashReceived,
+                notes,
+                tags: selectedTags,
+                orFields: selectedTags.includes('Request for Official Receipt (OR)') ? orFields : undefined,
+            };
+
+            handleCompletePayment(details);
+
+        } catch (err) {
+            console.error('Failed to save OR info:', err);
+            alert('Failed to save receipt details.');
+        }
     };
 
     const onSplitComplete = (entries: PaymentEntry[]) => {
@@ -495,13 +511,13 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                                     gap: '8px',
                                     background: approvalStatus.status === 'approved' ? '#d4edda'
                                         : approvalStatus.status === 'rejected' ? '#f8d7da'
-                                        : '#fff3cd',
+                                            : '#fff3cd',
                                     color: approvalStatus.status === 'approved' ? '#155724'
                                         : approvalStatus.status === 'rejected' ? '#721c24'
-                                        : '#856404',
+                                            : '#856404',
                                     border: `1px solid ${approvalStatus.status === 'approved' ? '#c3e6cb'
                                         : approvalStatus.status === 'rejected' ? '#f5c6cb'
-                                        : '#ffc107'}`,
+                                            : '#ffc107'}`,
                                 }}>
                                     {approvalPolling && (
                                         <div style={{

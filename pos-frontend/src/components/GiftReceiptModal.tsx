@@ -28,29 +28,51 @@ const GiftReceiptModal: React.FC<GiftReceiptProps> = ({
     date,
     time,
 }) => {
+
+    const [customer, setCustomer] = React.useState({
+        name: '',
+        tin: '',
+        address: ''
+    });
     // Auto-trigger print dialog, then close the component when done
     useEffect(() => {
         if (!isOpen) return;
 
-        console.log("GiftReceiptModal: Triggering print dialog for transaction:", transactionId);
-
         const handleAfterPrint = () => {
-            console.log("GiftReceiptModal: Print dialog closed, unmounting component.");
             onClose();
+        };
+
+        const loadDataAndPrint = async () => {
+            try {
+                const res = await fetch('http://localhost:4002/receipt/info');
+                const data = await res.json();
+
+                if (data) {
+                    setCustomer({
+                        name: data.name || '',
+                        tin: data.tin || '',
+                        address: data.address || ''
+                    });
+                }
+
+                // print AFTER data is set
+                setTimeout(() => {
+                    window.print();
+                }, 300);
+
+            } catch (err) {
+                console.error('Fetch receipt info error:', err);
+            }
         };
 
         window.addEventListener('afterprint', handleAfterPrint);
 
-        const timer = setTimeout(() => {
-            window.print();
-        }, 800); 
+        loadDataAndPrint();
 
         return () => {
-            clearTimeout(timer);
             window.removeEventListener('afterprint', handleAfterPrint);
         };
-    }, [isOpen, onClose, transactionId]);
-
+    }, [isOpen, onClose]);
     // Nothing to show if not open
     if (!isOpen) return null;
 
@@ -62,8 +84,10 @@ const GiftReceiptModal: React.FC<GiftReceiptProps> = ({
                 <p className="gift-store-sub">123 Sample St., Brgy. Example, City, Philippines</p>
                 <p className="gift-store-sub">TIN: 000-000-000-000</p>
                 <div className="gift-divider" />
-                <h2 className="gift-title">🎁 GIFT RECEIPT</h2>
-                <p className="gift-subtitle">No prices shown — for gift purposes only</p>
+                <h2 className="gift-title">OFFICIAL RECEIPT</h2>
+                <p className="gift-subtitle">Name: {customer.name}</p>
+                <p className="gift-subtitle">TIN: {customer.tin}</p>
+                <p className="gift-subtitle">Address: {customer.address}</p>
                 <div className="gift-divider dashed" />
 
                 <div className="gift-meta-section">

@@ -5,6 +5,8 @@ import { InventoryModule } from './inventory/inventory.module';
 import { StockModule } from './stock/stock.module';
 import { TransfersModule } from './transfers/transfers.module';
 import { RabbitMQService } from './rabbitmq.service';
+import { ReceiptModule } from './receipt/receipt.module';
+
 
 @Module({
   imports: [
@@ -12,9 +14,10 @@ import { RabbitMQService } from './rabbitmq.service';
     HealthModule,
     InventoryModule,
     StockModule,
-    TransfersModule
+    TransfersModule,
+    ReceiptModule, // ✅ ADD THIS LINE
   ],
   providers: [RabbitMQService],
   exports: [RabbitMQService],
 })
-export class AppModule {}
+export class AppModule { }
