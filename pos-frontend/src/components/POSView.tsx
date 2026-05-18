@@ -12,6 +12,7 @@ import { formatCurrency } from '../utils/numberformatters';
 import { productApi } from '../services/productApi';
 import { DiscountValidationResult } from '../services/discountApi';
 import { TaxDiscountBreakdown } from '../utils/vatCalculator';
+import { SuggestedAddonsWidget } from './SuggestedAddonsWidget';
 
 interface CartItem extends Product {
   quantity: number;
@@ -24,6 +25,7 @@ interface POSViewProps {
     available_stock?: number;
     reserved_transfer_qty?: number;
   })[];
+  allProducts: Product[];
   searchQuery: string;
   setSearchQuery: (value: string) => void;
   categories: string[];
@@ -62,6 +64,7 @@ const POSView: React.FC<POSViewProps> = ({
   cart,
   setCart,
   filteredProducts,
+  allProducts,
   searchQuery,
   setSearchQuery,
   categories,
@@ -766,6 +769,12 @@ const POSView: React.FC<POSViewProps> = ({
             ))
           )}
         </div>
+
+        <SuggestedAddonsWidget 
+          cart={cart} 
+          allProducts={allProducts} 
+          onAddToCart={addToCart} 
+        />
 
         <div className="discount-card">
           <div className="discount-header">

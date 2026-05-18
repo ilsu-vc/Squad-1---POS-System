@@ -1711,6 +1711,7 @@ const App: React.FC = () => {
               cart={cart}
               setCart={setCart}
               filteredProducts={filteredProducts}
+              allProducts={products}
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
               categories={categories}
