@@ -29,6 +29,12 @@ export interface PrintReceiptData {
   storeAddress?: string;
   storeTin?: string;
   storePtin?: string;
+  orFields?: {
+    name: string;
+    tin: string;
+    address: string;
+  };
+  isReprint?: boolean;
 }
 
 /**
@@ -185,6 +191,7 @@ export const generateReceiptHTML = (data: PrintReceiptData): string => {
     </head>
     <body>
       <div class="receipt-header">
+        ${data.isReprint ? `<h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: bold;">*** REPRINT ***</h3>` : data.orFields ? `<h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: bold;">OFFICIAL RECEIPT</h3>` : ''}
         <h2 class="store-name">${storeName}</h2>
         <p class="store-address">${storeAddress}</p>
         <p style="margin: 2px 0; font-size: 10px;">TIN: ${storeTin}</p>
@@ -201,6 +208,24 @@ export const generateReceiptHTML = (data: PrintReceiptData): string => {
         <span>${dateStr} ${timeStr}</span>
       </div>
       ${data.customerName ? `<div class="meta-row"><span>Customer: ${data.customerName}</span></div>` : ''}
+
+      ${data.orFields ? `
+      <div class="divider dashed"></div>
+      <div style="font-size: 11px; padding: 2px 0;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+          <span>Name:</span>
+          <strong>${data.orFields.name}</strong>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+          <span>TIN:</span>
+          <strong>${data.orFields.tin}</strong>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+          <span>Address:</span>
+          <strong>${data.orFields.address}</strong>
+        </div>
+      </div>
+      ` : ''}
 
       <div class="divider"></div>
 

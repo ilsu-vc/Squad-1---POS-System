@@ -43,6 +43,11 @@ interface ItemizedReceiptProps {
   onPrint?: () => void;
   isPrinting?: boolean;
   isReprint?: boolean;
+  orFields?: {
+    name: string;
+    tin: string;
+    address: string;
+  };
 }
 
 const ItemizedReceipt: React.FC<ItemizedReceiptProps> = ({
@@ -68,6 +73,7 @@ const ItemizedReceipt: React.FC<ItemizedReceiptProps> = ({
   onPrint,
   isPrinting = false,
   isReprint = false,
+  orFields,
 }) => {
   const formatReceiptDate = (value?: string): string => {
     const parsed = value ? new Date(value) : new Date();
@@ -113,6 +119,11 @@ const ItemizedReceipt: React.FC<ItemizedReceiptProps> = ({
 
       {/* Store Header */}
       <div className="receipt-header">
+        {isReprint ? (
+          <h3 className="receipt-type-label" style={{ margin: '0 0 8px 0', fontSize: '14px', fontWeight: 'bold', textAlign: 'center' }}>*** REPRINT ***</h3>
+        ) : orFields ? (
+          <h3 className="receipt-type-label" style={{ margin: '0 0 8px 0', fontSize: '14px', fontWeight: 'bold', textAlign: 'center' }}>OFFICIAL RECEIPT</h3>
+        ) : null}
         <h2 className="store-name">{storeName}</h2>
         <p className="store-address">{storeAddress}</p>
         <p className="store-info">TIN: {storeTin}</p>
@@ -145,6 +156,26 @@ const ItemizedReceipt: React.FC<ItemizedReceiptProps> = ({
           </div>
         )}
         <div className="receipt-divider" />
+
+        {orFields && (
+          <>
+            <div className="or-details-section" style={{ fontSize: '11px', margin: '4px 0', padding: '2px 0' }}>
+              <div className="meta-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
+                <span className="meta-label">Name:</span>
+                <span className="meta-value" style={{ fontWeight: 'bold' }}>{orFields.name}</span>
+              </div>
+              <div className="meta-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
+                <span className="meta-label">TIN:</span>
+                <span className="meta-value" style={{ fontWeight: 'bold' }}>{orFields.tin}</span>
+              </div>
+              <div className="meta-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
+                <span className="meta-label">Address:</span>
+                <span className="meta-value" style={{ fontWeight: 'bold' }}>{orFields.address}</span>
+              </div>
+            </div>
+            <div className="receipt-divider dashed" />
+          </>
+        )}
       </div>
 
       {/* Items */}

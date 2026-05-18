@@ -25,6 +25,7 @@ interface SplitPaymentFormProps {
   onCancel: () => void;
   onBack: () => void;
   isSubmitting?: boolean;
+  isValid?: boolean;
 }
 
 const getImgSrc = (img: any): string =>
@@ -46,6 +47,7 @@ const SplitPaymentForm: React.FC<SplitPaymentFormProps> = ({
   onCancel,
   onBack,
   isSubmitting = false,
+  isValid = true,
 }) => {
   const [entries, setEntries] = useState<PaymentEntry[]>([
     createEntry(1),
@@ -94,7 +96,8 @@ const SplitPaymentForm: React.FC<SplitPaymentFormProps> = ({
 
   const allValid =
     entries.every(isEntryValid) &&
-    Math.abs(totalEntered - finalTotal) < 0.01;
+    Math.abs(totalEntered - finalTotal) < 0.01 &&
+    isValid;
 
   const handleComplete = () => {
     if (!allValid) return;

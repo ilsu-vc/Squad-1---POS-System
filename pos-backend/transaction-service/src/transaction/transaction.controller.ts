@@ -41,7 +41,7 @@ export class TransactionController {
     const client = this.supabase.getClient();
     const { data: txnRow, error: txnErr } = await client
       .from('transactions')
-      .insert({ status: 'pending' })
+      .insert({ status: 'pending', cashier_name: 'POS' })
       .select('id')
       .single();
       
@@ -107,7 +107,7 @@ export class TransactionController {
       .from('transactions')
       .select(`
         id, tx_no, status, total_amount, vat, subtotal, payment_method, items_count, 
-        discount_type, discount_amount, created_at,
+        discount_type, discount_amount, created_at, cashier_name,
         transaction_items (name, category, unit_price, quantity),
         receipts (receipt_number)
       `)
@@ -149,6 +149,7 @@ export class TransactionController {
           hour, amount: `₱${rawAmount.toFixed(2)}`, rawAmount,
           method: t.payment_method ?? 'Unknown',
           itemsCount: Number(t.items_count ?? 0),
+          cashierName: t.cashier_name ?? 'POS',
           createdAt: t.created_at,
           items: (t.transaction_items || []).map((item: any) => ({
             name: item.name, qty: Number(item.quantity), price: Number(item.unit_price), category: item.category ?? undefined,
@@ -247,6 +248,7 @@ export class TransactionController {
         id: data.id, status: data.status, totalAmount: data.total_amount, vat: data.vat, subtotal: data.subtotal,
         paymentMethod: data.payment_method, itemsCount: data.items_count, discountType: data.discount_type,
         discountAmount: data.discount_amount, notes: data.notes, tags: data.tags, createdAt: data.created_at,
+        cashierName: data.cashier_name ?? 'POS',
         receiptNumber,
         items: (data.transaction_items || []).map((item: any) => ({
           id: item.id, name: item.item_name, category: item.category, unitPrice: item.unit_price, quantity: item.quantity,
@@ -326,7 +328,7 @@ export class TransactionController {
   @Post('initiate')
   async initiateTransaction() {
     const client = this.supabase.getClient();
-    const { data, error } = await client.from('transactions').insert({ status: 'pending' }).select('id').single();
+    const { data, error } = await client.from('transactions').insert({ status: 'pending', cashier_name: 'POS' }).select('id').single();
     if (error) throw new InternalServerErrorException(error.message);
     return { transactionId: data.id };
   }
@@ -340,7 +342,7 @@ export class TransactionController {
     // POS-S4-009-T3: Handle offline local IDs by creating a new transaction record
     let effectiveTxId = transactionId;
     if (transactionId && (transactionId.startsWith('LOCAL-TXN-') || transactionId.startsWith('oq_'))) {
-      const { data: newTx, error: createErr } = await client.from('transactions').insert({ status: 'pending' }).select('id').single();
+      const { data: newTx, error: createErr } = await client.from('transactions').insert({ status: 'pending', cashier_name: 'POS' }).select('id').single();
       if (createErr) throw new InternalServerErrorException(`Failed to create replacement for offline transaction: ${createErr.message}`);
       effectiveTxId = newTx.id;
       console.log(`[Offline Sync] Replaced local ID ${transactionId} with database ID ${effectiveTxId}`);

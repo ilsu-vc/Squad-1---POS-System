@@ -54,7 +54,6 @@ fun POSScreen(navController: NavHostController) {
     var showScanner by remember { mutableStateOf(false) }
     var showSuccessDialog by remember { mutableStateOf(false) }
     var showPaymentDialog by remember { mutableStateOf(false) }
-    var showGiftReceipt by remember { mutableStateOf(false) }
     var heldOrdersCount by remember { mutableStateOf(0) }
     var lastReceiptNumber by remember { mutableStateOf("") }
     var lastItems by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
@@ -75,9 +74,10 @@ fun POSScreen(navController: NavHostController) {
     var stockAlert by remember { mutableStateOf<Triple<String, Int, Boolean>?>(null) } // name, stock, isNoStock
 
     val categoriesList = listOf("All", "OTC Medications", "Vitamins & Supplements", "Personal Care", "First Aid", "Health & Wellness", "Baby Care")
-    val subtotal = cart.sumOf { it.finalPrice }
-    val tax = subtotal * 0.12
-    val total = subtotal + tax - discountAmount
+    val totalInclusive = cart.sumOf { it.finalPrice }
+    val tax = (totalInclusive / 1.12) * 0.12
+    val subtotal = totalInclusive - tax
+    val total = totalInclusive - discountAmount
 
     LaunchedEffect(Unit) {
         try {
@@ -246,7 +246,15 @@ fun POSScreen(navController: NavHostController) {
                                     discountAmount = finalDiscountAmount, 
                                     discountLabel = finalDiscountLabel,
                                     amountTendered = paymentResult.amountPaid,
-                                    change = paymentResult.change
+                                    change = paymentResult.change,
+                                    isReprint = false,
+                                    customerName = paymentResult.customerName,
+                                    notes = paymentResult.notes,
+                                    tags = paymentResult.tags,
+                                    orName = paymentResult.orName,
+                                    orTin = paymentResult.orTin,
+                                    orAddress = paymentResult.orAddress,
+                                    txnId = txnId
                                 )
                             }
                             coroutineScope.launch {
@@ -294,7 +302,15 @@ fun POSScreen(navController: NavHostController) {
                             discountAmount = finalDiscountAmount,
                             discountLabel = finalDiscountLabel,
                             amountTendered = paymentResult.amountPaid,
-                            change = paymentResult.change
+                            change = paymentResult.change,
+                            isReprint = false,
+                            customerName = paymentResult.customerName,
+                            notes = paymentResult.notes,
+                            tags = paymentResult.tags,
+                            orName = paymentResult.orName,
+                            orTin = paymentResult.orTin,
+                            orAddress = paymentResult.orAddress,
+                            txnId = offlineId
                         )
                     }
                     val constraints = androidx.work.Constraints.Builder().setRequiredNetworkType(androidx.work.NetworkType.CONNECTED).build()
@@ -530,6 +546,7 @@ fun POSScreen(navController: NavHostController) {
     if (showPaymentDialog) {
         FullPaymentDialog(
             totalAmount = total,
+            preAppliedDiscountType = if (discountValid) discountCode else "",
             onDismiss = { showPaymentDialog = false },
             onConfirm = { result -> handleCheckout(result) }
         )
@@ -582,30 +599,13 @@ fun POSScreen(navController: NavHostController) {
             },
             confirmButton = { Button(onClick = { showSuccessDialog = false }, colors = ButtonDefaults.buttonColors(containerColor = Primary), shape = RoundedCornerShape(8.dp)) { Text("New Sale") } },
             dismissButton = {
-                TextButton(onClick = { showSuccessDialog = false; showGiftReceipt = true }) {
-                    Icon(Icons.Default.CardGiftcard, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text("Gift Receipt", color = Primary)
-                }
+
             },
             containerColor = White, shape = RoundedCornerShape(16.dp)
         )
     }
 
-    if (showGiftReceipt) {
-        GiftReceiptDialog(
-            receiptNumber = lastReceiptNumber,
-            items = lastItems,
-            total = total,
-            onDismiss = { showGiftReceipt = false },
-            onPrint = {
-                coroutineScope.launch {
-                    com.pharmacare.pos.util.PrintManager.printReceipt(context, lastReceiptNumber, lastItems, 0.0, "Gift Receipt", subtotal, tax)
-                }
-                showGiftReceipt = false
-            }
-        )
-    }
+
 }
 
 // ── ProductCard ────────────────────────────────────────────────────────────────

@@ -33,6 +33,7 @@ interface PaymentFormProps {
     isSubmitting?: boolean;
     preAppliedDiscountAmount?: number;
     preAppliedDiscountType?: string;
+    preAppliedDiscountPercent?: number;
 }
 
 const toTitleCase = (value: string): string =>
@@ -61,7 +62,9 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
     isSubmitting = false,
     preAppliedDiscountAmount = 0,
     preAppliedDiscountType = 'none',
+    preAppliedDiscountPercent = 0,
 }) => {
+    const isPromoApplied = !!(preAppliedDiscountType && !['none', 'senior', 'pwd'].includes(preAppliedDiscountType.toLowerCase()));
     // --- Essential States ---
     const [customerName, setCustomerName] = useState('');
     const [discountType, setDiscountType] = useState(preAppliedDiscountType || 'none'); // 'none', 'senior', 'pwd'
@@ -77,24 +80,11 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
         tin: '',
         address: '',
     });
-    // ── POS-S4-008-T1: Discount/Promo code validation state ──
-    const [promoCode, setPromoCode] = useState('');
-    const [promoValidating, setPromoValidating] = useState(false);
-    const [promoResult, setPromoResult] = useState<DiscountValidationResult | null>(null);
+    const [customDiscountPercent, setCustomDiscountPercent] = useState(preAppliedDiscountPercent || 0);
 
     // ── POS-S4-008-T2: Manual discount approval state ──
     const [approvalStatus, setApprovalStatus] = useState<DiscountApprovalRequest | null>(null);
     const [approvalPolling, setApprovalPolling] = useState(false);
-
-    // T1: Validate promo/discount code via API
-    const handleValidatePromoCode = useCallback(async () => {
-        if (!promoCode.trim()) return;
-        setPromoValidating(true);
-        setPromoResult(null);
-        const result = await discountApi.validateDiscountCode(promoCode);
-        setPromoResult(result);
-        setPromoValidating(false);
-    }, [promoCode]);
 
     // T2: Request manual discount approval + poll for result
     const handleRequestApproval = useCallback(async (type: string) => {
@@ -168,19 +158,28 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
             preAppliedTaxBreakdown &&
             preAppliedDiscountAmount > 0 &&
             String(discountType || '').toLowerCase() === String(preAppliedDiscountType || '').toLowerCase();
+        
+        let percent = 0;
+        const normType = String(discountType || '').toLowerCase();
+        if (normType === 'senior' || normType === 'pwd') {
+            percent = 20;
+        } else if (normType !== 'none') {
+            percent = customDiscountPercent;
+        }
+
         const nextBreakdown = shouldUsePreAppliedBreakdown
             ? preAppliedTaxBreakdown
             : calculateTaxDiscountBreakdown({
                 subtotal: subtotal || Math.max(0, initialTotal - tax),
                 vat: tax,
                 discountType,
-                discountPercent: discountType === 'none' ? 0 : 20,
+                discountPercent: percent,
             });
 
         setDiscountAmount(nextBreakdown.discountAmount);
         setFinalTotal(nextBreakdown.totalDue);
         setTaxBreakdown(nextBreakdown);
-    }, [discountType, initialTotal, preAppliedDiscountAmount, preAppliedDiscountType, preAppliedTaxBreakdown, subtotal, tax]);
+    }, [discountType, initialTotal, preAppliedDiscountAmount, preAppliedDiscountType, preAppliedTaxBreakdown, subtotal, tax, customDiscountPercent]);
 
     // Recalculate change based on discounted total
     const currentCashReceived = parseFloat(cashReceived) || 0;
@@ -303,10 +302,39 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                         />
                     </div>
 
+                    {/* Applied Discount moved up */}
+                    <div className="discount-section" style={{ marginTop: '15px' }}>
+                        <label className="section-label-sm">Applied Discount</label>
+                        <div className="discount-grid">
+                            {(['none', 'senior', 'pwd'] as const).map(type => (
+                                <button
+                                    key={type}
+                                    className={`discount-btn ${
+                                        (type === 'none' && !['senior', 'pwd'].includes(discountType.toLowerCase())) || 
+                                        discountType.toLowerCase() === type 
+                                            ? 'active' : ''
+                                    }`}
+                                    onClick={() => {
+                                        setDiscountType(type);
+                                        setCustomDiscountPercent(0);
+                                    }}
+                                    disabled={(!canApproveDiscount && type !== 'none') || (type !== 'none' && isPromoApplied)}
+                                >
+                                    {type === 'none' ? 'No Discount' : type.toUpperCase()}
+                                </button>
+                            ))}
+                        </div>
+                        {isPromoApplied && (
+                            <div style={{ color: '#0284c7', background: '#e0f2fe', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem', marginTop: '10px', lineHeight: '1.4' }}>
+                                ℹ️ Promo code <strong>{preAppliedDiscountType}</strong> applied from the main screen. To use Senior Citizen or PWD discount, please clear the discount code on the main screen.
+                            </div>
+                        )}
+                    </div>
+
                     <div className="input-group" style={{ marginTop: '15px' }}>
                         <label className="section-label-sm">Transaction Tags</label>
                         <div className="discount-grid">
-                            {['Bulk Order', 'Delivery', 'Request for Official Receipt (OR)'].map(tag => (
+                            {['Request for Official Receipt (OR)'].map(tag => (
                                 <button
                                     key={tag}
                                     className={`discount-btn ${selectedTags.includes(tag) ? 'active' : ''}`}
@@ -317,16 +345,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                             ))}
                         </div>
                     </div>
-                    <div className="input-group" style={{ marginTop: '15px' }}>
-                        <label className="section-label-sm">Transaction Notes ({notes.length}/500)</label>
-                        <textarea
-                            className="modern-input"
-                            style={{ height: '60px', resize: 'none', paddingTop: '10px' }}
-                            value={notes}
-                            onChange={(e) => setNotes(toSentenceCase(e.target.value).slice(0, 500))}
-                            placeholder="Add special instructions..."
-                        />
-                    </div>
+
 
                     {/* Dynamic OR Fields */}
                     {selectedTags.includes('Request for Official Receipt (OR)') && (
@@ -365,20 +384,19 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                         </div>
                     )}
 
-                    <div className="discount-section">
-                        <label className="section-label-sm">Applied Discount</label>
-                        <div className="discount-grid">
-                            {(['none', 'senior', 'pwd'] as const).map(type => (
-                                <button
-                                    key={type}
-                                    className={`discount-btn ${discountType === type ? 'active' : ''}`}
-                                    onClick={() => setDiscountType(type)}
-                                    disabled={!canApproveDiscount && type !== 'none'}
-                                >
-                                    {type === 'none' ? 'No Discount' : type.toUpperCase()}
-                                </button>
-                            ))}
-                        </div>
+                    <div className="input-group" style={{ marginTop: '15px' }}>
+                        <label className="section-label-sm">Transaction Notes ({notes.length}/500)</label>
+                        <textarea
+                            className="modern-input"
+                            style={{ height: '60px', resize: 'none', paddingTop: '10px' }}
+                            value={notes}
+                            onChange={(e) => setNotes(toSentenceCase(e.target.value).slice(0, 500))}
+                            placeholder="Add special instructions..."
+                        />
+                    </div>
+
+                    {/* SplitPaymentForm remains at the bottom */}
+                    <div style={{ marginTop: '15px' }}>
                         <SplitPaymentForm
                             finalTotal={finalTotal}
                             icons={{ cash_icon, card_icon, mobile_icon }}
@@ -389,6 +407,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                                 setPaymentMethod(null);
                             }}
                             isSubmitting={isSubmitting}
+                            isValid={!selectedTags.includes('Request for Official Receipt (OR)') || (orFields.name.trim() !== '' && orFields.tin.trim() !== '' && orFields.address.trim() !== '')}
                         />
                     </div>
                 </div>
@@ -451,7 +470,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                         <div className="input-group" style={{ marginTop: '15px' }}>
                             <label className="section-label-sm">Transaction Tags</label>
                             <div className="discount-grid">
-                                {['Bulk Order', 'Delivery', 'Request for Official Receipt (OR)'].map(tag => (
+                                {['Request for Official Receipt (OR)'].map(tag => (
                                     <button
                                         key={tag}
                                         className={`discount-btn ${selectedTags.includes(tag) ? 'active' : ''}`}
@@ -517,7 +536,11 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                                 {(['none', 'senior', 'pwd'] as const).map(type => (
                                     <button
                                         key={type}
-                                        className={`discount-btn ${discountType === type ? 'active' : ''}`}
+                                        className={`discount-btn ${
+                                            (type === 'none' && !['senior', 'pwd'].includes(discountType.toLowerCase())) || 
+                                            discountType.toLowerCase() === type 
+                                                ? 'active' : ''
+                                        }`}
                                         onClick={() => {
                                             if (canApproveDiscount || type === 'none') {
                                                 setDiscountType(type);
@@ -525,13 +548,18 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                                                 handleRequestApproval(type);
                                             }
                                         }}
-                                        disabled={approvalPolling && !canApproveDiscount && type !== 'none'}
+                                        disabled={(approvalPolling && !canApproveDiscount && type !== 'none') || (type !== 'none' && isPromoApplied)}
                                         title={!canApproveDiscount && type !== 'none' ? 'Requires supervisor approval — will request' : undefined}
                                     >
                                         {type === 'none' ? 'No Discount' : type.toUpperCase()}
                                     </button>
                                 ))}
                             </div>
+                            {isPromoApplied && (
+                                <div style={{ color: '#0284c7', background: '#e0f2fe', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem', marginTop: '10px', lineHeight: '1.4' }}>
+                                    ℹ️ Promo code <strong>{preAppliedDiscountType}</strong> applied from the main screen. To use Senior Citizen or PWD discount, please clear the discount code on the main screen.
+                                </div>
+                            )}
 
                             {/* T2: Approval status indicator */}
                             {approvalStatus && (
@@ -752,12 +780,22 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                 <button className="cancel-btn" onClick={handleCancelPayment}>Cancel</button>
                 <button
                     className={`complete-btn ${(() => {
+                        const isOrRequired = selectedTags.includes('Request for Official Receipt (OR)');
+                        const isOrValid = !isOrRequired || (orFields.name.trim() && orFields.tin.trim() && orFields.address.trim());
+                        
+                        if (!isOrValid) return '';
+                        
                         if (paymentMethod === 'cash') return (parseFloat(cashReceived) >= finalTotal - 0.001) ? 'active' : '';
                         if (paymentMethod === 'card') return (refNo.trim() !== '' && cardLast4.length === 4) ? 'active' : '';
                         if (paymentMethod === 'mobile') return (refNo.trim() !== '') ? 'active' : '';
                         return '';
                     })()}`}
                     disabled={(() => {
+                        const isOrRequired = selectedTags.includes('Request for Official Receipt (OR)');
+                        const isOrInvalid = isOrRequired && (!orFields.name.trim() || !orFields.tin.trim() || !orFields.address.trim());
+                        
+                        if (isOrInvalid) return true;
+                        
                         if (paymentMethod === 'cash') return (parseFloat(cashReceived) < finalTotal - 0.001 || !cashReceived);
                         if (paymentMethod === 'card') return (refNo.trim() === '' || cardLast4.length !== 4);
                         if (paymentMethod === 'mobile') return (refNo.trim() === '');

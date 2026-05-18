@@ -35,7 +35,7 @@ export const discountApi = {
    * Returns whether the code is valid and the discount details.
    * Falls back gracefully on API failure (T3 of 008).
    */
-  async validateDiscountCode(code: string): Promise<DiscountValidationResult> {
+  async validateDiscountCode(code: string, cartTotal?: number): Promise<DiscountValidationResult> {
     const trimmed = code.trim().toUpperCase();
     if (!trimmed) {
       return { valid: false, error: 'Discount code cannot be empty.' };
@@ -49,7 +49,7 @@ export const discountApi = {
       const res = await authFetch(`${BASE}/discounts/validate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: trimmed }),
+        body: JSON.stringify({ code: trimmed, cartTotal: cartTotal ?? 0 }),
       });
 
       if (!res.ok) {
@@ -61,9 +61,9 @@ export const discountApi = {
       const data = await res.json();
       const result: DiscountValidationResult = {
         valid: data.valid ?? false,
-        discountType: data.discountType,
-        discountPercent: data.discountPercent,
-        description: data.description,
+        discountType: data.discountType || data.discount?.code || 'Promo Code',
+        discountPercent: data.discountPercent ?? data.discount?.value ?? 0,
+        description: data.description || data.discount?.description,
         error: data.valid ? undefined : (data.error || 'Invalid discount code.'),
       };
 

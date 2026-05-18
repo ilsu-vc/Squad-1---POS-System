@@ -113,7 +113,15 @@ object PrintManager {
         discountLabel: String? = null,
         amountTendered: Double? = null,
         change: Double? = null,
-        localOnly: Boolean = false
+        localOnly: Boolean = false,
+        isReprint: Boolean = false,
+        customerName: String? = null,
+        notes: String? = null,
+        tags: List<String> = emptyList(),
+        orName: String? = null,
+        orTin: String? = null,
+        orAddress: String? = null,
+        txnId: String? = null
     ) {
         // 0. Try Network Printing (H10 as Server)
         val h10Ip = getH10Ip(context)?.trim()
@@ -127,17 +135,36 @@ object PrintManager {
                     netPrinter.initialize()
                     netPrinter.setAlignCenter()
                     netPrinter.boldOn()
-                    netPrinter.printLine("OFFICIAL RECEIPT")
+                    if (isReprint) {
+                        netPrinter.printLine("*** REPRINT ***")
+                    } else if (tags.contains("Request for OR")) {
+                        netPrinter.printLine("OFFICIAL RECEIPT")
+                    }
+                    netPrinter.printLine("PharmaCare Drugstore")
                     netPrinter.boldOff()
-                    netPrinter.doubleSizeOn()
-                    netPrinter.printLine("PHARMACARE")
-                    netPrinter.doubleSizeOff()
-                    netPrinter.printLine("Quality Healthcare for You")
+                    netPrinter.printLine("123 Sample St., Brgy. Example, City, Philippines")
+                    netPrinter.printLine("TIN: 000-000-000-000")
+                    netPrinter.printLine("PTIN: 12-345-678-901-001")
                     netPrinter.printLine("--------------------------------")
+                    
+                    // Print OR Details if requested
+                    if (!isReprint && tags.contains("Request for OR")) {
+                        netPrinter.setAlignLeft()
+                        netPrinter.printLine("Name: ${orName ?: ""}")
+                        netPrinter.printLine("TIN: ${orTin ?: ""}")
+                        netPrinter.printLine("Address: ${orAddress ?: ""}")
+                        netPrinter.printLine("--------------------------------")
+                    }
+                    
                     netPrinter.setAlignLeft()
-                    netPrinter.printLine("RECPT: $receiptNumber")
-                    netPrinter.printLine("DATE: ${java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault()).format(java.util.Date())}")
+                    netPrinter.printLine("Receipt #: $receiptNumber")
+                    if (!txnId.isNullOrBlank()) netPrinter.printLine("Txn ID: $txnId")
+                    val sdf = java.text.SimpleDateFormat("MMM dd, yyyy hh:mm:ss a", java.util.Locale.getDefault())
+                    netPrinter.printLine(sdf.format(java.util.Date()))
                     netPrinter.printLine("--------------------------------")
+                    
+                    // Table Header
+                    netPrinter.printLine("Item".padEnd(12) + "Qty".padStart(4) + "Price".padStart(8) + "Total".padStart(8))
                     
                     items.forEach { item ->
                         val name = item["name"]?.toString() ?: "Item"
@@ -148,12 +175,14 @@ object PrintManager {
                                    (item["unit_price"] as? Double) ?: 0.0
                         val lineTotal = qty.toDouble() * price
                         
+                        // Name line
                         netPrinter.printLine(name)
-                        // Manual alignment for 32-column thermal paper
-                        val qtyPrice = "$qty x P${String.format("%.2f", price)}"
-                        val totalStr = "P${String.format("%.2f", lineTotal)}"
-                        val spaces = " ".repeat((32 - qtyPrice.length - totalStr.length).coerceAtLeast(1))
-                        netPrinter.printLine("$qtyPrice$spaces$totalStr")
+                        
+                        // Numbers line aligned to headers
+                        val qtyStr = qty.toString().padStart(16) // Align under Qty (12 + 4)
+                        val priceStr = "P${String.format("%.2f", price)}".padStart(8)
+                        val totalStr = "P${String.format("%.2f", lineTotal)}".padStart(8)
+                        netPrinter.printLine("$qtyStr$priceStr$totalStr")
                     }
                     
                     netPrinter.printLine("--------------------------------")
@@ -163,49 +192,39 @@ object PrintManager {
                                        discountLabel?.contains("SC/", ignoreCase = true) == true
 
                     if (isSeniorOrPwd && discountAmount > 0) {
-                        // For Senior/PWD, we show the specific tax-exempt breakdown
-                        // Standard logic: Gross -> Less VAT -> VAT Exempt -> Less 20% -> Net
                         val gross = (subtotal ?: 0.0) + (vat ?: 0.0)
                         val vatRelief = vat ?: (gross - (gross / 1.12))
                         val vatExempt = gross - vatRelief
-                        val seniorDiscount = discountAmount - vatRelief // The 20% part
+                        val seniorDiscount = discountAmount - vatRelief
                         
-                        netPrinter.printLine("GROSS AMOUNT:".padEnd(20) + String.format("P%,.2f", gross).padStart(12))
-                        netPrinter.printLine("LESS VAT (12%):".padEnd(20) + String.format("-P%,.2f", vatRelief).padStart(12))
-                        netPrinter.printLine("VAT-EXEMPT SALE:".padEnd(20) + String.format("P%,.2f", vatExempt).padStart(12))
-                        val label = if (discountLabel?.contains("PWD", ignoreCase = true) == true) "PWD DISCOUNT:" else "SENIOR DISCOUNT:"
-                        netPrinter.printLine(label.padEnd(20) + String.format("-P%,.2f", seniorDiscount).padStart(12))
-                        
-                        netPrinter.printLine("TOTAL DISCOUNT:".padEnd(20) + String.format("-P%,.2f", discountAmount).padStart(12))
+                        netPrinter.printLine("VATable Sales:".padEnd(20) + String.format("P%,.2f", 0.0).padStart(12))
+                        netPrinter.printLine("VAT-Exempt Sales:".padEnd(20) + String.format("P%,.2f", vatExempt).padStart(12))
+                        netPrinter.printLine("VAT (12%):".padEnd(20) + String.format("P%,.2f", 0.0).padStart(12))
+                        netPrinter.printLine("VAT Discount/Deduction:".padEnd(20) + String.format("-P%,.2f", vatRelief).padStart(12))
+                        val dLabel = if (discountLabel?.contains("PWD", ignoreCase = true) == true) "Discount (PWD):" else "Discount (SENIOR):"
+                        netPrinter.printLine(dLabel.padEnd(20) + String.format("-P%,.2f", seniorDiscount).padStart(12))
                     } else {
-                        // Standard Breakdown
-                        if (subtotal != null) {
-                            val subStr = "SUBTOTAL: P${String.format("%.2f", subtotal)}"
-                            netPrinter.printLine(subStr.padStart(32))
-                        }
-                        if (vat != null && vat > 0) {
-                            val vatStr = "VAT (12%): P${String.format("%.2f", vat)}"
-                            netPrinter.printLine(vatStr.padStart(32))
-                        }
+                        netPrinter.printLine("VATable Sales:".padEnd(20) + String.format("P%,.2f", subtotal ?: 0.0).padStart(12))
+                        netPrinter.printLine("VAT (12%):".padEnd(20) + String.format("P%,.2f", vat ?: 0.0).padStart(12))
                         if (discountAmount > 0) {
-                            val discStr = "DISCOUNT (${discountLabel ?: "Disc"}): -P${String.format("%.2f", discountAmount)}"
-                            netPrinter.printLine(discStr.padStart(32))
+                            val label = if (!discountLabel.isNullOrBlank()) "Discount ($discountLabel):" else "Discount:"
+                            netPrinter.printLine(label.padEnd(20) + String.format("-P%,.2f", discountAmount).padStart(12))
                         }
                     }
                     
-                    netPrinter.boldOn()
-                    val totalLabel = if (isSeniorOrPwd) "NET AMOUNT PAID:" else "TOTAL AMOUNT PAID:"
-                    val totalStr = "$totalLabel P${String.format("%.2f", total)}"
-                    netPrinter.printLine(totalStr.padStart(32))
-                    netPrinter.boldOff()
+                    netPrinter.printLine("================================")
+                    val totalLabel = "TOTAL DUE:"
+                    val totalStr = "P${String.format("%.2f", total)}"
+                    netPrinter.printLine(totalLabel.padEnd(20) + totalStr.padStart(12))
+                    netPrinter.printLine("================================")
                     
                     if (amountTendered != null && amountTendered > 0) {
-                        val tenderedStr = "AMOUNT TENDERED: P${String.format("%.2f", amountTendered)}"
-                        netPrinter.printLine(tenderedStr.padStart(32))
+                        val tenderedStr = "P${String.format("%.2f", amountTendered)}"
+                        netPrinter.printLine("AMOUNT TENDERED:".padEnd(20) + tenderedStr.padStart(12))
                         
                         if (change != null) {
-                            val changeStr = "CHANGE: P${String.format("%.2f", change)}"
-                            netPrinter.printLine(changeStr.padStart(32))
+                            val changeStr = "P${String.format("%.2f", change)}"
+                            netPrinter.printLine("CHANGE:".padEnd(20) + changeStr.padStart(12))
                         }
                     }
                     
@@ -265,39 +284,24 @@ object PrintManager {
             // Future: Implement AIDL binding for MobiIot
         }
 
-        // 2. Try Android System Printing
-        val success = printViaSystem(context, receiptNumber, items, total, paymentMethod, subtotal, vat, discountAmount, discountLabel, amountTendered, change)
-        if (success) {
-            withContext(Dispatchers.Main) {
-                Toast.makeText(context, "Sending to System Printer...", Toast.LENGTH_SHORT).show()
+        // 1. Try Bluetooth (Prioritize InnerPrinter for Sunmi V2)
+        val bluetoothPrinter = findPrinter(context)
+        if (bluetoothPrinter != null) {
+            val btSuccess = printToDevice(bluetoothPrinter, receiptNumber, items, total, paymentMethod, subtotal, vat, discountAmount, discountLabel, amountTendered, change, context, isReprint, customerName, notes, orName, orTin, orAddress, txnId)
+            if (btSuccess) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, "Receipt Printed via Bluetooth", Toast.LENGTH_SHORT).show()
+                }
+                return
             }
-            return
         }
 
-        // 2. Try Intent Broadcast (Common for "Locked" H10 systems)
-        val intentActions = listOf(
-            "com.mobi.intent.action.PRINT",
-            "com.imin.intent.action.PRINT",
-            "com.trendit.intent.action.PRINT",
-            "android.intent.action.PRINT_RECEIPT"
-        )
-        
-        for (action in intentActions) {
-            val printIntent = android.content.Intent(action)
-            val header = "OFFICIAL RECEIPT\nPHARMACARE\n--------------------------------\n"
-            val body = "RECPT: $receiptNumber\nTOTAL PAID: P${String.format("%.2f", total)}\nMethod: $paymentMethod\n"
-            val footer = "--------------------------------\nThank you for your purchase!\n\n\n\n"
-            printIntent.putExtra("content", header + body + footer)
-            printIntent.putExtra("text", header + body + footer)
-            context.sendBroadcast(printIntent)
-        }
-
-        // 3. Try Serial Port Direct (Prioritize H10 ports)
+        // 2. Try Serial Port Direct (Prioritize H10 ports)
         val h10Ports = listOf("/dev/ttyS1", "/dev/ttyS3", "/dev/ttyMT1") + SerialPrinter.COMMON_PORTS
         for (port in h10Ports.distinct()) {
             val serialPrinter = SerialPrinter(port)
             if (serialPrinter.connect()) {
-                val success = printToSerial(serialPrinter, receiptNumber, items, total, paymentMethod, subtotal, vat, discountAmount, discountLabel, amountTendered, change)
+                val success = printToSerial(serialPrinter, receiptNumber, items, total, paymentMethod, subtotal, vat, discountAmount, discountLabel, amountTendered, change, isReprint, customerName, notes, orName, orTin, orAddress, txnId)
                 serialPrinter.close()
                 if (success) {
                     withContext(Dispatchers.Main) {
@@ -305,33 +309,6 @@ object PrintManager {
                     }
                     return
                 }
-            }
-        }
-
-        // 3. Fallback: USB
-        val usbPrinter = UsbPrinter(context)
-        if (usbPrinter.findPrinter()) {
-            if (usbPrinter.connect()) {
-                val usbSuccess = printToUsb(usbPrinter, receiptNumber, items, total, paymentMethod, subtotal, vat, discountAmount, discountLabel, amountTendered, change)
-                usbPrinter.close()
-                if (usbSuccess) {
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(context, "Receipt Printed via USB", Toast.LENGTH_SHORT).show()
-                    }
-                    return
-                }
-            }
-        }
-
-        // 3. Fallback: Bluetooth
-        val bluetoothPrinter = findPrinter(context)
-        if (bluetoothPrinter != null) {
-            val btSuccess = printToDevice(bluetoothPrinter, receiptNumber, items, total, paymentMethod, subtotal, vat, discountAmount, discountLabel, amountTendered, change, context)
-            if (btSuccess) {
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(context, "Receipt Printed via Bluetooth", Toast.LENGTH_SHORT).show()
-                }
-                return
             }
         }
 
@@ -458,7 +435,14 @@ object PrintManager {
         discountAmount: Double = 0.0,
         discountLabel: String? = null,
         amountTendered: Double? = null,
-        change: Double? = null
+        change: Double? = null,
+        isReprint: Boolean = false,
+        customerName: String? = null,
+        notes: String? = null,
+        orName: String? = null,
+        orTin: String? = null,
+        orAddress: String? = null,
+        txnId: String? = null
     ): Boolean {
         return try {
             val printManager = context.getSystemService(Context.PRINT_SERVICE) as AndroidPrintManager
@@ -481,55 +465,69 @@ object PrintManager {
                         .right { text-align: right; }
                         .bold { font-weight: bold; }
                         hr { border: 0; border-top: 1px dashed #000; margin: 5px 0; }
-                        table { width: 100%; border-collapse: collapse; }
+                        table { width: 100%; border-collapse: collapse; font-size: 9px; }
                         td { vertical-align: top; }
-                        .total { font-size: 12px; margin-top: 5px; }
+                        .total { font-size: 12px; margin-top: 5px; border-top: 1px double #000; border-bottom: 1px double #000; padding: 2px 0; }
                     </style>
                 </head>
                 <body>
                     <div class="center">
-                        <div class="bold">OFFICIAL RECEIPT</div>
-                        <h3 style="margin: 0; font-size: 14px;">PHARMACARE</h3>
-                        <p style="margin: 0;">Quality Healthcare for You</p>
+                        <h2 style="margin: 0; font-size: 14px;">PharmaCare Drugstore</h2>
+                        <p style="margin: 2px 0; font-size: 8px;">123 Sample St., Brgy. Example, City, Philippines</p>
+                        <p style="margin: 2px 0; font-size: 8px;">TIN: 000-000-000-000</p>
+                        <p style="margin: 2px 0; font-size: 8px;">PTIN: 12-345-678-901-001</p>
                     </div>
                     <hr>
-                    <p>
-                        RECPT: $receiptNumber<br>
-                        DATE: ${java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault()).format(java.util.Date())}
+                    <p style="font-size: 8px;">
+                        Receipt #: <strong>$receiptNumber</strong><br>
+                        ${if (!txnId.isNullOrBlank()) "Txn ID: $txnId<br>" else ""}
+                        Date: ${java.text.SimpleDateFormat("MMM dd, yyyy hh:mm:ss a", java.util.Locale.getDefault()).format(java.util.Date())}<br>
                     </p>
                     <hr>
                     <table>
+                        <tr>
+                            <td class="bold">Item</td>
+                            <td class="bold right">Qty</td>
+                            <td class="bold right">Price</td>
+                            <td class="bold right">Total</td>
+                        </tr>
                         ${items.joinToString("") { item ->
                             val name = item["name"]?.toString() ?: "Item"
                             val qty = (item["qty"] as? Double)?.toInt() ?: (item["quantity"] as? Double)?.toInt() ?: 1
                             val price = (item["price"] as? Double) ?: (item["unit_price"] as? Double) ?: 0.0
-                            "<tr><td colspan='2'>$name</td></tr>" +
-                            "<tr><td>$qty x P${String.format("%.2f", price)}</td><td class='right'>P${String.format("%.2f", qty.toDouble() * price)}</td></tr>"
+                            val lineTotal = qty.toDouble() * price
+                            "<tr><td colspan='4'>$name</td></tr>" +
+                            "<tr><td></td><td class='right'>$qty</td><td class='right'>P${String.format("%.2f", price)}</td><td class='right'>P${String.format("%.2f", lineTotal)}</td></tr>"
                         }}
                     </table>
                     <hr>
                     ${if (isSeniorOrPwd) """
-                        <div class="right">GROSS AMOUNT: P${String.format("%.2f", gross)}</div>
-                        <div class="right">LESS VAT (12%): -P${String.format("%.2f", vatRelief)}</div>
-                        <div class="right">VAT-EXEMPT SALE: P${String.format("%.2f", vatExempt)}</div>
-                        <div class="right">${if (discountLabel?.contains("PWD", ignoreCase = true) == true) "PWD" else "SENIOR"} DISCOUNT: -P${String.format("%.2f", seniorDiscount)}</div>
-                        <div class="right bold">TOTAL DISCOUNT: -P${String.format("%.2f", discountAmount)}</div>
+                        <div class="right" style="font-size: 8px;">VATable Sales: P${String.format("%.2f", 0.0)}</div>
+                        <div class="right" style="font-size: 8px;">VAT-Exempt Sales: P${String.format("%.2f", vatExempt)}</div>
+                        <div class="right" style="font-size: 8px;">VAT (12%): P${String.format("%.2f", 0.0)}</div>
+                        <div class="right" style="font-size: 8px;">VAT Discount/Deduction: -P${String.format("%.2f", vatRelief)}</div>
+                        <div class="right" style="font-size: 8px;">Discount (${if (discountLabel?.contains("PWD", ignoreCase = true) == true) "PWD" else "SENIOR"}): -P${String.format("%.2f", seniorDiscount)}</div>
                     """ else """
-                        <div class="right">SUBTOTAL: P${String.format("%.2f", subtotal ?: 0.0)}</div>
-                        <div class="right">VAT (12%): P${String.format("%.2f", vat ?: 0.0)}</div>
-                        ${if (discountAmount > 0) "<div class='right'>DISCOUNT: -P${String.format("%.2f", discountAmount)}</div>" else ""}
+                        <div class="right" style="font-size: 8px;">VATable Sales: P${String.format("%.2f", subtotal ?: 0.0)}</div>
+                        <div class="right" style="font-size: 8px;">VAT (12%): P${String.format("%.2f", vat ?: 0.0)}</div>
+                        ${if (discountAmount > 0) "<div class='right' style='font-size: 8px;'>Discount (${discountLabel ?: "Promo"}): -P${String.format("%.2f", discountAmount)}</div>" else ""}
                     """}
-                    <div class="right total bold">
-                        ${if (isSeniorOrPwd) "NET PAID" else "TOTAL PAID"}: P${String.format("%.2f", total)}
+                    
+                    <div class="total">
+                        <div class="bold">TOTAL DUE: <span style="float: right;">P${String.format("%.2f", total)}</span></div>
                     </div>
-                    ${if (amountTendered != null) """
-                        <div class="right">TENDERED: P${String.format("%.2f", amountTendered)}</div>
-                        <div class="right">CHANGE: P${String.format("%.2f", change ?: 0.0)}</div>
+
+                    <div class="bold" style="font-size: 8px; margin-top: 5px;">Payment:</div>
+                    <div style="font-size: 8px;">${paymentMethod.uppercase()}</div>
+                    
+                    ${if (amountTendered != null && amountTendered > 0) """
+                        <div class="right" style="font-size: 8px;">Change: P${String.format("%.2f", change ?: 0.0)}</div>
                     """ else ""}
-                    <div class="bold">Payment: $paymentMethod</div>
                     <hr>
-                    <div class="center">
+                    <div class="center" style="font-size: 8px;">
                         <p>Thank you for your purchase!</p>
+                        <p>Please keep this receipt for your records.</p>
+                        <p style="font-size: 6px;">THIS RECEIPT SHALL BE VALID FOR FIVE (5) YEARS FROM THE DATE OF ATP</p>
                         <br><br><br>
                     </div>
                 </body>
@@ -566,36 +564,50 @@ object PrintManager {
         discountAmount: Double = 0.0,
         discountLabel: String? = null,
         amountTendered: Double? = null,
-        change: Double? = null
+        change: Double? = null,
+        isReprint: Boolean = false,
+        customerName: String? = null,
+        notes: String? = null,
+        orName: String? = null,
+        orTin: String? = null,
+        orAddress: String? = null,
+        txnId: String? = null
     ): Boolean {
         try {
             printer.initialize()
             printer.setAlignCenter()
             printer.boldOn()
-            printer.write("OFFICIAL RECEIPT\n".toByteArray())
+            printer.write("PharmaCare Drugstore\n".toByteArray())
             printer.boldOff()
-            printer.doubleSizeOn()
-            printer.write("PHARMACARE\n".toByteArray())
-            printer.doubleSizeOff()
-            printer.write("Quality Healthcare for You\n".toByteArray())
+            printer.write("123 Sample St., Brgy. Example, City, Philippines\n".toByteArray())
+            printer.write("TIN: 000-000-000-000\n".toByteArray())
+            printer.write("PTIN: 12-345-678-901-001\n".toByteArray())
             printer.write("--------------------------------\n".toByteArray())
             
             printer.setAlignLeft()
-            printer.write("RECPT: $receiptNumber\n".toByteArray())
-            printer.write("DATE: ${java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault()).format(java.util.Date())}\n".toByteArray())
+            printer.write("Receipt #: $receiptNumber\n".toByteArray())
+            if (!txnId.isNullOrBlank()) printer.write("Txn ID: $txnId\n".toByteArray())
+            val sdf = java.text.SimpleDateFormat("MMM dd, yyyy hh:mm:ss a", java.util.Locale.getDefault())
+            printer.write("${sdf.format(java.util.Date())}\n".toByteArray())
             printer.write("--------------------------------\n".toByteArray())
 
+            // Table Header
+            printer.write(("Item".padEnd(12) + "Qty".padStart(4) + "Price".padStart(8) + "Total".padStart(8) + "\n").toByteArray())
+            
             items.forEach { item ->
                 val name = item["name"]?.toString() ?: "Item"
                 val qty = (item["qty"] as? Double)?.toInt() ?: (item["quantity"] as? Double)?.toInt() ?: 1
                 val price = (item["price"] as? Double) ?: (item["unit_price"] as? Double) ?: 0.0
                 val lineTotal = qty.toDouble() * price
                 
+                // Name line
                 printer.write("$name\n".toByteArray())
-                val qtyPrice = "$qty x P${String.format("%.2f", price)}"
-                val totalStr = "P${String.format("%.2f", lineTotal)}"
-                val spaces = " ".repeat((32 - qtyPrice.length - totalStr.length).coerceAtLeast(1))
-                printer.write("$qtyPrice$spaces$totalStr\n".toByteArray())
+                
+                // Numbers line aligned to headers
+                val qtyStr = qty.toString().padStart(16) // Align under Qty (12 + 4)
+                val priceStr = "P${String.format("%.2f", price)}".padStart(8)
+                val totalStr = "P${String.format("%.2f", lineTotal)}".padStart(8)
+                printer.write(("$qtyStr$priceStr$totalStr\n").toByteArray())
             }
 
             printer.write("--------------------------------\n".toByteArray())
@@ -609,32 +621,39 @@ object PrintManager {
                 val vatExempt = gross - vatRelief
                 val seniorDiscount = discountAmount - vatRelief
                 
-                printer.write(("GROSS AMT:".padEnd(20) + String.format("P%,.2f", gross).padStart(12) + "\n").toByteArray())
-                printer.write(("LESS VAT:".padEnd(20) + String.format("-P%,.2f", vatRelief).padStart(12) + "\n").toByteArray())
-                printer.write(("VAT-EXEMPT:".padEnd(20) + String.format("P%,.2f", vatExempt).padStart(12) + "\n").toByteArray())
-                val dLabel = if (discountLabel?.contains("PWD", ignoreCase = true) == true) "PWD DISC:" else "SNR DISC:"
+                printer.write(("VATable Sales:".padEnd(20) + String.format("P%,.2f", 0.0).padStart(12) + "\n").toByteArray())
+                printer.write(("VAT-Exempt Sales:".padEnd(20) + String.format("P%,.2f", vatExempt).padStart(12) + "\n").toByteArray())
+                printer.write(("VAT (12%):".padEnd(20) + String.format("P%,.2f", 0.0).padStart(12) + "\n").toByteArray())
+                printer.write(("VAT Discount/Deduction:".padEnd(20) + String.format("-P%,.2f", vatRelief).padStart(12) + "\n").toByteArray())
+                val dLabel = if (discountLabel?.contains("PWD", ignoreCase = true) == true) "Discount (PWD):" else "Discount (SENIOR):"
                 printer.write((dLabel.padEnd(20) + String.format("-P%,.2f", seniorDiscount).padStart(12) + "\n").toByteArray())
-                printer.write(("TOTAL DISC:".padEnd(20) + String.format("-P%,.2f", discountAmount).padStart(12) + "\n").toByteArray())
             } else {
-                if (subtotal != null) printer.write(("SUBTOTAL: P${String.format("%.2f", subtotal)}".padStart(32) + "\n").toByteArray())
-                if (vat != null && vat > 0) printer.write(("VAT (12%): P${String.format("%.2f", vat)}".padStart(32) + "\n").toByteArray())
-                if (discountAmount > 0) printer.write(("DISCOUNT: -P${String.format("%.2f", discountAmount)}".padStart(32) + "\n").toByteArray())
+                printer.write(("VATable Sales:".padEnd(20) + String.format("P%,.2f", subtotal ?: 0.0).padStart(12) + "\n").toByteArray())
+                printer.write(("VAT (12%):".padEnd(20) + String.format("P%,.2f", vat ?: 0.0).padStart(12) + "\n").toByteArray())
+                if (discountAmount > 0) {
+                    val label = if (!discountLabel.isNullOrBlank()) "Discount ($discountLabel):" else "Discount:"
+                    printer.write((label.padEnd(20) + String.format("-P%,.2f", discountAmount).padStart(12) + "\n").toByteArray())
+                }
             }
 
+            printer.write("================================\n".toByteArray())
             printer.boldOn()
-            val finalLabel = if (isSeniorOrPwd) "NET PAID:" else "TOTAL PAID:"
-            printer.write(("$finalLabel P${String.format("%.2f", total)}".padStart(32) + "\n").toByteArray())
+            printer.write(("TOTAL DUE:".padEnd(20) + String.format("P%,.2f", total).padStart(12) + "\n").toByteArray())
             printer.boldOff()
+            printer.write("================================\n".toByteArray())
 
+            printer.write("Payment:\n".toByteArray())
+            printer.write((paymentMethod.uppercase() + "\n").toByteArray())
+            
             if (amountTendered != null && amountTendered > 0) {
-                printer.write(("TENDERED: P${String.format("%.2f", amountTendered)}".padStart(32) + "\n").toByteArray())
-                if (change != null) printer.write(("CHANGE: P${String.format("%.2f", change)}".padStart(32) + "\n").toByteArray())
+                printer.write(("Change:".padEnd(20) + String.format("P%,.2f", change ?: 0.0).padStart(12) + "\n").toByteArray())
             }
-
-            printer.write("Payment: $paymentMethod\n".toByteArray())
-            printer.write("--------------------------------\n".toByteArray())
+            printer.write("================================\n".toByteArray())
+            
             printer.setAlignCenter()
-            printer.write("Thank you for your purchase!\n\n".toByteArray())
+            printer.write("Thank you for your purchase!\n".toByteArray())
+            printer.write("Please keep this receipt for your records.\n".toByteArray())
+            printer.write("THIS RECEIPT SHALL BE VALID FOR FIVE (5) YEARS FROM THE DATE OF ATP\n".toByteArray())
             printer.feed(4)
             return true
         } catch (e: Exception) {
@@ -653,36 +672,50 @@ object PrintManager {
         discountAmount: Double = 0.0,
         discountLabel: String? = null,
         amountTendered: Double? = null,
-        change: Double? = null
+        change: Double? = null,
+        isReprint: Boolean = false,
+        customerName: String? = null,
+        notes: String? = null,
+        orName: String? = null,
+        orTin: String? = null,
+        orAddress: String? = null,
+        txnId: String? = null
     ): Boolean {
         try {
             printer.initialize()
             printer.setAlignCenter()
             printer.boldOn()
-            printer.write("OFFICIAL RECEIPT\n".toByteArray())
+            printer.write("PharmaCare Drugstore\n".toByteArray())
             printer.boldOff()
-            printer.doubleSizeOn()
-            printer.write("PHARMACARE\n".toByteArray())
-            printer.doubleSizeOff()
-            printer.write("Quality Healthcare for You\n".toByteArray())
+            printer.write("123 Sample St., Brgy. Example, City, Philippines\n".toByteArray())
+            printer.write("TIN: 000-000-000-000\n".toByteArray())
+            printer.write("PTIN: 12-345-678-901-001\n".toByteArray())
             printer.write("--------------------------------\n".toByteArray())
             
             printer.setAlignLeft()
-            printer.write("RECPT: $receiptNumber\n".toByteArray())
-            printer.write("DATE: ${java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault()).format(java.util.Date())}\n".toByteArray())
+            printer.write("Receipt #: $receiptNumber\n".toByteArray())
+            if (!txnId.isNullOrBlank()) printer.write("Txn ID: $txnId\n".toByteArray())
+            val sdf = java.text.SimpleDateFormat("MMM dd, yyyy hh:mm:ss a", java.util.Locale.getDefault())
+            printer.write("${sdf.format(java.util.Date())}\n".toByteArray())
             printer.write("--------------------------------\n".toByteArray())
 
+            // Table Header
+            printer.write(("Item".padEnd(12) + "Qty".padStart(4) + "Price".padStart(8) + "Total".padStart(8) + "\n").toByteArray())
+            
             items.forEach { item ->
                 val name = item["name"]?.toString() ?: "Item"
                 val qty = (item["qty"] as? Double)?.toInt() ?: (item["quantity"] as? Double)?.toInt() ?: 1
                 val price = (item["price"] as? Double) ?: (item["unit_price"] as? Double) ?: 0.0
                 val lineTotal = qty.toDouble() * price
                 
+                // Name line
                 printer.write("$name\n".toByteArray())
-                val qtyPrice = "$qty x P${String.format("%.2f", price)}"
-                val totalStr = "P${String.format("%.2f", lineTotal)}"
-                val spaces = " ".repeat((32 - qtyPrice.length - totalStr.length).coerceAtLeast(1))
-                printer.write("$qtyPrice$spaces$totalStr\n".toByteArray())
+                
+                // Numbers line aligned to headers
+                val qtyStr = qty.toString().padStart(16) // Align under Qty (12 + 4)
+                val priceStr = "P${String.format("%.2f", price)}".padStart(8)
+                val totalStr = "P${String.format("%.2f", lineTotal)}".padStart(8)
+                printer.write(("$qtyStr$priceStr$totalStr\n").toByteArray())
             }
 
             printer.write("--------------------------------\n".toByteArray())
@@ -696,32 +729,39 @@ object PrintManager {
                 val vatExempt = gross - vatRelief
                 val seniorDiscount = discountAmount - vatRelief
                 
-                printer.write(("GROSS AMT:".padEnd(20) + String.format("P%,.2f", gross).padStart(12) + "\n").toByteArray())
-                printer.write(("LESS VAT:".padEnd(20) + String.format("-P%,.2f", vatRelief).padStart(12) + "\n").toByteArray())
-                printer.write(("VAT-EXEMPT:".padEnd(20) + String.format("P%,.2f", vatExempt).padStart(12) + "\n").toByteArray())
-                val dLabel = if (discountLabel?.contains("PWD", ignoreCase = true) == true) "PWD DISC:" else "SNR DISC:"
+                printer.write(("VATable Sales:".padEnd(20) + String.format("P%,.2f", 0.0).padStart(12) + "\n").toByteArray())
+                printer.write(("VAT-Exempt Sales:".padEnd(20) + String.format("P%,.2f", vatExempt).padStart(12) + "\n").toByteArray())
+                printer.write(("VAT (12%):".padEnd(20) + String.format("P%,.2f", 0.0).padStart(12) + "\n").toByteArray())
+                printer.write(("VAT Discount/Deduction:".padEnd(20) + String.format("-P%,.2f", vatRelief).padStart(12) + "\n").toByteArray())
+                val dLabel = if (discountLabel?.contains("PWD", ignoreCase = true) == true) "Discount (PWD):" else "Discount (SENIOR):"
                 printer.write((dLabel.padEnd(20) + String.format("-P%,.2f", seniorDiscount).padStart(12) + "\n").toByteArray())
-                printer.write(("TOTAL DISC:".padEnd(20) + String.format("-P%,.2f", discountAmount).padStart(12) + "\n").toByteArray())
             } else {
-                if (subtotal != null) printer.write(("SUBTOTAL: P${String.format("%.2f", subtotal)}".padStart(32) + "\n").toByteArray())
-                if (vat != null && vat > 0) printer.write(("VAT (12%): P${String.format("%.2f", vat)}".padStart(32) + "\n").toByteArray())
-                if (discountAmount > 0) printer.write(("DISCOUNT: -P${String.format("%.2f", discountAmount)}".padStart(32) + "\n").toByteArray())
+                printer.write(("VATable Sales:".padEnd(20) + String.format("P%,.2f", subtotal ?: 0.0).padStart(12) + "\n").toByteArray())
+                printer.write(("VAT (12%):".padEnd(20) + String.format("P%,.2f", vat ?: 0.0).padStart(12) + "\n").toByteArray())
+                if (discountAmount > 0) {
+                    val label = if (!discountLabel.isNullOrBlank()) "Discount ($discountLabel):" else "Discount:"
+                    printer.write((label.padEnd(20) + String.format("-P%,.2f", discountAmount).padStart(12) + "\n").toByteArray())
+                }
             }
 
+            printer.write("================================\n".toByteArray())
             printer.boldOn()
-            val finalLabel = if (isSeniorOrPwd) "NET PAID:" else "TOTAL PAID:"
-            printer.write(("$finalLabel P${String.format("%.2f", total)}".padStart(32) + "\n").toByteArray())
+            printer.write(("TOTAL DUE:".padEnd(20) + String.format("P%,.2f", total).padStart(12) + "\n").toByteArray())
             printer.boldOff()
+            printer.write("================================\n".toByteArray())
 
+            printer.write("Payment:\n".toByteArray())
+            printer.write((paymentMethod.uppercase() + "\n").toByteArray())
+            
             if (amountTendered != null && amountTendered > 0) {
-                printer.write(("TENDERED: P${String.format("%.2f", amountTendered)}".padStart(32) + "\n").toByteArray())
-                if (change != null) printer.write(("CHANGE: P${String.format("%.2f", change)}".padStart(32) + "\n").toByteArray())
+                printer.write(("Change:".padEnd(20) + String.format("P%,.2f", change ?: 0.0).padStart(12) + "\n").toByteArray())
             }
-
-            printer.write("Payment: $paymentMethod\n".toByteArray())
-            printer.write("--------------------------------\n".toByteArray())
+            printer.write("================================\n".toByteArray())
+            
             printer.setAlignCenter()
-            printer.write("Thank you for your purchase!\n\n".toByteArray())
+            printer.write("Thank you for your purchase!\n".toByteArray())
+            printer.write("Please keep this receipt for your records.\n".toByteArray())
+            printer.write("THIS RECEIPT SHALL BE VALID FOR FIVE (5) YEARS FROM THE DATE OF ATP\n".toByteArray())
             printer.feed(4)
             return true
         } catch (e: Exception) {
@@ -764,7 +804,14 @@ object PrintManager {
         discountLabel: String? = null,
         amountTendered: Double? = null,
         change: Double? = null,
-        context: Context
+        context: Context,
+        isReprint: Boolean = false,
+        customerName: String? = null,
+        notes: String? = null,
+        orName: String? = null,
+        orTin: String? = null,
+        orAddress: String? = null,
+        txnId: String? = null
     ): Boolean = withContext(Dispatchers.IO) {
         if (!printer.connect()) return@withContext false
 
@@ -772,19 +819,36 @@ object PrintManager {
             printer.initialize()
             printer.alignCenter()
             printer.boldOn()
-            printer.printLine("OFFICIAL RECEIPT")
+            if (isReprint) {
+                printer.printLine("*** REPRINT ***")
+            } else if (orName != null) {
+                printer.printLine("OFFICIAL RECEIPT")
+            }
+            printer.printLine("PharmaCare Drugstore")
             printer.boldOff()
-            printer.doubleSizeOn()
-            printer.printLine("PHARMACARE")
-            printer.doubleSizeOff()
-            printer.printLine("Quality Healthcare for You")
+            printer.printLine("123 Sample St., Brgy. Example, City, Philippines")
+            printer.printLine("TIN: 000-000-000-000")
+            printer.printLine("PTIN: 12-345-678-901-001")
             printer.printLine("--------------------------------")
             
+            // Print OR Details if requested
+            if (!isReprint && orName != null) {
+                printer.alignLeft()
+                printer.printLine("Name: $orName")
+                printer.printLine("TIN: ${orTin ?: ""}")
+                printer.printLine("Address: ${orAddress ?: ""}")
+                printer.printLine("--------------------------------")
+            }
+            
             printer.alignLeft()
-            printer.printLine("RECPT: $receiptNumber")
-            val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
-            printer.printLine("DATE: ${sdf.format(Date())}")
+            printer.printLine("Receipt #: $receiptNumber")
+            if (!txnId.isNullOrBlank()) printer.printLine("Txn ID: $txnId")
+            val sdf = SimpleDateFormat("MMM dd, yyyy hh:mm:ss a", Locale.getDefault())
+            printer.printLine(sdf.format(Date()))
             printer.printLine("--------------------------------")
+            
+            // Table Header
+            printer.printLine("Item".padEnd(12) + "Qty".padStart(4) + "Price".padStart(8) + "Total".padStart(8))
             
             items.forEach { item ->
                 val name = item["name"]?.toString() ?: "Item"
@@ -792,11 +856,14 @@ object PrintManager {
                 val price = (item["price"] as? Double) ?: (item["unit_price"] as? Double) ?: 0.0
                 val lineTotal = qty.toDouble() * price
                 
+                // Name line
                 printer.printLine(name)
-                val qtyPrice = "$qty x P${String.format("%.2f", price)}"
-                val totalS = "P${String.format("%.2f", lineTotal)}"
-                val spaces = " ".repeat((32 - qtyPrice.length - totalS.length).coerceAtLeast(1))
-                printer.printLine("$qtyPrice$spaces$totalS")
+                
+                // Numbers line aligned to headers
+                val qtyStr = qty.toString().padStart(16) // Align under Qty (12 + 4)
+                val priceStr = "P${String.format("%.2f", price)}".padStart(8)
+                val totalStr = "P${String.format("%.2f", lineTotal)}".padStart(8)
+                printer.printLine("$qtyStr$priceStr$totalStr")
             }
             
             printer.printLine("--------------------------------")
@@ -810,32 +877,39 @@ object PrintManager {
                 val vatExempt = gross - vatRelief
                 val seniorDiscount = discountAmount - vatRelief
                 
-                printer.printLine("GROSS AMT:".padEnd(20) + String.format("P%,.2f", gross).padStart(12))
-                printer.printLine("LESS VAT:".padEnd(20) + String.format("-P%,.2f", vatRelief).padStart(12))
-                printer.printLine("VAT-EXEMPT:".padEnd(20) + String.format("P%,.2f", vatExempt).padStart(12))
-                val dLabel = if (discountLabel?.contains("PWD", ignoreCase = true) == true) "PWD DISC:" else "SNR DISC:"
+                printer.printLine("VATable Sales:".padEnd(20) + String.format("P%,.2f", 0.0).padStart(12))
+                printer.printLine("VAT-Exempt Sales:".padEnd(20) + String.format("P%,.2f", vatExempt).padStart(12))
+                printer.printLine("VAT (12%):".padEnd(20) + String.format("P%,.2f", 0.0).padStart(12))
+                printer.printLine("VAT Discount/Deduction:".padEnd(20) + String.format("-P%,.2f", vatRelief).padStart(12))
+                val dLabel = if (discountLabel?.contains("PWD", ignoreCase = true) == true) "Discount (PWD):" else "Discount (SENIOR):"
                 printer.printLine(dLabel.padEnd(20) + String.format("-P%,.2f", seniorDiscount).padStart(12))
-                printer.printLine("TOTAL DISC:".padEnd(20) + String.format("-P%,.2f", discountAmount).padStart(12))
             } else {
-                if (subtotal != null) printer.printLine("SUBTOTAL: P${String.format("%.2f", subtotal)}".padStart(32))
-                if (vat != null && vat > 0) printer.printLine("VAT (12%): P${String.format("%.2f", vat)}".padStart(32))
-                if (discountAmount > 0) printer.printLine("DISCOUNT: -P${String.format("%.2f", discountAmount)}".padStart(32))
+                printer.printLine("VATable Sales:".padEnd(20) + String.format("P%,.2f", subtotal ?: 0.0).padStart(12))
+                printer.printLine("VAT (12%):".padEnd(20) + String.format("P%,.2f", vat ?: 0.0).padStart(12))
+                if (discountAmount > 0) {
+                    val label = if (!discountLabel.isNullOrBlank()) "Discount ($discountLabel):" else "Discount:"
+                    printer.printLine(label.padEnd(20) + String.format("-P%,.2f", discountAmount).padStart(12))
+                }
             }
             
+            printer.printLine("================================")
             printer.boldOn()
-            val finalLabel = if (isSeniorOrPwd) "NET PAID:" else "TOTAL PAID:"
-            printer.printLine("$finalLabel P${String.format("%.2f", total)}".padStart(32))
+            printer.printLine("TOTAL DUE:".padEnd(20) + String.format("P%,.2f", total).padStart(12))
             printer.boldOff()
+            printer.printLine("================================")
 
-            if (amountTendered != null && amountTendered > 0) {
-                printer.printLine("TENDERED: P${String.format("%.2f", amountTendered)}".padStart(32))
-                if (change != null) printer.printLine("CHANGE: P${String.format("%.2f", change)}".padStart(32))
-            }
+            printer.printLine("Payment:")
+            printer.printLine(paymentMethod.uppercase())
             
-            printer.printLine("Payment: $paymentMethod")
-            printer.printLine("--------------------------------")
+            if (amountTendered != null && amountTendered > 0) {
+                printer.printLine("Change:".padEnd(20) + String.format("P%,.2f", change ?: 0.0).padStart(12))
+            }
+            printer.printLine("================================")
+            
             printer.alignCenter()
             printer.printLine("Thank you for your purchase!")
+            printer.printLine("Please keep this receipt for your records.")
+            printer.printLine("THIS RECEIPT SHALL BE VALID FOR FIVE (5) YEARS FROM THE DATE OF ATP")
             printer.feed(4)
             printer.close()
             true

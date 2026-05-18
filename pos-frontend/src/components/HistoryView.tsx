@@ -160,7 +160,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({
                             <span
                               className={`history-method-pill ${getMethodPillClass(txn.method)}`}
                             >
-                              {txn.method}
+                              {txn.cashierName?.toLowerCase() === 'ecommerce' ? 'Online Order' : txn.method}
                             </span>
                           )}
                         </div>

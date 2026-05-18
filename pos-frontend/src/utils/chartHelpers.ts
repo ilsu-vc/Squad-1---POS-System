@@ -29,6 +29,7 @@ export interface Transaction {
     tags?: string[];
     type?: 'sale' | 'refund';
     originalTransactionId?: string;
+    cashierName?: string;
 }
 
 export interface RevenueByHour {

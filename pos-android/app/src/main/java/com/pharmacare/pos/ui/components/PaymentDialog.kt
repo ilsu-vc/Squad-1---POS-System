@@ -26,11 +26,14 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import kotlin.math.ceil
 import com.pharmacare.pos.ui.theme.*
+import kotlinx.coroutines.launch
+import io.github.jan.supabase.gotrue.auth
+
 
 enum class PaymentMethod(val label: String) {
     CASH("Cash"),
     CARD("Card"),
-    GCASH("GCash"),
+    MOBILE("Mobile"),
     SPLIT("Split")
 }
 
@@ -40,9 +43,17 @@ data class PaymentResult(
     val splitCash: Double = 0.0,
     val splitCard: Double = 0.0,
     val referenceNumber: String? = null,
+    val cardLast4: String? = null,
     val change: Double = 0.0,
     val discountType: String? = null,
-    val discountAmount: Double = 0.0
+    val discountAmount: Double = 0.0,
+    val customerName: String? = null,
+    val notes: String? = null,
+    val tags: List<String> = emptyList(),
+    val orName: String? = null,
+    val orTin: String? = null,
+    val orAddress: String? = null,
+    val mobileProvider: String? = null
 )
 
 fun getChangeBreakdown(changeAmount: Double): List<Pair<String, Int>> {
@@ -68,24 +79,41 @@ fun getChangeBreakdown(changeAmount: Double): List<Pair<String, Int>> {
 @Composable
 fun FullPaymentDialog(
     totalAmount: Double,
+    preAppliedDiscountType: String = "",
     onDismiss: () -> Unit,
     onConfirm: (PaymentResult) -> Unit
 ) {
     var selectedMethod by remember { mutableStateOf(PaymentMethod.CASH) }
     var cashTendered by remember { mutableStateOf("") }
     var cardRef by remember { mutableStateOf("") }
+    var cardLast4 by remember { mutableStateOf("") }
+    var mobileRef by remember { mutableStateOf("") }
     var splitCash by remember { mutableStateOf("") }
     var splitCard by remember { mutableStateOf("") }
     var discountType by remember { mutableStateOf("None") }
+    
+    // New states for web feature parity
+    var customerName by remember { mutableStateOf("") }
+    var notes by remember { mutableStateOf("") }
+    var selectedTags by remember { mutableStateOf(setOf<String>()) }
+    var mobileProvider by remember { mutableStateOf("GCash") }
+    var orName by remember { mutableStateOf("") }
+    var orTin by remember { mutableStateOf("") }
+    var orAddress by remember { mutableStateOf("") }
+
+    val isPromoApplied = preAppliedDiscountType.isNotBlank() && preAppliedDiscountType != "None"
 
     val currentTotal = remember(totalAmount, discountType) {
-        if (discountType == "None") {
+        val typeNorm = discountType.lowercase()
+        if (typeNorm == "none") {
             totalAmount
-        } else {
+        } else if (typeNorm == "senior citizen" || typeNorm == "pwd" || typeNorm == "senior") {
             // PH Logic: Remove 12% VAT, then apply 20% discount
             val vatable = totalAmount / 1.12
             val discount = vatable * 0.20
             vatable - discount
+        } else {
+            totalAmount
         }
     }
     val currentDiscountAmount = totalAmount - currentTotal
@@ -97,12 +125,15 @@ fun FullPaymentDialog(
     val splitTotal = splitCashVal + splitCardVal
     val splitValid = splitTotal >= currentTotal && splitCashVal > 0 && splitCardVal > 0
 
-    val canConfirm = when (selectedMethod) {
+    val isOrRequired = selectedTags.contains("Request for OR")
+    val isOrValid = !isOrRequired || (orName.isNotBlank() && orTin.isNotBlank() && orAddress.isNotBlank())
+
+    val canConfirm = (when (selectedMethod) {
         PaymentMethod.CASH -> cashValue >= currentTotal
         PaymentMethod.CARD -> true
-        PaymentMethod.GCASH -> true
+        PaymentMethod.MOBILE -> true
         PaymentMethod.SPLIT -> splitValid
-    }
+    }) && isOrValid
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -141,24 +172,92 @@ fun FullPaymentDialog(
 
                 Spacer(Modifier.height(16.dp))
 
-                // Discount Selector
+                // Customer Name (Optional)
+                OutlinedTextField(
+                    value = customerName,
+                    onValueChange = { customerName = it },
+                    label = { Text("Customer Name (Optional)") },
+                    placeholder = { Text("Walking Customer") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = TextFieldDefaults.outlinedTextFieldColors(focusedBorderColor = Primary, unfocusedBorderColor = Border)
+                )
+
+                Spacer(Modifier.height(12.dp))
+
+                // Discount Selector moved up
                 Text("Applied Discount", fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 14.sp)
                 Spacer(Modifier.height(8.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf("None", "Senior Citizen", "PWD").forEach { type ->
                         val isSelected = discountType == type
+                        val isEnabled = !isPromoApplied || type == "None"
                         Surface(
                             modifier = Modifier
                                 .weight(1f)
                                 .height(44.dp)
-                                .clickable { discountType = type },
+                                .clickable(enabled = isEnabled) { 
+                                    discountType = type
+                                },
+                            color = if (isSelected) Primary else if (!isEnabled) androidx.compose.ui.graphics.Color(0xFFF3F4F6) else White,
+                            shape = RoundedCornerShape(8.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, if (isSelected) Primary else if (!isEnabled) androidx.compose.ui.graphics.Color(0xFFE5E7EB) else Border)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    type,
+                                    color = if (isSelected) White else if (!isEnabled) androidx.compose.ui.graphics.Color(0xFF9CA3AF) else TextPrimary,
+                                    fontSize = 12.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                )
+                            }
+                        }
+                    }
+                }
+
+                if (isPromoApplied) {
+                    Spacer(Modifier.height(8.dp))
+                    Surface(
+                        color = androidx.compose.ui.graphics.Color(0xFFE0F2FE),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "ℹ️ Promo code \"$preAppliedDiscountType\" applied from the main screen. Senior/PWD discounts are disabled.",
+                                color = androidx.compose.ui.graphics.Color(0xFF0284C7),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                // Transaction Tags
+                Text("Transaction Tags", fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 14.sp)
+                Spacer(Modifier.height(8.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("Request for OR").forEach { tag ->
+                        val isSelected = selectedTags.contains(tag)
+                        Surface(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(44.dp)
+                                .clickable {
+                                    selectedTags = if (isSelected) selectedTags - tag else selectedTags + tag
+                                },
                             color = if (isSelected) Primary else White,
                             shape = RoundedCornerShape(8.dp),
                             border = androidx.compose.foundation.BorderStroke(1.dp, if (isSelected) Primary else Border)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Text(
-                                    type,
+                                    tag,
                                     color = if (isSelected) White else TextPrimary,
                                     fontSize = 12.sp,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
@@ -167,6 +266,67 @@ fun FullPaymentDialog(
                         }
                     }
                 }
+
+                // Dynamic OR Fields
+                if (selectedTags.contains("Request for OR")) {
+                    Spacer(Modifier.height(12.dp))
+                    Surface(
+                        color = SurfaceLight,
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text("Official Receipt Details", fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 14.sp)
+                            Spacer(Modifier.height(8.dp))
+                            
+                            OutlinedTextField(
+                                value = orName,
+                                onValueChange = { orName = it },
+                                label = { Text("Name") },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(8.dp),
+                                colors = TextFieldDefaults.outlinedTextFieldColors(focusedBorderColor = Primary, unfocusedBorderColor = Border)
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            
+                            OutlinedTextField(
+                                value = orTin,
+                                onValueChange = { orTin = it },
+                                label = { Text("TIN") },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(8.dp),
+                                colors = TextFieldDefaults.outlinedTextFieldColors(focusedBorderColor = Primary, unfocusedBorderColor = Border)
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            
+                            OutlinedTextField(
+                                value = orAddress,
+                                onValueChange = { orAddress = it },
+                                label = { Text("Address") },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(8.dp),
+                                colors = TextFieldDefaults.outlinedTextFieldColors(focusedBorderColor = Primary, unfocusedBorderColor = Border)
+                            )
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                // Transaction Notes
+                OutlinedTextField(
+                    value = notes,
+                    onValueChange = { if (it.length <= 500) notes = it },
+                    label = { Text("Transaction Notes (${notes.length}/500)") },
+                    placeholder = { Text("Add special instructions...") },
+                    modifier = Modifier.fillMaxWidth().height(100.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = TextFieldDefaults.outlinedTextFieldColors(focusedBorderColor = Primary, unfocusedBorderColor = Border)
+                )
+
+                Spacer(Modifier.height(16.dp))
+
+
 
                 Spacer(Modifier.height(20.dp))
 
@@ -188,7 +348,7 @@ fun FullPaymentDialog(
                                     val icon = when (method) {
                                         PaymentMethod.CASH -> Icons.Default.Money
                                         PaymentMethod.CARD -> Icons.Default.CreditCard
-                                        PaymentMethod.GCASH -> Icons.Default.PhoneAndroid
+                                        PaymentMethod.MOBILE -> Icons.Default.PhoneAndroid
                                         PaymentMethod.SPLIT -> Icons.Default.CallSplit
                                     }
                                     Icon(
@@ -298,13 +458,14 @@ fun FullPaymentDialog(
                                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                                         ) {
                                             items(breakdown) { (denom, count) ->
+                                                val is1c = denom == "1c"
                                                 Surface(
-                                                    color = Primary.copy(alpha = 0.1f),
+                                                    color = if (is1c) Color.Red.copy(alpha = 0.1f) else Primary.copy(alpha = 0.1f),
                                                     shape = RoundedCornerShape(6.dp),
                                                 ) {
                                                     Text(
                                                         if (denom.endsWith("c")) "${count}x $denom" else "${count}x ₱$denom",
-                                                        color = Primary,
+                                                        color = if (is1c) Color.Red else Primary,
                                                         fontWeight = FontWeight.Bold,
                                                         fontSize = 11.sp,
                                                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
@@ -325,7 +486,7 @@ fun FullPaymentDialog(
                                 Spacer(Modifier.width(12.dp))
                                 Column {
                                     Text("Card Payment", fontWeight = FontWeight.Bold, color = TextPrimary)
-                                    Text("Present card to reader or enter reference number", color = TextMuted, fontSize = 13.sp)
+                                    Text("Present card to reader or enter details", color = TextMuted, fontSize = 13.sp)
                                 }
                             }
                         }
@@ -334,6 +495,15 @@ fun FullPaymentDialog(
                             value = cardRef,
                             onValueChange = { cardRef = it },
                             label = { Text("Reference Number (optional)") },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = TextFieldDefaults.outlinedTextFieldColors(focusedBorderColor = Primary, unfocusedBorderColor = Border)
+                        )
+                        OutlinedTextField(
+                            value = cardLast4,
+                            onValueChange = { if (it.length <= 4) cardLast4 = it },
+                            label = { Text("Last 4 Digits (optional)") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(10.dp),
                             colors = TextFieldDefaults.outlinedTextFieldColors(focusedBorderColor = Primary, unfocusedBorderColor = Border)
@@ -351,7 +521,34 @@ fun FullPaymentDialog(
                         }
                     }
 
-                    PaymentMethod.GCASH -> {
+                    PaymentMethod.MOBILE -> {
+                        Text("Mobile Payment Provider", fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 14.sp)
+                        Spacer(Modifier.height(8.dp))
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            listOf("GCash", "Maya").forEach { provider ->
+                                val isSelected = mobileProvider == provider
+                                Surface(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(44.dp)
+                                        .clickable { mobileProvider = provider },
+                                    color = if (isSelected) Color(0xFF0066CC) else White,
+                                    shape = RoundedCornerShape(8.dp),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, if (isSelected) Color(0xFF0066CC) else Border)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Text(
+                                            provider,
+                                            color = if (isSelected) White else TextPrimary,
+                                            fontSize = 12.sp,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        Spacer(Modifier.height(12.dp))
+                        
                         Surface(color = Color(0xFFE8F5FF), shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
                             Column(modifier = Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                                 Box(
@@ -363,16 +560,24 @@ fun FullPaymentDialog(
                                     Icon(Icons.Default.QrCode, contentDescription = "QR Code", tint = White, modifier = Modifier.size(80.dp))
                                 }
                                 Spacer(Modifier.height(12.dp))
-                                Text("Scan GCash QR Code", fontWeight = FontWeight.Bold, color = Color(0xFF0066CC), fontSize = 16.sp)
+                                Text("Scan $mobileProvider QR Code", fontWeight = FontWeight.Bold, color = Color(0xFF0066CC), fontSize = 16.sp)
                                 Text(
                                     "Amount: ₱${String.format("%.2f", currentTotal)}",
                                     color = TextPrimary,
                                     fontWeight = FontWeight.ExtraBold,
                                     fontSize = 18.sp
                                 )
-                                Text("Ask customer to scan with GCash app", color = TextMuted, fontSize = 13.sp)
+                                Text("Ask customer to scan with $mobileProvider app", color = TextMuted, fontSize = 13.sp)
                             }
                         }
+                        OutlinedTextField(
+                            value = mobileRef,
+                            onValueChange = { mobileRef = it },
+                            label = { Text("Reference Number (optional)") },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = TextFieldDefaults.outlinedTextFieldColors(focusedBorderColor = Primary, unfocusedBorderColor = Border)
+                        )
                     }
 
                     PaymentMethod.SPLIT -> {
@@ -451,20 +656,41 @@ fun FullPaymentDialog(
                                     amountPaid = cashValue,
                                     change = cashChange,
                                     discountType = if (discountType != "None") discountType else null,
-                                    discountAmount = currentDiscountAmount
+                                    discountAmount = currentDiscountAmount,
+                                    customerName = customerName.ifBlank { null },
+                                    notes = notes.ifBlank { null },
+                                    tags = selectedTags.toList(),
+                                    orName = if (selectedTags.contains("Request for OR")) orName.ifBlank { null } else null,
+                                    orTin = if (selectedTags.contains("Request for OR")) orTin.ifBlank { null } else null,
+                                    orAddress = if (selectedTags.contains("Request for OR")) orAddress.ifBlank { null } else null
                                 )
                                 PaymentMethod.CARD -> PaymentResult(
                                     method = "Card",
                                     amountPaid = currentTotal,
                                     referenceNumber = cardRef.ifBlank { null },
+                                    cardLast4 = cardLast4.ifBlank { null },
                                     discountType = if (discountType != "None") discountType else null,
-                                    discountAmount = currentDiscountAmount
+                                    discountAmount = currentDiscountAmount,
+                                    customerName = customerName.ifBlank { null },
+                                    notes = notes.ifBlank { null },
+                                    tags = selectedTags.toList(),
+                                    orName = if (selectedTags.contains("Request for OR")) orName.ifBlank { null } else null,
+                                    orTin = if (selectedTags.contains("Request for OR")) orTin.ifBlank { null } else null,
+                                    orAddress = if (selectedTags.contains("Request for OR")) orAddress.ifBlank { null } else null
                                 )
-                                PaymentMethod.GCASH -> PaymentResult(
-                                    method = "GCash",
+                                PaymentMethod.MOBILE -> PaymentResult(
+                                    method = mobileProvider,
                                     amountPaid = currentTotal,
+                                    referenceNumber = mobileRef.ifBlank { null },
                                     discountType = if (discountType != "None") discountType else null,
-                                    discountAmount = currentDiscountAmount
+                                    discountAmount = currentDiscountAmount,
+                                    customerName = customerName.ifBlank { null },
+                                    notes = notes.ifBlank { null },
+                                    tags = selectedTags.toList(),
+                                    orName = if (selectedTags.contains("Request for OR")) orName.ifBlank { null } else null,
+                                    orTin = if (selectedTags.contains("Request for OR")) orTin.ifBlank { null } else null,
+                                    orAddress = if (selectedTags.contains("Request for OR")) orAddress.ifBlank { null } else null,
+                                    mobileProvider = mobileProvider
                                 )
                                 PaymentMethod.SPLIT -> PaymentResult(
                                     method = "Split (Cash + Card)",
@@ -472,7 +698,13 @@ fun FullPaymentDialog(
                                     splitCash = splitCashVal,
                                     splitCard = splitCardVal,
                                     discountType = if (discountType != "None") discountType else null,
-                                    discountAmount = currentDiscountAmount
+                                    discountAmount = currentDiscountAmount,
+                                    customerName = customerName.ifBlank { null },
+                                    notes = notes.ifBlank { null },
+                                    tags = selectedTags.toList(),
+                                    orName = if (selectedTags.contains("Request for OR")) orName.ifBlank { null } else null,
+                                    orTin = if (selectedTags.contains("Request for OR")) orTin.ifBlank { null } else null,
+                                    orAddress = if (selectedTags.contains("Request for OR")) orAddress.ifBlank { null } else null
                                 )
                             }
                             onConfirm(result)

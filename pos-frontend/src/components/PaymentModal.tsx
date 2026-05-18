@@ -37,10 +37,16 @@ interface PaymentModalProps {
     isSubmitting?: boolean;
     discountAmount?: number;
     discountType?: string;
+    preAppliedDiscountPercent?: number;
     receiptItems?: ReceiptItem[];
     customerName?: string;
     taxBreakdown?: TaxDiscountBreakdown;
     onOpenGiftReceipt?: () => void;
+    orFields?: {
+        name: string;
+        tin: string;
+        address: string;
+    };
 }
 
 const PaymentModal: React.FC<PaymentModalProps> = ({
@@ -65,9 +71,11 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
     isSubmitting = false,
     discountAmount,
     discountType,
+    preAppliedDiscountPercent = 0,
     receiptItems = [],
     customerName,
     taxBreakdown,
+    orFields,
 }) => {
     const [isPrinting, setIsPrinting] = useState(false);
 
@@ -87,6 +95,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                 paymentMethod: paymentMethod || 'cash',
                 changeAmount: apiChangeAmount || changeAmount,
                 customerName,
+                orFields,
             });
         } catch (error) {
             console.error('Print error:', error);
@@ -116,6 +125,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                                 paymentMethod={paymentMethod || 'cash'}
                                 changeAmount={apiChangeAmount !== undefined ? apiChangeAmount : changeAmount}
                                 customerName={customerName}
+                                orFields={orFields}
                             />
                         </>
                     ) : (
@@ -185,6 +195,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                         isSubmitting={isSubmitting}
                         preAppliedDiscountAmount={discountAmount}
                         preAppliedDiscountType={discountType}
+                        preAppliedDiscountPercent={preAppliedDiscountPercent}
                     />
                 </div>
             )}

@@ -303,14 +303,15 @@ fun TransactionHistoryScreen() {
                                 )
                                 // Payment badge
                                 Box(modifier = Modifier.weight(1.2f)) {
-                                    val (pmColor, pmBg) = when {
-                                        txn.paymentMethod.contains("Cash", true) && !txn.paymentMethod.contains("Split") -> Pair(Color(0xFF10B981), Color(0xFFD1FAE5))
-                                        txn.paymentMethod.contains("Card", true) -> Pair(Info, Color(0xFFDBEAFE))
-                                        txn.paymentMethod.contains("GCash", true) -> Pair(Color(0xFF0066CC), Color(0xFFDCEEFF))
-                                        else -> Pair(Warning, Color(0xFFFEF3C7))
+                                    val (pmColor, pmBg, pmLabel) = when {
+                                        txn.cashierName.equals("Ecommerce", ignoreCase = true) -> Triple(Color(0xFF8B5CF6), Color(0xFFEDE9FE), "Online Order")
+                                        txn.paymentMethod.contains("Cash", true) && !txn.paymentMethod.contains("Split") -> Triple(Color(0xFF10B981), Color(0xFFD1FAE5), txn.paymentMethod)
+                                        txn.paymentMethod.contains("Card", true) -> Triple(Info, Color(0xFFDBEAFE), txn.paymentMethod)
+                                        txn.paymentMethod.contains("GCash", true) -> Triple(Color(0xFF0066CC), Color(0xFFDCEEFF), txn.paymentMethod)
+                                        else -> Triple(Warning, Color(0xFFFEF3C7), txn.paymentMethod)
                                     }
                                     Surface(color = pmBg, shape = RoundedCornerShape(6.dp)) {
-                                        Text(txn.paymentMethod.take(16), color = pmColor, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
+                                        Text(pmLabel.take(16), color = pmColor, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
                                     }
                                 }
                                 // Items
@@ -333,11 +334,17 @@ fun TransactionHistoryScreen() {
                                                         )
                                                     },
                                                     total = txn.totalAmount,
-                                                    paymentMethod = txn.paymentMethod + " (Reprint)",
+                                                    paymentMethod = if (txn.cashierName.equals("Ecommerce", ignoreCase = true)) {
+                                                        "Online Order"
+                                                    } else {
+                                                        txn.paymentMethod
+                                                    },
                                                     subtotal = txn.subtotal,
                                                     vat = txn.vat,
                                                     discountAmount = txn.discountAmount ?: 0.0,
-                                                    discountLabel = txn.discountLabel
+                                                    discountLabel = txn.discountLabel,
+                                                    isReprint = true,
+                                                    txnId = txn.id
                                                 )
                                             }
                                         }

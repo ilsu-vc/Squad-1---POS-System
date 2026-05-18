@@ -120,6 +120,7 @@ const App: React.FC = () => {
   const [completedTaxBreakdown, setCompletedTaxBreakdown] = useState<any>(null);
   const [completedCustomerName, setCompletedCustomerName] = useState('');
   const [completedDiscountMeta, setCompletedDiscountMeta] = useState<{ amount: number; type: string }>({ amount: 0, type: 'none' });
+  const [completedOrFields, setCompletedOrFields] = useState<{ name: string; tin: string; address: string } | undefined>(undefined);
   const [isReprintModalOpen, setIsReprintModalOpen] = useState(false);
   const [isGiftReceiptOpen, setIsGiftReceiptOpen] = useState(false);
   const [lastCompletedTransaction, setLastCompletedTransaction] = useState<{
@@ -930,6 +931,7 @@ const App: React.FC = () => {
     setCompletedTaxBreakdown(null);
     setCompletedCustomerName('');
     setCompletedDiscountMeta({ amount: 0, type: 'none' });
+    setCompletedOrFields(undefined);
     if (paymentStatus === 'success') setCart([]);
   };
 
@@ -1015,7 +1017,7 @@ const App: React.FC = () => {
       discountType,
       discountAmount,
     });
-    const normalizedDiscountType = discountTypeMap[String(discountType).toLowerCase()] || 'None';
+    const normalizedDiscountType = discountTypeMap[String(discountType).toLowerCase()] || discountType || 'None';
     const isSplit = Array.isArray(splitPayments) && splitPayments.length > 1;
     const effectivePaymentMethod = isSplit ? 'Split' : paymentMethod ?? 'cash';
 
@@ -1092,6 +1094,7 @@ const App: React.FC = () => {
       setCompletedTaxBreakdown(paymentTaxBreakdown);
       setCompletedCustomerName(customerName);
       setCompletedDiscountMeta({ amount: paymentTaxBreakdown.discountAmount, type: discountType });
+      setCompletedOrFields(details.orFields);
 
       // Fetch the actual receipt data immediately (Skip if offline)
       if (!isOfflineSale) {
@@ -1728,7 +1731,7 @@ const App: React.FC = () => {
               validateDiscountCode={async () => {
                 setDiscountError(null);
                 setIsDiscountValidating(true);
-                const result = await discountApi.validateDiscountCode(discountCode);
+                const result = await discountApi.validateDiscountCode(discountCode, total);
                 setDiscountResult(result);
                 setIsDiscountValidating(false);
                 if (!result.valid) setDiscountError(result.error || 'Invalid discount code.');
@@ -1770,8 +1773,10 @@ const App: React.FC = () => {
             onOpenGiftReceipt={() => {setIsGiftReceiptOpen(true)}}
             discountAmount={completedTaxBreakdown ? completedDiscountMeta.amount : discountAmount}
             discountType={completedTaxBreakdown ? completedDiscountMeta.type : (discountResult?.discountType ?? 'none')}
+            preAppliedDiscountPercent={discountResult?.valid ? discountResult.discountPercent || 0 : 0}
             taxBreakdown={completedTaxBreakdown || checkoutTaxBreakdown}
             customerName={completedCustomerName}
+            orFields={completedOrFields}
             receiptItems={cart.map((item) => ({
               name: item.name,
               quantity: item.quantity,

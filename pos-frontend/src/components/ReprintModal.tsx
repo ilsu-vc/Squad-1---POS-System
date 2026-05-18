@@ -82,7 +82,11 @@ const ReprintModal: React.FC<ReprintModalProps> = ({ isOpen, onClose, transactio
         return `${formattedDate} ${formattedTime}`;
     };
 
-    const getPaymentMethodDisplay = (method: string) => {
+    const getPaymentMethodDisplay = (txn: Transaction) => {
+        if (txn.cashierName && txn.cashierName.toLowerCase() === 'ecommerce') {
+            return 'ONLINE ORDER';
+        }
+        const method = txn.method;
         const normalized = (method || 'cash').trim().toLowerCase();
         if (normalized === 'cash' || normalized === 'cash payment') return 'CASH';
         if (normalized === 'card' || normalized === 'card payment') return 'CARD';
@@ -189,7 +193,7 @@ const ReprintModal: React.FC<ReprintModalProps> = ({ isOpen, onClose, transactio
 
                 <div className="print-payment-section">
                     <p><strong>Payment:</strong></p>
-                    <p>{getPaymentMethodDisplay(txn.method)}</p>
+                    <p>{getPaymentMethodDisplay(txn)}</p>
                     <div className="print-change-row">
                         <span>Change:</span>
                         <span>{formatCurrency(changeAmount)}</span>

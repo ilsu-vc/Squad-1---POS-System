@@ -260,75 +260,7 @@ fun ChangePasswordDialog(onDismiss: () -> Unit) {
 // Gift Receipt Dialog
 // ─────────────────────────────────────────────────────────────────────────────
 
-@Composable
-fun GiftReceiptDialog(
-    receiptNumber: String,
-    items: List<Map<String, Any>>,
-    total: Double,
-    onDismiss: () -> Unit,
-    onPrint: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.CardGiftcard, contentDescription = null, tint = Primary, modifier = Modifier.size(22.dp))
-                Spacer(Modifier.width(8.dp))
-                Text("Gift Receipt", fontWeight = FontWeight.Bold, color = TextPrimary)
-            }
-        },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Receipt #: $receiptNumber", color = TextMuted, fontSize = 13.sp)
-                HorizontalDivider(color = Border)
-                Text("Items Purchased:", fontWeight = FontWeight.Bold, color = TextPrimary)
-                items.take(5).forEach { item ->
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text(
-                            "${item["name"]} Ã— ${item["quantity"]}",
-                            color = TextSecondary,
-                            fontSize = 13.sp,
-                            modifier = Modifier.weight(1f)
-                        )
-                        Text("(price hidden)", color = TextMuted, fontSize = 12.sp)
-                    }
-                }
-                if (items.size > 5) {
-                    Text("... and ${items.size - 5} more item(s)", color = TextMuted, fontSize = 12.sp)
-                }
-                HorizontalDivider(color = Border)
-                Surface(
-                    color = SurfaceLight,
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        "Note: Prices are not shown on this receipt as it is intended as a gift.",
-                        color = TextMuted,
-                        fontSize = 12.sp,
-                        modifier = Modifier.padding(10.dp)
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = onPrint,
-                colors = ButtonDefaults.buttonColors(containerColor = Primary),
-                shape = RoundedCornerShape(8.dp)
-            ) {
-                Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(6.dp))
-                Text("Print Gift Receipt")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel", color = TextMuted) }
-        },
-        containerColor = White,
-        shape = RoundedCornerShape(16.dp)
-    )
-}
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
