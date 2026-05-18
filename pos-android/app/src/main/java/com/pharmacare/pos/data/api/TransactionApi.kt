@@ -21,9 +21,25 @@ data class CompleteTransactionRequest(
     val discountAmount: Double? = null
 )
 
+data class CheckoutRequest(
+    val successUrl: String,
+    val cancelUrl: String,
+    val paymentMethods: List<String>,
+    val lineItems: List<Map<String, Any>>? = null
+)
+
 interface TransactionApi {
     @POST("/api/transactions/transactions/initiate")
     suspend fun startTransaction(@Body body: StartTransactionRequest): Response<Map<String, Any>>
+
+    @POST("/api/transactions/transactions/{id}/checkout")
+    suspend fun createCheckout(
+        @Path("id") transactionId: String,
+        @Body body: CheckoutRequest
+    ): Response<Map<String, Any>>
+
+    @GET("/api/transactions/transactions/{id}/status")
+    suspend fun getTransactionStatus(@Path("id") transactionId: String): Response<Map<String, Any>>
 
     @POST("/api/transactions/transactions/complete")
     suspend fun completeTransaction(@Body body: CompleteTransactionRequest): Response<Map<String, Any>>

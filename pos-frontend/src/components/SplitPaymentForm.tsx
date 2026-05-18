@@ -89,9 +89,7 @@ const SplitPaymentForm: React.FC<SplitPaymentFormProps> = ({
 
   const isEntryValid = (e: PaymentEntry): boolean => {
     if (!e.method || !(parseFloat(e.amount) > 0)) return false;
-    if (e.method === 'card') return e.refNo.trim() !== '' && e.cardLast4.length === 4;
-    if (e.method === 'mobile') return e.refNo.trim() !== '';
-    return true; // cash
+    return true; // cash, card, mobile are all immediately valid!
   };
 
   const allValid =
@@ -101,7 +99,16 @@ const SplitPaymentForm: React.FC<SplitPaymentFormProps> = ({
 
   const handleComplete = () => {
     if (!allValid) return;
-    onComplete(entries);
+    const mappedEntries = entries.map(e => {
+      if (e.method === 'card') {
+        return { ...e, refNo: 'CARD-SPLIT', cardLast4: '0000' };
+      }
+      if (e.method === 'mobile') {
+        return { ...e, refNo: e.mobileProvider ? `${e.mobileProvider.toUpperCase()}-SPLIT` : 'MOBILE-SPLIT' };
+      }
+      return e;
+    });
+    onComplete(mappedEntries);
   };
 
   return (
@@ -194,39 +201,9 @@ const SplitPaymentForm: React.FC<SplitPaymentFormProps> = ({
                   </div>
                 </div>
 
-                {/* Card-specific fields */}
-                {entry.method === 'card' && (
-                  <div className="split-extra-fields">
-                    <div className="split-input-group" style={{ flex: 1 }}>
-                      <label className="split-input-label">Reference #</label>
-                      <input
-                        type="text"
-                        className="split-text-input"
-                        placeholder="Ref #"
-                        value={entry.refNo}
-                        onChange={e => updateEntry(entry.id, 'refNo', e.target.value)}
-                      />
-                    </div>
-                    <div className="split-input-group" style={{ width: 100 }}>
-                      <label className="split-input-label">Last 4 Digits</label>
-                      <input
-                        type="text"
-                        className="split-text-input"
-                        placeholder="0000"
-                        maxLength={4}
-                        value={entry.cardLast4}
-                        onChange={e => {
-                          const val = e.target.value.replace(/\D/g, '');
-                          if (val.length <= 4) updateEntry(entry.id, 'cardLast4', val);
-                        }}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* Mobile-specific fields */}
+                {/* Mobile provider selector (no number inputs) */}
                 {entry.method === 'mobile' && (
-                  <div className="split-extra-fields">
+                  <div className="split-extra-fields" style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
                     <div className="split-input-group" style={{ flex: 1 }}>
                       <label className="split-input-label">Provider</label>
                       <div className="split-provider-row">
@@ -240,16 +217,6 @@ const SplitPaymentForm: React.FC<SplitPaymentFormProps> = ({
                           </button>
                         ))}
                       </div>
-                    </div>
-                    <div className="split-input-group" style={{ flex: 1 }}>
-                      <label className="split-input-label">Reference #</label>
-                      <input
-                        type="text"
-                        className="split-text-input"
-                        placeholder="Ref #"
-                        value={entry.refNo}
-                        onChange={e => updateEntry(entry.id, 'refNo', e.target.value)}
-                      />
                     </div>
                   </div>
                 )}

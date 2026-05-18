@@ -244,7 +244,95 @@ const App: React.FC = () => {
     }
   };
 
-  // Data fetching consolidated into authenticated initialization block below
+  // --- Same-Tab Payment Gateway Return Callback Listener ---
+  useEffect(() => {
+    const checkPaymentCallback = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const paymentStatus = urlParams.get('payment');
+      const txnId = urlParams.get('txnId');
+
+      if (paymentStatus === 'success' && txnId) {
+        const pendingSaleStr = localStorage.getItem('pending_checkout_sale');
+        const pendingCartStr = localStorage.getItem('pending_checkout_cart');
+        const pendingDetailsStr = localStorage.getItem('pending_checkout_details');
+
+        if (pendingSaleStr && pendingCartStr && pendingDetailsStr) {
+          try {
+            const pendingSale = JSON.parse(pendingSaleStr);
+            const pendingCart = JSON.parse(pendingCartStr);
+            const pendingDetails = JSON.parse(pendingDetailsStr);
+
+            setIsCompletingTransaction(true);
+
+            // 1. Call complete endpoint to save transaction in Supabase
+            const res = await authFetch('/api/transactions/transactions/complete', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(pendingSale),
+            });
+            const saleResult = await res.json();
+            
+            if (saleResult.error) throw new Error(saleResult.error);
+
+            // 2. Setup receipt states to display the Receipt Modal
+            const receiptNo = saleResult.receiptNumber ?? null;
+            setDbReceiptNumber(receiptNo);
+            setApiChangeAmount(saleResult.changeAmount ?? 0);
+            
+            const calculatedTax = calculateTaxDiscountBreakdown({
+              subtotal: pendingSale.subtotal,
+              vat: pendingSale.vat,
+              discountType: pendingDetails.discountType,
+              discountAmount: pendingSale.discountAmount,
+            });
+            
+            setCompletedTaxBreakdown(calculatedTax);
+            setCompletedCustomerName(pendingDetails.customerName || '');
+            setCompletedDiscountMeta({ amount: pendingSale.discountAmount, type: pendingDetails.discountType || 'none' });
+            setCompletedOrFields(pendingDetails.orFields);
+            
+            setDbTransactionId(txnId);
+            // Restore cart items so ItemizedReceipt renders them
+            setCart(pendingCart);
+            
+            // Configure modal states to show successful receipt screen
+            setPaymentMethod(pendingSale.paymentMethod || 'card');
+            setPaymentStatus('success');
+            setIsPaymentModalOpen(true);
+            
+            setDiscountCode('');
+            setDiscountResult(null);
+
+            // Fetch the actual receipt data immediately in the background
+            try {
+              const receiptData = await authFetch(`/api/transactions/transactions/${txnId}/receipt`).then((r) => r.json());
+              console.log('Fetched receipt data:', receiptData);
+            } catch (receiptErr) {
+              console.warn('Failed to fetch receipt details:', receiptErr);
+            }
+
+          } catch (err: any) {
+            console.error('Error completing transaction after redirect:', err);
+            setAppAlert({ isOpen: true, title: 'Payment Error', message: `Failed to complete transaction: ${err.message}` });
+          } finally {
+            setIsCompletingTransaction(false);
+            // Cleanup localStorage and clean URL parameters
+            localStorage.removeItem('pending_checkout_sale');
+            localStorage.removeItem('pending_checkout_cart');
+            localStorage.removeItem('pending_checkout_details');
+            window.history.replaceState({}, document.title, window.location.origin + '/');
+          }
+        }
+      } else if (paymentStatus === 'cancel') {
+        alert('❌ Payment was cancelled or failed. Your cart has been preserved.');
+        // Cleanup URL query strings
+        window.history.replaceState({}, document.title, window.location.origin + '/');
+      }
+    };
+
+    // Run callback check on page load
+    checkPaymentCallback();
+  }, []);
 
   useEffect(() => {
     const channel = supabase
@@ -437,7 +525,13 @@ const App: React.FC = () => {
       if (result.error) throw new Error(result.error);
       const handoverData = (result.handover as ShiftRecord | null) ?? null;
       setLatestHandover(handoverData);
+
+      // Check if returning from checkout callback to suppress the Shift Handover popup
+      const urlParams = new URLSearchParams(window.location.search);
+      const isReturningFromCheckout = urlParams.has('payment');
+
       if (
+        !isReturningFromCheckout &&
         handoverData &&
         (handoverData.handover_notes ||
           handoverData.cash_discrepancies ||
@@ -1010,6 +1104,7 @@ const App: React.FC = () => {
       notes = '',
       tags = [],
       taxBreakdown = null,
+      mobileProvider = 'gcash', // Destructure selected mobile provider (gcash, maya, qrph)
     } = details;
     const paymentTaxBreakdown = taxBreakdown || calculateTaxDiscountBreakdown({
       subtotal,
@@ -1049,6 +1144,55 @@ const App: React.FC = () => {
         notes,
         tags,
       };
+
+      // Trigger payment gateway checkout for Card and Mobile payments
+      const isGatewayPayment = effectivePaymentMethod === 'card' || effectivePaymentMethod === 'mobile';
+      if (isGatewayPayment && !dbTransactionId.startsWith('LOCAL-TXN-')) {
+        try {
+          // Construct unified payment line item with the exact discounted finalTotal
+          const frontendLineItems = [{
+            name: 'POS Transaction Payment',
+            quantity: 1,
+            amount: {
+              value: Math.round(Number(finalTotal || total || 0) * 100),
+              currency: 'PHP',
+            },
+          }];
+
+          // Restrict gateway options dynamically based on payment method
+          let paymentMethodsList = ['card'];
+          if (effectivePaymentMethod === 'mobile') {
+            paymentMethodsList = [mobileProvider]; // ['gcash'], ['maya'], or ['qrph']
+          }
+
+          const checkoutRes = await authFetch(`/api/transactions/transactions/${dbTransactionId}/checkout`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              successUrl: `${window.location.origin}/?payment=success&txnId=${dbTransactionId}`,
+              cancelUrl: `${window.location.origin}/?payment=cancel&txnId=${dbTransactionId}`,
+              paymentMethods: paymentMethodsList, // Restrict gateway dynamically
+              lineItems: frontendLineItems, // Pass unified discounted total
+            }),
+          });
+          const checkoutResult = await checkoutRes.json();
+          if (checkoutResult.checkoutUrl) {
+            // Save state to localStorage to prevent loss upon redirect
+            localStorage.setItem('pending_checkout_sale', JSON.stringify(salePayload));
+            localStorage.setItem('pending_checkout_cart', JSON.stringify(cart));
+            localStorage.setItem('pending_checkout_details', JSON.stringify(details));
+
+            // Redirect this tab directly to the secure PayMongo hosted payment page
+            window.location.href = checkoutResult.checkoutUrl;
+            return; // Stop local execution immediately to await Return to Merchant callback
+          } else {
+            throw new Error(checkoutResult.message || 'Failed to generate payment checkout link.');
+          }
+        } catch (err: any) {
+          console.error('Payment gateway checkout failure:', err);
+          throw new Error(`Payment Gateway Error: ${err.message}`);
+        }
+      }
 
       let saleResult: any;
       let isOfflineSale = false;

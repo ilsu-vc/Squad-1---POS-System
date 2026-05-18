@@ -4,6 +4,7 @@ import { SupabaseService } from '../supabase.service';
 import { RabbitMQService } from '../rabbitmq.service';
 import { TransactionService } from './transaction.service';
 import { ZodValidationPipe } from '../zod-validation.pipe';
+import { ApiCenterService } from './api-center.service';
 import { 
   CreateTransactionSchema, CompleteTransactionSchema, CancelTransactionSchema, 
   UpdateNotesSchema, HoldTransactionSchema, RefundSchema 
@@ -17,6 +18,7 @@ export class TransactionController {
     private readonly supabase: SupabaseService,
     private readonly rabbitmq: RabbitMQService,
     private readonly txService: TransactionService,
+    private readonly apiCenter: ApiCenterService,
   ) {}
 
   @Post()
@@ -303,9 +305,33 @@ export class TransactionController {
 
     const { originalTransactionId, items, refundSubtotal, refundTax, refundTotal, reason } = body;
     const client = this.supabase.getClient();
-    const { data: original, error: origErr } = await client.from('transactions').select('id, status').eq('id', originalTransactionId).single();
+    const { data: original, error: origErr } = await client.from('transactions').select('id, status, notes').eq('id', originalTransactionId).single();
     if (origErr || !original) throw new NotFoundException('Original transaction not found');
     if (original.status !== 'paid') throw new BadRequestException('Can only refund completed transactions');
+
+    // extract upstream payment gateway refund details if present
+    let gatewayPaymentId: string | null = null;
+    if (original.notes) {
+      const match = original.notes.match(/Gateway ID:\s*([^\s,;.]+)/);
+      if (match) {
+        gatewayPaymentId = match[1];
+      }
+    }
+
+    if (gatewayPaymentId) {
+      try {
+        await this.apiCenter.createRefund(gatewayPaymentId, {
+          amount: {
+            value: Math.abs(Math.round(refundTotal * 100)),
+            currency: 'PHP',
+          },
+          reason: reason || 'customer_request',
+        });
+        this.logger.log(`✅ Successfully processed gateway refund for payment ID: ${gatewayPaymentId}`);
+      } catch (err: any) {
+        this.logger.warn(`Could not process upstream gateway refund for ID ${gatewayPaymentId}: ${err.message}`);
+      }
+    }
 
     const { data: refundTxn, error: insertErr } = await client.from('transactions').insert({
       status: 'refunded', total_amount: -Math.abs(refundTotal), vat: -Math.abs(refundTax), subtotal: -Math.abs(refundSubtotal),
@@ -392,5 +418,108 @@ export class TransactionController {
     const { error } = await client.from('transactions').update({ notes, tags }).eq('id', id);
     if (error) throw new InternalServerErrorException(error.message);
     return { success: true };
+  }
+
+  @Get(':id/status')
+  async getStatus(@Param('id') transactionId: string) {
+    const client = this.supabase.getClient();
+    const { data: txn, error } = await client
+      .from('transactions')
+      .select('status, notes')
+      .eq('id', transactionId)
+      .single();
+
+    if (error || !txn) {
+      throw new NotFoundException('Transaction not found');
+    }
+
+    if (txn.status === 'completed') {
+      return { paid: true, status: 'completed' };
+    }
+
+    const match = txn.notes?.match(/Gateway ID:\s*([^\s.]+)/);
+    const checkoutId = match ? match[1] : null;
+
+    if (!checkoutId) {
+      return { paid: false, status: txn.status };
+    }
+
+    try {
+      const checkoutStatus = await this.apiCenter.getCheckoutStatus(checkoutId);
+      const paid = checkoutStatus?.status === 'completed' || checkoutStatus?.paymentStatus === 'paid';
+      return { paid, status: checkoutStatus?.status || 'unknown' };
+    } catch (err: any) {
+      this.logger.error(`Error checking status for checkout ${checkoutId}: ${err.message}`);
+      return { paid: false, status: 'unknown', error: err.message };
+    }
+  }
+
+  @Post(':id/checkout')
+  async createCheckout(
+    @Param('id') transactionId: string,
+    @Body() body: { successUrl: string; cancelUrl: string; paymentMethods?: string[]; lineItems?: any[] }
+  ) {
+    const { successUrl, cancelUrl, paymentMethods, lineItems: bodyLineItems } = body;
+    const client = this.supabase.getClient();
+
+    let lineItems = bodyLineItems;
+
+    if (!lineItems || lineItems.length === 0) {
+      // 1. Fetch transaction and associated items from Supabase as fallback
+      const { data: txn, error: txnErr } = await client
+        .from('transactions')
+        .select('*, transaction_items(*)')
+        .eq('id', transactionId)
+        .single();
+
+      if (txnErr || !txn) {
+        throw new NotFoundException('Transaction not found in Supabase database.');
+      }
+
+      // 2. Format line items to conform with API Center SDK structure
+      lineItems = (txn.transaction_items || []).map((item: any) => ({
+        name: item.name || item.item_name || 'POS Checkout Item',
+        quantity: Number(item.quantity || 1),
+        amount: {
+          value: Math.round(Number(item.unit_price || 0) * 100),
+          currency: 'PHP',
+        },
+      }));
+    }
+
+    if (!lineItems || lineItems.length === 0) {
+      throw new BadRequestException('Cannot request checkout for a transaction with no items.');
+    }
+
+    try {
+      // 3. Request session from central payment gateway shared service
+      const checkout: any = await this.apiCenter.createCheckoutSession({
+        referenceId: transactionId,
+        idempotencyKey: transactionId, // Enforce transaction idempotency to prevent double-charging
+        successUrl,
+        cancelUrl,
+        paymentMethods,
+        lineItems,
+      });
+
+      const checkoutUrl = `https://checkout.paymongo.com/${checkout.checkoutId}`;
+
+      // 4. Update the Supabase record with checkout reference and temporary pending status
+      await client
+        .from('transactions')
+        .update({
+          status: 'pending',
+          notes: `Gateway ID: ${checkout.checkoutId}. checkout_url: ${checkoutUrl}`,
+        })
+        .eq('id', transactionId);
+
+      return {
+        checkoutId: checkout.checkoutId,
+        checkoutUrl: checkoutUrl,
+      };
+    } catch (err: any) {
+      this.logger.error(`Error requesting checkout session: ${err.message}`);
+      throw new InternalServerErrorException(`Gateway communication failure: ${err.message}`);
+    }
   }
 }

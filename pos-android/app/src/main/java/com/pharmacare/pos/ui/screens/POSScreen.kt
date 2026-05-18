@@ -174,10 +174,23 @@ fun POSScreen(navController: NavHostController) {
                         "category" to (it.product.categoryId ?: "")
                     ) 
                 }
+                
                 if (isOnline) {
-                    val initResp = ApiClient.transactionApi.startTransaction(com.pharmacare.pos.data.api.StartTransactionRequest(user?.id ?: "unknown"))
-                    if (initResp.isSuccessful) {
-                        val txnId = initResp.body()?.get("transactionId") as? String ?: ""
+                    val isGatewayTransaction = paymentResult.referenceNumber?.startsWith("GATEWAY-TXN-ID:") == true
+                    val gatewayTxnIdVal = if (isGatewayTransaction) paymentResult.referenceNumber!!.removePrefix("GATEWAY-TXN-ID:") else null
+
+                    val txnId = if (isGatewayTransaction && gatewayTxnIdVal != null) {
+                        gatewayTxnIdVal
+                    } else {
+                        val initResp = ApiClient.transactionApi.startTransaction(com.pharmacare.pos.data.api.StartTransactionRequest(user?.id ?: "unknown"))
+                        if (initResp.isSuccessful) {
+                            initResp.body()?.get("transactionId") as? String ?: ""
+                        } else {
+                            ""
+                        }
+                    }
+
+                    if (txnId.isNotEmpty()) {
                         val effectiveDiscountType = paymentResult.discountType ?: if (discountValid) discountCode else null
                         val effectiveDiscountAmount = if (paymentResult.discountAmount > 0) paymentResult.discountAmount else if (discountValid) discountAmount else 0.0
                         val finalTotal = subtotal + tax - effectiveDiscountAmount

@@ -72,7 +72,9 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
     const [selectedTags, setSelectedTags] = useState<string[]>([]);
     const [refNo, setRefNo] = useState('');
     const [cardLast4, setCardLast4] = useState('');
-    const [mobileProvider, setMobileProvider] = useState('GCash'); // GCash, Maya
+    const [cardNumber, setCardNumber] = useState('');
+    const [mobileNumber, setMobileNumber] = useState('');
+    const [mobileProvider, setMobileProvider] = useState<'gcash' | 'maya' | 'qrph'>('gcash');
     const [isSplitMode, setIsSplitMode] = useState(false);
     // ── OR (Official Receipt) Fields ---
     const [orFields, setOrFields] = useState({
@@ -243,8 +245,10 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                 discountType,
                 discountAmount,
                 finalTotal,
-                refNo,
-                cardLast4,
+                refNo: paymentMethod === 'card' ? 'CARD-ONLINE' : paymentMethod === 'mobile' ? `${mobileProvider.toUpperCase()}-ONLINE` : refNo,
+                cardLast4: paymentMethod === 'card' ? '0000' : cardLast4,
+                cardNumber: '',
+                mobileNumber: '',
                 mobileProvider,
                 tendered: cashReceived,
                 notes,
@@ -639,69 +643,45 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                         {paymentMethod === 'mobile' && (
                             <div className="mobile-payment-form">
                                 <div className="provider-selection">
-                                    <p className="section-label-sm">Mobile Provider</p>
-                                    <div className="discount-grid">
-                                        {['GCash', 'Maya'].map(p => (
-                                            <button
-                                                key={p}
-                                                className={`discount-btn ${mobileProvider === p ? 'active' : ''}`}
-                                                onClick={() => setMobileProvider(p)}
-                                            >
-                                                {p}
-                                            </button>
-                                        ))}
+                                    <p className="section-label-sm">Select Mobile Payment Method</p>
+                                    <div className="discount-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginTop: '10px' }}>
+                                        <button
+                                            className={`discount-btn ${mobileProvider === 'gcash' ? 'active' : ''}`}
+                                            onClick={() => setMobileProvider('gcash')}
+                                            style={{ padding: '15px', fontSize: '1rem', fontWeight: 'bold' }}
+                                        >
+                                            GCash
+                                        </button>
+                                        <button
+                                            className={`discount-btn ${mobileProvider === 'maya' ? 'active' : ''}`}
+                                            onClick={() => setMobileProvider('maya')}
+                                            style={{ padding: '15px', fontSize: '1rem', fontWeight: 'bold' }}
+                                        >
+                                            Maya
+                                        </button>
+                                        <button
+                                            className={`discount-btn ${mobileProvider === 'qrph' ? 'active' : ''}`}
+                                            onClick={() => setMobileProvider('qrph')}
+                                            style={{ padding: '15px', fontSize: '1rem', fontWeight: 'bold' }}
+                                        >
+                                            QRPh (QR)
+                                        </button>
                                     </div>
                                 </div>
-                                <div style={{ marginTop: '20px' }}>
-                                    <GCashQRPanel
-                                        provider={mobileProvider as 'GCash' | 'Maya'}
-                                        amount={finalTotal}
-                                        referenceNumber={refNo || undefined}
-                                        showDetails={true}
-                                    />
-                                </div>
-                                <div className="input-group" style={{ marginTop: '15px' }}>
-                                    <label className="modern-label">Reference Number</label>
-                                    <input
-                                        type="text"
-                                        className="modern-input-lg"
-                                        placeholder="Ref # (from mobile wallet app)"
-                                        value={refNo}
-                                        onChange={(e) => setRefNo(e.target.value)}
-                                    />
+                                <div style={{ marginTop: '20px', padding: '15px', backgroundColor: '#e0f2fe', color: '#0369a1', borderRadius: '8px', fontSize: '0.9rem', lineHeight: '1.5' }}>
+                                    ℹ️ <strong>API Payment Gateway Enabled</strong>:
+                                    <br />
+                                    Clicking <strong>Complete Payment</strong> below will direct this tab to the secure PayMongo checkout screen for <strong>{mobileProvider === 'qrph' ? 'QRPh' : mobileProvider === 'gcash' ? 'GCash' : 'Maya'}</strong> where you can authorize the payment.
                                 </div>
                             </div>
                         )}
 
                         {paymentMethod === 'card' && (
                             <div className="card-payment-form">
-                                <div className="input-row" style={{ display: 'flex', gap: '10px' }}>
-                                    <div className="input-group" style={{ flex: 1 }}>
-                                        <label className="modern-label">Reference Number</label>
-                                        <input
-                                            type="text"
-                                            className="modern-input"
-                                            style={{ height: '45px', fontSize: '1.2rem' }}
-                                            placeholder="Ref #"
-                                            value={refNo}
-                                            onChange={(e) => setRefNo(e.target.value)}
-                                        />
-                                    </div>
-                                    <div className="input-group" style={{ width: '120px' }}>
-                                        <label className="modern-label">Last 4 Digits</label>
-                                        <input
-                                            type="text"
-                                            className="modern-input"
-                                            style={{ height: '45px', fontSize: '1.2rem' }}
-                                            placeholder="0000"
-                                            maxLength={4}
-                                            value={cardLast4}
-                                            onChange={(e) => {
-                                                const val = e.target.value.replace(/\D/g, '');
-                                                if (val.length <= 4) setCardLast4(val);
-                                            }}
-                                        />
-                                    </div>
+                                <div style={{ marginTop: '15px', padding: '12px 15px', backgroundColor: '#f0fdf4', color: '#166534', borderRadius: '8px', fontSize: '0.9rem', lineHeight: '1.4' }}>
+                                    ℹ️ <strong>Card Checkout Session Enabled</strong>:
+                                    <br />
+                                    Clicking <strong>Complete Payment</strong> will direct this tab to the secure credit card checkout.
                                 </div>
                             </div>
                         )}
@@ -785,9 +765,9 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                         
                         if (!isOrValid) return '';
                         
-                        if (paymentMethod === 'cash') return (parseFloat(cashReceived) >= finalTotal - 0.001) ? 'active' : '';
-                        if (paymentMethod === 'card') return (refNo.trim() !== '' && cardLast4.length === 4) ? 'active' : '';
-                        if (paymentMethod === 'mobile') return (refNo.trim() !== '') ? 'active' : '';
+                        if (paymentMethod === 'cash') return (cashReceived && parseFloat(cashReceived) >= finalTotal - 0.001) ? 'active' : '';
+                        if (paymentMethod === 'card') return 'active';
+                        if (paymentMethod === 'mobile') return 'active';
                         return '';
                     })()}`}
                     disabled={(() => {
@@ -797,8 +777,8 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                         if (isOrInvalid) return true;
                         
                         if (paymentMethod === 'cash') return (parseFloat(cashReceived) < finalTotal - 0.001 || !cashReceived);
-                        if (paymentMethod === 'card') return (refNo.trim() === '' || cardLast4.length !== 4);
-                        if (paymentMethod === 'mobile') return (refNo.trim() === '');
+                        if (paymentMethod === 'card') return false;
+                        if (paymentMethod === 'mobile') return false;
                         return true;
                     })() || isSubmitting}
                     onClick={onComplete}

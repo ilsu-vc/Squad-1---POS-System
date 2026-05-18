@@ -156,3 +156,11 @@ pos-android/local.properties
 local.properties
 *.iml
 .gradle/
+
+# Custom ignores for local environment safety
+.npmrc
+*.npmrc
+test-checkout.js
+README (3).md
+consumer-runbook (2).md
+tribe-sdk-consumption (3).md
