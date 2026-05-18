@@ -8,11 +8,11 @@ export class SupabaseService {
   private client: SupabaseClient;
 
   constructor(@Inject(REQUEST) private request: Request) {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const supabaseUrl = process.env.NEXT_PUBLIC_POS_ROLE_SUPABASE_URL;
+    const supabaseKey = process.env.NEXT_PUBLIC_POS_ROLE_SUPABASE_ANON_KEY;
 
     if (!supabaseUrl || !supabaseKey) {
-      throw new Error('Missing required env vars: NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY');
+      throw new Error('Missing required env vars: NEXT_PUBLIC_POS_ROLE_SUPABASE_URL or NEXT_PUBLIC_POS_ROLE_SUPABASE_ANON_KEY');
     }
 
     const authHeader = this.request.headers.authorization;

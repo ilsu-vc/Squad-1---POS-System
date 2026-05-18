@@ -358,29 +358,6 @@ const App: React.FC = () => {
     };
   }, []);
 
-  useEffect(() => {
-    const channel = supabase
-      .channel('live-products-and-transfers')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'products' },
-        async () => {
-          await fetchProducts();
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'requesttransfers' },
-        async () => {
-          await refreshInventoryData();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
 
   // ── Sync Transaction History Real-time ──
   useEffect(() => {

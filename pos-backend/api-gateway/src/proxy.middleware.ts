@@ -17,7 +17,7 @@ const proxyOptions = {
 export class ProxyMiddleware implements NestMiddleware {
   private proxy = createProxyMiddleware({
     ...proxyOptions,
-    target: process.env.AUTH_SERVICE_URL || 'http://localhost:4001',
+    target: process.env.POS_GATEWAY_AUTH_SERVICE_URL || 'http://localhost:3032',
     pathRewrite: { '^/api/auth': '' },
   });
 
@@ -33,15 +33,15 @@ export class ProtectedProxyMiddleware implements NestMiddleware {
   private logger = new Logger('ProtectedProxyMiddleware');
 
   constructor() {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+    const supabaseUrl = process.env.NEXT_PUBLIC_POS_GATEWAY_SUPABASE_URL || '';
+    const supabaseKey = process.env.NEXT_PUBLIC_POS_GATEWAY_SUPABASE_ANON_KEY || '';
     this.supabase = createClient(supabaseUrl, supabaseKey);
 
-    const inventoryServiceUrl = process.env.INVENTORY_SERVICE_URL || 'http://localhost:4002';
-    const transactionServiceUrl = process.env.TRANSACTION_SERVICE_URL || 'http://localhost:4007';
-    const reportingServiceUrl = process.env.REPORTING_SERVICE_URL || 'http://localhost:4004';
-    const roleServiceUrl = process.env.ROLE_SERVICE_URL || 'http://localhost:4005';
-    const receiptServiceUrl = process.env.RECEIPT_SERVICE_URL || 'http://localhost:4006';
+    const inventoryServiceUrl = process.env.POS_GATEWAY_INVENTORY_SERVICE_URL || 'http://localhost:3033';
+    const transactionServiceUrl = process.env.POS_GATEWAY_TRANSACTION_SERVICE_URL || 'http://localhost:3038';
+    const reportingServiceUrl = process.env.POS_GATEWAY_REPORTING_SERVICE_URL || 'http://localhost:3035';
+    const roleServiceUrl = process.env.POS_GATEWAY_ROLE_SERVICE_URL || 'http://localhost:3036';
+    const receiptServiceUrl = process.env.POS_GATEWAY_RECEIPT_SERVICE_URL || 'http://localhost:3034';
 
     this.proxies = {
       products: createProxyMiddleware({ ...proxyOptions, target: inventoryServiceUrl, pathRewrite: { '^/api/products': '' } }),
@@ -91,7 +91,7 @@ export class ProtectedProxyMiddleware implements NestMiddleware {
 export class FrontendProxyMiddleware implements NestMiddleware {
   private proxy = createProxyMiddleware({
     ...proxyOptions,
-    target: process.env.FRONTEND_URL || 'http://localhost:3000',
+    target: process.env.POS_GATEWAY_FRONTEND_URL || 'http://localhost:3030',
     ws: true,
   });
 

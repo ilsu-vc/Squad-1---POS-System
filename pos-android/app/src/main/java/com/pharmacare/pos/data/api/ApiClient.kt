@@ -87,7 +87,7 @@ object ApiClient {
         if (!url.startsWith("http")) {
             url = "http://$url"
         }
-        // If no port is specified, default to 8000
+        // If no port is specified, default to 3031 (POS API Gateway)
         // We check if there's a colon after the http:// or https:// prefix
         val hasPort = if (url.startsWith("https://")) {
             url.substring(8).contains(":")
@@ -96,7 +96,7 @@ object ApiClient {
         }
         
         if (!hasPort) {
-            url = "$url:8000"
+            url = "$url:3031"
         }
 
         retrofit = buildRetrofit(url)

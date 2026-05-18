@@ -921,8 +921,8 @@ fun FullPaymentDialog(
                                             val checkoutResp = ApiClient.transactionApi.createCheckout(
                                                 transactionId = txnId,
                                                 body = com.pharmacare.pos.data.api.CheckoutRequest(
-                                                    successUrl = "http://localhost:3000/?payment=success&txnId=$txnId",
-                                                    cancelUrl = "http://localhost:3000/?payment=cancel&txnId=$txnId",
+                                                    successUrl = "http://localhost:3030/?payment=success&txnId=$txnId",
+                                                    cancelUrl = "http://localhost:3030/?payment=cancel&txnId=$txnId",
                                                     paymentMethods = gatewayMethods,
                                                     lineItems = listOf(genericLineItem)
                                                 )

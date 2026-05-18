@@ -446,7 +446,7 @@ export class TransactionController {
 
     try {
       const checkoutStatus = await this.apiCenter.getCheckoutStatus(checkoutId);
-      const paid = checkoutStatus?.status === 'completed' || checkoutStatus?.paymentStatus === 'paid';
+      const paid = (checkoutStatus as any)?.status === 'paid' || (checkoutStatus as any)?.status === 'completed' || (checkoutStatus as any)?.paymentStatus === 'paid';
       return { paid, status: checkoutStatus?.status || 'unknown' };
     } catch (err: any) {
       this.logger.error(`Error checking status for checkout ${checkoutId}: ${err.message}`);

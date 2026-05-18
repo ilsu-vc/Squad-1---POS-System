@@ -7,7 +7,7 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(RabbitMQService.name);
   private connection: any = null;
   private channel: any = null;
-  private readonly RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://guest:guest@localhost:5672';
+  private readonly POS_REPORTING_RABBITMQ_URL = process.env.POS_REPORTING_RABBITMQ_URL || 'amqp://guest:guest@localhost:5672';
   private readonly EXCHANGE_NAME = 'transaction_events';
   private readonly QUEUE_NAME = 'reporting_queue';
 
@@ -28,7 +28,7 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
   private async connect(retries: number) {
     for (let i = 0; i < retries; i++) {
        try {
-         this.connection = await amqp.connect(this.RABBITMQ_URL);
+         this.connection = await amqp.connect(this.POS_REPORTING_RABBITMQ_URL);
          this.channel = await this.connection.createChannel();
          
          await this.channel.assertExchange(this.EXCHANGE_NAME, 'fanout', { durable: true });

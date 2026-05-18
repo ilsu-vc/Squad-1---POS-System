@@ -4,7 +4,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 
-const SERVICE_URL = process.env.RECEIPT_SERVICE_URL || 'http://localhost:4006';
+const SERVICE_URL = process.env.POS_FRONTEND_RECEIPT_SERVICE_URL || 'http://localhost:3034';
 
 async function proxyRequest(req: NextRequest, path: string) {
   try {

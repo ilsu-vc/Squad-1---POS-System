@@ -13,22 +13,22 @@ export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
       .apply(ProxyMiddleware)
-      .forRoutes({ path: 'api/auth/*', method: RequestMethod.ALL });
+      .forRoutes({ path: 'api/auth/*path', method: RequestMethod.ALL });
 
     consumer
       .apply(ProtectedProxyMiddleware)
       .forRoutes(
-        { path: 'api/products/*', method: RequestMethod.ALL },
-        { path: 'api/stock/*', method: RequestMethod.ALL },
-        { path: 'api/transactions/*', method: RequestMethod.ALL },
-        { path: 'api/reporting/*', method: RequestMethod.ALL },
-        { path: 'api/roles/*', method: RequestMethod.ALL },
-        { path: 'api/receipts/*', method: RequestMethod.ALL },
+        { path: 'api/products/*path', method: RequestMethod.ALL },
+        { path: 'api/stock/*path', method: RequestMethod.ALL },
+        { path: 'api/transactions/*path', method: RequestMethod.ALL },
+        { path: 'api/reporting/*path', method: RequestMethod.ALL },
+        { path: 'api/roles/*path', method: RequestMethod.ALL },
+        { path: 'api/receipts/*path', method: RequestMethod.ALL },
       );
 
     // Fallback frontend proxy
     consumer
       .apply(FrontendProxyMiddleware)
-      .forRoutes({ path: '*', method: RequestMethod.ALL });
+      .forRoutes({ path: '*path', method: RequestMethod.ALL });
   }
 }

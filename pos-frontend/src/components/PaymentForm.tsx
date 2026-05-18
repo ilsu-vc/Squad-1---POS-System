@@ -233,7 +233,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
         try {
             // ✅ Only send if OR is requested
             if (selectedTags.includes('Request for Official Receipt (OR)')) {
-                await fetch('http://localhost:4002/receipt/info', {
+                await fetch('http://localhost:3033/receipt/info', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ ...orFields, name: toTitleCase(orFields.name) }),

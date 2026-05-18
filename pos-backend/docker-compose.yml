@@ -1,18 +1,22 @@
 services:
   rabbitmq:
-    image: rabbitmq:3-management-alpine
+    image: rabbitmq:3.13-management
     ports:
       - "5672:5672"
       - "15672:15672"
+    hostname: rabbitmq
     environment:
       - RABBITMQ_DEFAULT_USER=guest
       - RABBITMQ_DEFAULT_PASS=guest
+      - RABBITMQ_ERLANG_COOKIE=POS_RABBITMQ_SECRET_COOKIE
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_running"]
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 60s
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
 
   api-gateway:
     build:
@@ -20,16 +24,18 @@ services:
       dockerfile: Dockerfile
     restart: always
     ports:
-      - "8000:8000"
+      - "3031:3031"
     environment:
-      - PORT=8000
-      - INVENTORY_SERVICE_URL=http://inventory-service:4002
-      - AUTH_SERVICE_URL=http://auth-service:4001
-      - TRANSACTION_SERVICE_URL=http://transaction-service:4007
-      - REPORTING_SERVICE_URL=http://reporting-service:4004
-      - ROLE_SERVICE_URL=http://role-service:4005
-      - RECEIPT_SERVICE_URL=http://receipt-service:4006
-      - FRONTEND_URL=http://frontend:3000
+      - PORT=3031
+      - POS_GATEWAY_INVENTORY_SERVICE_URL=http://inventory-service:3033
+      - POS_GATEWAY_AUTH_SERVICE_URL=http://auth-service:3032
+      - POS_GATEWAY_TRANSACTION_SERVICE_URL=http://transaction-service:3038
+      - POS_GATEWAY_REPORTING_SERVICE_URL=http://reporting-service:3035
+      - POS_GATEWAY_ROLE_SERVICE_URL=http://role-service:3036
+      - POS_GATEWAY_RECEIPT_SERVICE_URL=http://receipt-service:3034
+      - POS_GATEWAY_FRONTEND_URL=http://frontend:3030
+      - NEXT_PUBLIC_POS_GATEWAY_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_POS_GATEWAY_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
     env_file:
       - .env
     depends_on:
@@ -51,15 +57,16 @@ services:
         NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
     restart: always
     ports:
-      - "3000:3000"
+      - "3030:3030"
     environment:
-      - AUTH_SERVICE_URL=http://auth-service:4001
-      - INVENTORY_SERVICE_URL=http://inventory-service:4002
-      - SALES_SERVICE_URL=http://sales-service:4003
-      - REPORTING_SERVICE_URL=http://reporting-service:4004
-      - ROLE_SERVICE_URL=http://role-service:4005
-      - RECEIPT_SERVICE_URL=http://receipt-service:4006
-      - TRANSACTION_SERVICE_URL=http://transaction-service:4007
+      - PORT=3030
+      - POS_FRONTEND_AUTH_SERVICE_URL=http://auth-service:3032
+      - POS_FRONTEND_INVENTORY_SERVICE_URL=http://inventory-service:3033
+      - POS_FRONTEND_SALES_SERVICE_URL=http://sales-service:3037
+      - POS_FRONTEND_REPORTING_SERVICE_URL=http://reporting-service:3035
+      - POS_FRONTEND_ROLE_SERVICE_URL=http://role-service:3036
+      - POS_FRONTEND_RECEIPT_SERVICE_URL=http://receipt-service:3034
+      - POS_FRONTEND_TRANSACTION_SERVICE_URL=http://transaction-service:3038
     env_file:
       - .env
     depends_on:
@@ -77,9 +84,9 @@ services:
       dockerfile: Dockerfile
     restart: always
     ports:
-      - "4001:4001"
+      - "3032:3032"
     environment:
-      - PORT=4001
+      - PORT=3032
     env_file:
       - ./auth-service/.env
 
@@ -89,10 +96,10 @@ services:
       dockerfile: Dockerfile
     restart: always
     ports:
-      - "4002:4002"
+      - "3033:3033"
     environment:
-      - PORT=4002
-      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+      - PORT=3033
+      - POS_INVENTORY_RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
     env_file:
       - ./inventory-service/.env
     depends_on:
@@ -105,10 +112,10 @@ services:
       dockerfile: Dockerfile
     restart: always
     ports:
-      - "4003:4003"
+      - "3037:3037"
     environment:
-      - PORT=4003
-      - INVENTORY_SERVICE_URL=http://inventory-service:4002
+      - PORT=3037
+      - POS_SALES_INVENTORY_SERVICE_URL=http://inventory-service:3033
     env_file:
       - .env
 
@@ -118,10 +125,10 @@ services:
       dockerfile: Dockerfile
     restart: always
     ports:
-      - "4004:4004"
+      - "3035:3035"
     environment:
-      - PORT=4004
-      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+      - PORT=3035
+      - POS_REPORTING_RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
     env_file:
       - ./reporting-service/.env
     depends_on:
@@ -134,9 +141,9 @@ services:
       dockerfile: Dockerfile
     restart: always
     ports:
-      - "4005:4005"
+      - "3036:3036"
     environment:
-      - PORT=4005
+      - PORT=3036
     env_file:
       - ./role-service/.env
 
@@ -146,9 +153,9 @@ services:
       dockerfile: Dockerfile
     restart: always
     ports:
-      - "4006:4006"
+      - "3034:3034"
     environment:
-      - PORT=4006
+      - PORT=3034
     env_file:
       - ./receipt-service/.env
 
@@ -158,11 +165,11 @@ services:
       dockerfile: Dockerfile
     restart: always
     ports:
-      - "4007:4007"
+      - "3038:3038"
     environment:
-      - PORT=4007
-      - INVENTORY_SERVICE_URL=http://inventory-service:4002
-      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+      - PORT=3038
+      - POS_TRANSACTION_INVENTORY_SERVICE_URL=http://inventory-service:3033
+      - POS_TRANSACTION_RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
     env_file:
       - ./transaction-service/.env
     depends_on:
@@ -170,9 +177,6 @@ services:
         condition: service_healthy
 
   # ── Pact Broker (Contract Testing) ──────────────────────────────────────────
-  # SCRUM 300: Pact Broker for storing and managing consumer-provider contracts
-  # Access the Pact Broker UI at http://localhost:9292
-  # Credentials loaded from environment variables (OWASP compliant)
   pact-postgres:
     image: postgres:16-alpine
     ports:
@@ -204,7 +208,6 @@ services:
         condition: service_healthy
 
   # ── InfluxDB (k6 Metrics Storage) ────────────────────────────────────────────
-  # SCRUM 305 & 307: Time-series database for storing k6 load test results
   influxdb:
     image: influxdb:1.8-alpine
     ports:
@@ -221,8 +224,6 @@ services:
       retries: 5
 
   # ── Grafana (Load Test Dashboard) ───────────────────────────────────────────
-  # SCRUM 305: Dashboard for visualizing k6 load test results
-  # Access at http://localhost:3001 (admin / admin)
   grafana:
     image: grafana/grafana:10.4.0
     ports:
@@ -244,3 +245,4 @@ volumes:
   pact-postgres-data:
   influxdb-data:
   grafana-data:
+  rabbitmq-data:

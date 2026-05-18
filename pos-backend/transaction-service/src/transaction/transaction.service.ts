@@ -14,7 +14,7 @@ export class TransactionService {
   ) {}
 
   async decrementStock(items: any[]) {
-    const inventoryServiceUrl = process.env.INVENTORY_SERVICE_URL || 'http://localhost:4002';
+    const inventoryServiceUrl = process.env.POS_TRANSACTION_INVENTORY_SERVICE_URL || 'http://localhost:4002';
     const authHeader = this.request.headers.authorization;
 
     await Promise.allSettled(

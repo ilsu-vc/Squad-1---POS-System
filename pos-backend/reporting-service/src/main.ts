@@ -21,7 +21,7 @@ async function bootstrap() {
   );
   
   const port = process.env.PORT || 4004;
-  await app.listen(port);
-  console.log(`✅ reporting-service running on port ${port}`);
+  await app.listen(port, '0.0.0.0');
+  console.log(`✅ reporting-service running on port ${port} bound to 0.0.0.0`);
 }
 bootstrap();
