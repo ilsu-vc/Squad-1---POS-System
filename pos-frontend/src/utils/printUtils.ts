@@ -4,6 +4,7 @@
  */
 
 import { calculateTaxDiscountBreakdown, TaxDiscountBreakdown } from './vatCalculator';
+import { receiptApi } from '../services/receiptApi';
 
 export interface PrintReceiptData {
   receiptNumber: string | null;
@@ -110,33 +111,37 @@ export const generateReceiptHTML = (data: PrintReceiptData): string => {
       <meta charset="UTF-8" />
       <title>Receipt ${data.receiptNumber || 'N/A'}</title>
       <style>
+        @page {
+          margin: 0;
+          size: 72mm auto;
+        }
         body {
           font-family: 'Courier New', monospace;
-          max-width: 80mm;
+          max-width: 72mm;
           margin: 0 auto;
-          padding: 10mm;
-          font-size: 12px;
-          line-height: 1.4;
+          padding: 2mm 4mm;
+          font-size: 10px;
+          line-height: 1.2;
           color: #000;
         }
         .receipt-header {
           text-align: center;
-          margin-bottom: 10px;
+          margin-bottom: 6px;
           border-bottom: 1px solid #000;
-          padding-bottom: 10px;
+          padding-bottom: 6px;
         }
         .store-name {
-          font-size: 16px;
+          font-size: 12px;
           font-weight: bold;
-          margin: 0 0 4px 0;
+          margin: 0 0 3px 0;
         }
         .store-address {
           margin: 2px 0;
-          font-size: 10px;
+          font-size: 8px;
         }
         .divider {
           border-top: 1px solid #000;
-          margin: 8px 0;
+          margin: 5px 0;
         }
         .divider.dashed {
           border-top: 1px dashed #000;
@@ -144,58 +149,58 @@ export const generateReceiptHTML = (data: PrintReceiptData): string => {
         .meta-row {
           display: flex;
           justify-content: space-between;
-          padding: 2px 0;
-          font-size: 11px;
+          padding: 1px 0;
+          font-size: 9px;
         }
         table {
           width: 100%;
           border-collapse: collapse;
-          margin: 8px 0;
-          font-size: 11px;
+          margin: 5px 0;
+          font-size: 9px;
         }
         th {
           text-align: left;
-          padding: 4px 2px;
+          padding: 2px 1px;
           border-bottom: 1px solid #000;
           font-weight: bold;
         }
         td {
-          padding: 6px 2px;
+          padding: 3px 1px;
           border-bottom: 1px dashed #ddd;
         }
         .summary-row {
           display: flex;
           justify-content: space-between;
-          padding: 4px 0;
-          font-size: 11px;
+          padding: 2px 0;
+          font-size: 9px;
         }
         .summary-row.total {
-          font-size: 13px;
+          font-size: 11px;
           font-weight: bold;
-          padding: 8px 0;
+          padding: 4px 0;
           border-top: 1px solid #000;
           border-bottom: 1px solid #000;
         }
         .footer {
           text-align: center;
-          margin-top: 10px;
-          font-size: 10px;
-          padding-top: 10px;
+          margin-top: 6px;
+          font-size: 8px;
+          padding-top: 6px;
           border-top: 1px solid #000;
         }
         @media print {
-          body { margin: 0; padding: 0; }
+          html, body { margin: 0; padding: 2mm 3mm; }
           .no-print { display: none; }
         }
       </style>
     </head>
     <body>
       <div class="receipt-header">
-        ${data.isReprint ? `<h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: bold;">*** REPRINT ***</h3>` : data.orFields ? `<h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: bold;">OFFICIAL RECEIPT</h3>` : ''}
+        ${data.isReprint ? `<h3 style="margin: 0 0 6px 0; font-size: 12px; font-weight: bold;">*** REPRINT ***</h3>` : data.orFields ? `<h3 style="margin: 0 0 6px 0; font-size: 12px; font-weight: bold;">OFFICIAL RECEIPT</h3>` : ''}
         <h2 class="store-name">${storeName}</h2>
         <p class="store-address">${storeAddress}</p>
-        <p style="margin: 2px 0; font-size: 10px;">TIN: ${storeTin}</p>
-        <p style="margin: 2px 0; font-size: 10px;">PTIN: ${storePtin}</p>
+        <p style="margin: 2px 0; font-size: 8px;">TIN: ${storeTin}</p>
+        <p style="margin: 2px 0; font-size: 8px;">PTIN: ${storePtin}</p>
       </div>
 
       <div class="meta-row">
@@ -209,9 +214,9 @@ export const generateReceiptHTML = (data: PrintReceiptData): string => {
       </div>
       ${data.customerName ? `<div class="meta-row"><span>Customer: ${data.customerName}</span></div>` : ''}
 
-      ${data.orFields ? `
+      ${data.orFields && !data.isReprint ? `
       <div class="divider dashed"></div>
-      <div style="font-size: 11px; padding: 2px 0;">
+      <div style="font-size: 9px; padding: 1px 0;">
         <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
           <span>Name:</span>
           <strong>${data.orFields.name}</strong>
@@ -291,7 +296,7 @@ export const generateReceiptHTML = (data: PrintReceiptData): string => {
         <span>${formatCurrency(data.total)}</span>
       </div>
 
-      <div style="padding: 8px 0; font-size: 11px;">
+      <div style="padding: 4px 0; font-size: 9px;">
         <strong>Payment:</strong>
         ${paymentHtml}
       </div>
@@ -310,9 +315,9 @@ export const generateReceiptHTML = (data: PrintReceiptData): string => {
       <div class="divider"></div>
 
       <div class="footer">
-        <p style="margin: 4px 0;">Thank you for your purchase!</p>
-        <p style="margin: 4px 0; font-size: 10px;">Please keep this receipt for your records.</p>
-        <p style="margin: 4px 0; font-size: 9px;">THIS RECEIPT SHALL BE VALID FOR FIVE (5) YEARS FROM THE DATE OF ATP</p>
+        <p style="margin: 3px 0;">Thank you for your purchase!</p>
+        <p style="margin: 3px 0; font-size: 8px;">Please keep this receipt for your records.</p>
+        <p style="margin: 3px 0; font-size: 7px;">THIS RECEIPT SHALL BE VALID FOR FIVE (5) YEARS FROM THE DATE OF ATP</p>
       </div>
     </body>
     </html>
@@ -322,6 +327,7 @@ export const generateReceiptHTML = (data: PrintReceiptData): string => {
 /**
  * Browser-based print using window.print()
  */
+
 export const printReceiptBrowser = async (data: PrintReceiptData): Promise<void> => {
   const html = generateReceiptHTML(data);
 
@@ -372,10 +378,69 @@ export const printReceiptExpo = async (data: PrintReceiptData): Promise<void> =>
   }
 };
 
+// ── Double-print lock ─────────────────────────────────────────────────────
+// Tracks in-flight or recently completed print jobs by receipt key.
+// A print for the same key is ignored if called within 3 seconds.
+const _printLock = new Map<string, number>();
+const PRINT_LOCK_MS = 3000;
+
 /**
  * Smart print function that detects environment and uses appropriate method
  */
 export const printReceipt = async (data: PrintReceiptData): Promise<void> => {
+  // ── Double-print prevention ──────────────────────────────────────────
+  const lockKey = `${data.receiptNumber ?? 'none'}_${data.transactionId ?? 'none'}`;
+  const now = Date.now();
+  const lastPrint = _printLock.get(lockKey);
+  if (lastPrint && now - lastPrint < PRINT_LOCK_MS) {
+    console.warn(`[printReceipt] Duplicate print for ${lockKey} blocked (${now - lastPrint}ms since last).`);
+    return;
+  }
+  _printLock.set(lockKey, now);
+
+  try {
+    // Attempt backend direct print first (for thermal printer over IP)
+    const result = await receiptApi.printReceipt({
+      receiptNumber: data.receiptNumber || '000000',
+      items: data.items,
+      vatable: data.taxBreakdown?.vatableSales,
+      vatAmount: data.taxBreakdown?.vatAmount,
+      discount: data.taxBreakdown?.discountAmount || data.discountAmount,
+      discountType: data.discountType,
+      total: data.total,
+      paymentMethod: data.paymentMethod,
+      amountPaid: data.total + (data.changeAmount || 0), // estimation
+      change: data.changeAmount,
+      cashier: 'Cashier',
+      date: new Date().toLocaleString(),
+      storeName: data.storeName,
+      storeAddress: data.storeAddress,
+      storeTin: data.storeTin,
+      splitPayments: data.splitPayments,
+      isReprint: data.isReprint ?? false,
+      orFields: data.orFields,
+    });
+
+
+    if (result.printed) {
+      console.log('Successfully printed via backend directly to Sunmi V2');
+      return; // Skip browser print if backend succeeded
+    }
+
+    if (result.viaQueue) {
+      console.log('Successfully enqueued to Cloud Print Queue. Android POS will pick it up.');
+      return; // Skip browser print since it's queued for hardware printing
+    }
+    
+    console.warn('Backend returned not printed and not queued:', result);
+    alert('Print failed: Backend returned not printed and not queued.');
+    return;
+  } catch (error: any) {
+    console.error('Backend print failed', error);
+    alert('Backend API Print Error: ' + (error?.message || String(error)));
+    return;
+  }
+
   // Check if we're in a React Native environment
   if (typeof window !== 'undefined' && !window.print) {
     // React Native environment

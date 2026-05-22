@@ -396,29 +396,70 @@
   cursor: not-allowed;
 }
 
-/* Print Media Styles */
+/* Print Media Styles for 58mm POS Printer */
 @media print {
-  .itemized-receipt {
-    background: transparent;
-    padding: 0;
-    max-height: none;
-    overflow: visible;
-    border-radius: 0;
-    max-width: 80mm;
-    margin: 0 auto;
+  @page {
+    margin: 0; /* Remove browser margins */
+    size: 58mm auto; /* Suggest paper size to browser */
   }
 
-  .receipt-actions {
-    display: none;
+  /* Hide the entire application UI */
+  body * {
+    visibility: hidden !important;
+  }
+
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    width: 58mm !important; /* Force browser body width */
+  }
+
+  /* Only show the receipt container and its children */
+  .itemized-receipt, .itemized-receipt * {
+    visibility: visible !important;
+  }
+
+  /* Force a 58mm width layout and standard thermal fonts */
+  .itemized-receipt {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 58mm !important;
+    max-width: 58mm !important;
+    font-family: 'Courier New', Courier, monospace !important;
+    font-size: 11px !important; /* Thermal printer typical size */
+    margin: 0 !important;
+    padding: 4mm !important; /* Slight padding from paper edge */
+    color: #000 !important;
+    background: transparent !important;
+    box-sizing: border-box !important;
+    border: none !important;
+    border-radius: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .receipt-header, .receipt-footer {
+    text-align: center !important;
+  }
+
+  .receipt-item-row {
+    display: flex !important;
+    justify-content: space-between !important;
+  }
+
+  .summary-row.total {
+    font-size: 14px !important;
+  }
+
+  /* Hide elements that shouldn't print */
+  .receipt-actions, .modal-overlay, .gcash-qr-panel {
+    display: none !important;
   }
 
   .receipt-reprint-watermark {
-    color: rgba(180, 0, 0, 0.18);
-    font-size: 6rem;
-  }
-
-  .modal-overlay,
-  .gcash-qr-panel {
-    display: none;
+    color: rgba(0, 0, 0, 0.1) !important;
+    font-size: 3rem !important;
   }
 }

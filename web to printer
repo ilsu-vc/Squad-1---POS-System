@@ -1,0 +1,125 @@
+# Integrate Sunmi V2 Thermal Printer for Mobile Receipts
+
+This plan outlines the steps to connect our web-based React POS to the Sunmi V2's internal thermal printer, formatting the output to look like a professional 58mm mobile receipt.
+
+## User Review Required
+
+> [!IMPORTANT]
+> **Architectural Decision: How we connect to the printer**
+> Since web browsers (like Chrome) cannot directly talk to internal hardware printers, we need a bridge. 
+> 
+> **Proposed Approach (Recommended): Capacitor JS**
+> We will use **Capacitor** (by Ionic) to wrap our React frontend into a native Android `.apk`. Capacitor allows us to write standard React code while using "Plugins" to talk to native Android hardware (like the Sunmi Printer SDK). This gives the POS a true "Mobile App" feel without rewriting it in Java or Kotlin.
+
+## Open Questions
+
+> [!WARNING]
+> Please provide your feedback on the following before we begin:
+> 1. **Do you agree with using Capacitor JS** to turn the React app into an Android APK, or would you prefer relying on a third-party "Web Print" localhost utility app? (Capacitor is much more professional).
+> 2. **Store Logo:** Do you have a black-and-white version of the store logo that we should encode into the receipt header?
+> 3. **Receipt Footer:** What information should be at the bottom of the receipt? (e.g., "Thank you for shopping!", a barcode, or a QR code pointing to a website?)
+
+## Proposed Changes
+
+We will implement this in three main phases entirely within the `pos-frontend` directory.
+
+### Phase 1: Capacitor Integration (Making it a Mobile App)
+- Initialize Capacitor in the `pos-frontend` project (`npm install @capacitor/core @capacitor/cli`).
+- Add the Android platform (`npx cap add android`).
+- This will allow us to build an `app-release.apk` that can be installed directly onto the Sunmi V2 device.
+
+### Phase 2: Sunmi Printer SDK Plugin
+- Install a Capacitor Sunmi Printer plugin (e.g., `capacitor-sunmi-printer` or similar open-source bridge).
+- This plugin connects JavaScript commands directly to the `SunmiPrinterService` built into the device.
+
+### Phase 3: Receipt Formatting Service
+#### [NEW] `pos-frontend/src/services/printerService.ts`
+We will create a service that takes a `Transaction` object and translates it into Sunmi thermal printer commands. It will handle the 58mm layout:
+
+```typescript
+export const printReceipt = async (transaction, cartItems) => {
+  // 1. Header (Centered, Bold)
+  await SunmiPrinter.setAlignment('CENTER');
+  await SunmiPrinter.setFontSize(24);
+  await SunmiPrinter.printText("MY STORE NAME\n");
+  
+  // 2. Transaction Details (Left Aligned)
+  await SunmiPrinter.setAlignment('LEFT');
+  await SunmiPrinter.setFontSize(16);
+  await SunmiPrinter.printText(`Date: ${transaction.date}\n`);
+  await SunmiPrinter.printText(`Receipt #: ${transaction.id}\n`);
+  await SunmiPrinter.printText("--------------------------------\n");
+  
+  // 3. Items (Left/Right justified mapping)
+  cartItems.forEach(item => {
+    // Format: "1x Coffee           P150.00"
+    await SunmiPrinter.printColumnsText(
+      [`${item.qty}x ${item.name}`, `P${item.total}`],
+      [20, 12], // Column widths for 58mm paper
+      [0, 2]    // 0=Left align, 2=Right align
+    );
+  });
+  
+  await SunmiPrinter.printText("--------------------------------\n");
+  
+  // 4. Total (Large Font, Right Aligned)
+  await SunmiPrinter.setAlignment('RIGHT');
+  await SunmiPrinter.setFontSize(30);
+  await SunmiPrinter.printText(`TOTAL: P${transaction.total}\n`);
+  
+  // 5. Footer & Cut
+  await SunmiPrinter.setAlignment('CENTER');
+  await SunmiPrinter.printQRCode("https://mystore.com", 6, 3);
+  await SunmiPrinter.printText("\nThank you for shopping!\n\n\n");
+  
+  // Cut the paper (if supported by the specific Sunmi model)
+  await SunmiPrinter.cutPaper();
+}
+```
+
+#### [MODIFY] `pos-frontend/src/components/CheckoutModal.tsx`
+- Update the successful checkout flow. When a transaction successfully saves to the database, we will call `printReceipt(transaction, cart)` to automatically push the receipt to the Sunmi printer.
+
+### Phase 4: Standard Web-to-Printer Fallback (CSS Print Media)
+If the system is ever run on a standard PC Chrome browser connected to a USB thermal POS printer, we will implement a CSS `@media print` stylesheet to ensure the web print dialog produces the exact same 58mm layout as the mobile version.
+
+#### [NEW] `pos-frontend/src/styles/ReceiptPrint.css`
+```css
+@media print {
+  /* Hide the entire application UI */
+  body * {
+    visibility: hidden;
+  }
+  
+  /* Only show the hidden receipt container */
+  #printable-receipt, #printable-receipt * {
+    visibility: visible;
+  }
+  
+  /* Force a 58mm width layout and standard thermal fonts */
+  #printable-receipt {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 58mm; /* Standard Sunmi / Thermal paper width */
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 12px;
+    margin: 0;
+    padding: 0;
+    color: #000;
+  }
+
+  .receipt-header { text-align: center; font-weight: bold; font-size: 16px; }
+  .receipt-item-row { display: flex; justify-content: space-between; }
+  .receipt-total { text-align: right; font-weight: bold; font-size: 18px; }
+}
+```
+
+## Verification Plan
+
+### Automated/Local Testing
+- Since we are developing on Windows, we will mock the `SunmiPrinter` plugin on the web browser so it simply `console.log`s the receipt layout during local development (`npm run dev`).
+
+### Manual Verification
+- We will build the Android APK (`npx cap build android`).
+- You will need to transfer the APK to the Sunmi V2 device, install it, perform a test transaction, and verify that the physical receipt prints with the correct alignments and font sizes.

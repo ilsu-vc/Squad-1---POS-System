@@ -603,7 +603,8 @@
 
 @media print {
   @page {
-    margin: 8mm;
+    margin: 0;
+    size: 58mm auto;
   }
 
   /* Hide everything visually */
@@ -611,11 +612,11 @@
     visibility: hidden !important;
   }
 
-  html,
-  body {
+  html, body {
     margin: 0 !important;
     padding: 0 !important;
-    width: auto !important;
+    background: #fff !important;
+    width: 58mm !important;
   }
 
   /* Show ONLY the receipt area and its children */
@@ -627,19 +628,19 @@
   /* Center the same print receipt layout used by original receipts. */
   .receipt-print-area {
     position: absolute !important;
-    left: 50% !important;
+    left: 0 !important;
     top: 0 !important;
-    transform: translateX(-50%) !important;
-    width: 110mm !important;
-    max-width: calc(100vw - 16mm) !important;
+    transform: none !important;
+    width: 58mm !important;
+    max-width: 58mm !important;
     box-sizing: border-box !important;
-
     border: none !important;
-    padding: 0 !important;
+    padding: 4mm !important;
     border-radius: 0 !important;
-    font-family: monospace !important;
-    font-size: 12px !important;
+    font-family: 'Courier New', Courier, monospace !important;
+    font-size: 11px !important;
     overflow: visible !important;
+    background: transparent !important;
   }
 
   .receipt-print-area .print-style-receipt {
@@ -653,8 +654,8 @@
 
   .print-reprint-watermark {
     visibility: visible !important;
-    color: rgba(180, 0, 0, 0.18) !important;
-    font-size: 4rem !important;
+    color: rgba(180, 0, 0, 0.1) !important;
+    font-size: 3rem !important;
   }
 
   /* Ensure non-print UI doesn't show */

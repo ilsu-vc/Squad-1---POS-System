@@ -8,22 +8,35 @@ const BASE = '/api/receipts';
 
 export const receiptApi = {
   async printReceipt(data: {
-    receiptNumber?: string;
+    receiptNumber?: string | number;
     items?: Array<{ name: string; quantity: number; price: number }>;
     vatable?: number;
-    vatExempt?: number;
     vatAmount?: number;
-    vatDeduction?: number;
-    discountAmount?: number;
+    discount?: number;
     discountType?: string;
     total?: number;
+    paymentMethod?: string;
+    amountPaid?: number;
+    change?: number;
+    cashier?: string;
+    date?: string;
+    storeName?: string;
+    storeAddress?: string;
+    storeTin?: string;
     splitPayments?: Array<{
       method: string;
-      amount: string;
+      amount: number;
       refNo?: string;
       cardLast4?: string;
       mobileProvider?: string;
     }>;
+    // ── Receipt type flags ─────────────────────────────────────────────────
+    isReprint?: boolean;
+    orFields?: {
+      name: string;
+      tin: string;
+      address: string;
+    };
   }) {
     const res = await authFetch(`${BASE}/print`, {
       method: 'POST',

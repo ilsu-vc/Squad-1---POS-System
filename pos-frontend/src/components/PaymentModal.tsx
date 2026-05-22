@@ -80,6 +80,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
     const [isPrinting, setIsPrinting] = useState(false);
 
     const handlePrintReceipt = async () => {
+        if (isPrinting) return; // strict double-click guard
         setIsPrinting(true);
         try {
             await printReceipt({
@@ -96,6 +97,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                 changeAmount: apiChangeAmount || changeAmount,
                 customerName,
                 orFields,
+                isReprint: false,
             });
         } catch (error) {
             console.error('Print error:', error);
@@ -103,6 +105,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
             setIsPrinting(false);
         }
     };
+
     if (!isOpen) return null;
 
     return (

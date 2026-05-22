@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Transaction } from '../utils/chartHelpers';
 import { formatCurrency } from '../utils/numberformatters';
 import { calculateTaxDiscountBreakdown } from '../utils/vatCalculator';
+import { printReceipt } from '../utils/printUtils';
 import './ReprintModal.css';
 
 const SUPERVISOR_PIN = '1234';
@@ -19,6 +20,7 @@ const ReprintModal: React.FC<ReprintModalProps> = ({ isOpen, onClose, transactio
     const [pinInput, setPinInput] = useState('');
     const [pinError, setPinError] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
+    const [isPrinting, setIsPrinting] = useState(false);
 
     if (!isOpen) return null;
 
@@ -51,9 +53,45 @@ const ReprintModal: React.FC<ReprintModalProps> = ({ isOpen, onClose, transactio
         t.id.toLowerCase().includes(q)
     );
 
-    const handlePrint = () => {
-        window.print();
+    const handlePrint = async (txn: Transaction) => {
+        if (isPrinting) return;
+        setIsPrinting(true);
+        try {
+            const receiptTaxBreakdown = calculateTaxDiscountBreakdown({
+                subtotal: txn.subtotal,
+                vat: txn.tax,
+                discountType: txn.discountType,
+                discountAmount: txn.discountAmount,
+            });
+
+            await printReceipt({
+                receiptNumber: txn.receiptNumber ? String(txn.receiptNumber) : null,
+                transactionId: txn.id,
+                items: txn.items.map(item => ({
+                    name: item.name,
+                    quantity: item.qty,
+                    price: item.price,
+                })),
+                subtotal: txn.subtotal,
+                tax: txn.tax,
+                discountAmount: txn.discountAmount,
+                discountType: txn.discountType,
+                taxBreakdown: receiptTaxBreakdown,
+                total: txn.rawAmount,
+                paymentMethod: txn.method || 'cash',
+                changeAmount: Number(txn.changeAmount ?? txn.change_amount ?? 0),
+                customerName: txn.customerName,
+                // isReprint: true — marks this as a reprint on the physical receipt
+                isReprint: true,
+                // orFields intentionally omitted — reprints do NOT include customer OR details
+            });
+        } catch (err) {
+            console.error('Reprint error:', err);
+        } finally {
+            setIsPrinting(false);
+        }
     };
+
 
     const handleClose = () => {
         setStep('pin');
@@ -278,7 +316,13 @@ const ReprintModal: React.FC<ReprintModalProps> = ({ isOpen, onClose, transactio
 
                             <div className="reprint-actions no-print">
                                 <button className="reprint-cancel-btn" onClick={handleClose}>Close</button>
-                                <button className="reprint-print-btn" onClick={handlePrint}>🖨 Print Receipt</button>
+                                <button
+                                    className="reprint-print-btn"
+                                    onClick={() => handlePrint(matchedTxn)}
+                                    disabled={isPrinting}
+                                >
+                                    {isPrinting ? '⏳ Printing...' : '🖨 Print Receipt'}
+                                </button>
                             </div>
                         </>
                     ) : q && !matchedTxn ? (

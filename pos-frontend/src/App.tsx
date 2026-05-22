@@ -1310,27 +1310,10 @@ const App: React.FC = () => {
         }
       }
 
-      // Print receipt (Handle printer failure gracefully if offline)
-      try {
-        await receiptApi.printReceipt({
-          receiptNumber: newTransaction.receiptNumber ?? undefined,
-          items: newTransaction.items.map(i => ({
-            name: i.name,
-            quantity: i.qty,
-            price: Number(i.price)
-          })),
-          vatable: paymentTaxBreakdown.vatableSales,
-          vatExempt: paymentTaxBreakdown.vatExemptSales,
-          vatAmount: paymentTaxBreakdown.vatAmount,
-          vatDeduction: paymentTaxBreakdown.vatDeduction,
-          discountAmount: paymentTaxBreakdown.discountAmount,
-          discountType: normalizedDiscountType,
-          total: newTransaction.rawAmount,
-          splitPayments: isSplit ? splitPayments! : undefined,
-        });
-      } catch (printErr) {
-        console.warn('[Offline] Printer unavailable, skipping print.', printErr);
-      }
+      // Note: Printing is now handled by the user clicking "Print Receipt" in the
+      // PaymentModal success screen. This ensures the correct receipt type
+      // (Normal, Official Receipt, or Reprint) is chosen by the cashier.
+
 
       if (!isOfflineSale) {
         try {
